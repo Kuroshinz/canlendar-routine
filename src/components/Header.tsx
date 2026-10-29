@@ -1,174 +1,200 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
+import { CalendarViewType, SyncState } from '../types/calendar';
 import {
   Menu,
   ChevronLeft,
   ChevronRight,
-  Search,
-  X,
-  Sparkles,
-  HelpCircle,
-  Download,
-  Moon,
-  Sun,
-  Globe,
-  Check,
   ChevronDown,
+  Search,
+  HelpCircle,
+  Sun,
+  Moon,
+  Sparkles,
+  Download,
+  Calendar as CalIcon,
+  Globe,
   Layers,
   RefreshCw,
+  Check,
+  Activity,
+  Cloud,
+  Undo,
+  Redo,
 } from 'lucide-react';
-import { CalendarViewType, CalendarEvent } from '../types/calendar';
 
 interface HeaderProps {
   currentDate: Date;
+  onPrev: () => void;
+  onNext: () => void;
+  onToday: () => void;
   view: CalendarViewType;
   onViewChange: (view: CalendarViewType) => void;
-  onNavigatePrev: () => void;
-  onNavigateNext: () => void;
-  onNavigateToday: () => void;
   onToggleSidebar: () => void;
-  searchQuery: string;
-  onSearchChange: (q: string) => void;
   onOpenQuickAdd: () => void;
   onOpenShortcuts: () => void;
   onOpenExportImport: () => void;
+  onOpenCloudSync?: () => void;
   onOpenMultiHub?: () => void;
-  lang: 'vi' | 'en';
-  onToggleLang: () => void;
+  searchQuery: string;
+  onSearchChange: (query: string) => void;
+  userEmail?: string;
   darkMode: boolean;
   onToggleDarkMode: () => void;
-  userEmail?: string;
+  lang: 'vi' | 'en';
+  onToggleLang: () => void;
   isLoggedInGoogle?: boolean;
   isSyncing?: boolean;
-  events?: CalendarEvent[];
-  onSelectEvent?: (ev: CalendarEvent) => void;
+  syncState?: SyncState;
+  canUndo?: boolean;
+  canRedo?: boolean;
+  onUndo?: () => void;
+  onRedo?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   currentDate,
+  onPrev,
+  onNext,
+  onToday,
   view,
   onViewChange,
-  onNavigatePrev,
-  onNavigateNext,
-  onNavigateToday,
   onToggleSidebar,
-  searchQuery,
-  onSearchChange,
   onOpenQuickAdd,
   onOpenShortcuts,
   onOpenExportImport,
+  onOpenCloudSync,
   onOpenMultiHub,
-  lang,
-  onToggleLang,
+  searchQuery,
+  onSearchChange,
+  userEmail = 'user@example.com',
   darkMode,
   onToggleDarkMode,
-  userEmail = 'nghuyenthiennhannghuyen@gmail.com',
+  lang,
+  onToggleLang,
   isLoggedInGoogle = false,
   isSyncing = false,
-  events = [],
-  onSelectEvent,
+  syncState = 'offline',
+  canUndo = false,
+  canRedo = false,
+  onUndo,
+  onRedo,
 }) => {
   const [showViewDropdown, setShowViewDropdown] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
-  const [isSearchFocused, setIsSearchFocused] = useState(false);
 
-  // Formatter for main title depending on view
-  const getHeaderDateTitle = () => {
-    const year = currentDate.getFullYear();
-    const month = currentDate.getMonth() + 1;
-
-    if (lang === 'vi') {
-      if (view === 'year') {
-        return `Năm ${year}`;
-      }
-      const monthNamesVi = [
-        'Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6',
-        'Tháng 7', 'Tháng 8', 'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12'
-      ];
-      return `${monthNamesVi[month - 1]} năm ${year}`;
-    } else {
-      if (view === 'year') {
-        return `${year}`;
-      }
-      const monthNamesEn = [
-        'January', 'February', 'March', 'April', 'May', 'June',
-        'July', 'August', 'September', 'October', 'November', 'December'
-      ];
-      return `${monthNamesEn[month - 1]} ${year}`;
-    }
-  };
-
-  const viewOptions: { id: CalendarViewType; labelVi: string; labelEn: string; shortcut: string }[] = [
-    { id: 'day', labelVi: 'Ngày', labelEn: 'Day', shortcut: 'D' },
-    { id: 'week', labelVi: 'Tuần', labelEn: 'Week', shortcut: 'W' },
-    { id: 'month', labelVi: 'Tháng', labelEn: 'Month', shortcut: 'M' },
-    { id: 'year', labelVi: 'Năm', labelEn: 'Year', shortcut: 'Y' },
-    { id: 'schedule', labelVi: 'Lịch biểu', labelEn: 'Schedule', shortcut: 'A' },
-    { id: 'fourDay', labelVi: '4 ngày', labelEn: '4 days', shortcut: 'X' },
+  // Month & Year display formatting
+  const monthNamesVi = [
+    'Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6',
+    'Tháng 7', 'Tháng 8', 'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12',
+  ];
+  const monthNamesEn = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December',
   ];
 
-  const currentViewObj = viewOptions.find((v) => v.id === view) || viewOptions[2];
+  const currentMonthName =
+    lang === 'vi'
+      ? monthNamesVi[currentDate.getMonth()]
+      : monthNamesEn[currentDate.getMonth()];
+  const currentYear = currentDate.getFullYear();
+
+  const viewOptions: { id: CalendarViewType; labelVi: string; labelEn: string; shortcut: string }[] = [
+    { id: 'month', labelVi: 'Tháng', labelEn: 'Month', shortcut: 'M' },
+    { id: 'week', labelVi: 'Tuần', labelEn: 'Week', shortcut: 'W' },
+    { id: 'day', labelVi: 'Ngày', labelEn: 'Day', shortcut: 'D' },
+    { id: 'fourDay', labelVi: '4 ngày', labelEn: '4 days', shortcut: 'X' },
+    { id: 'year', labelVi: 'Năm', labelEn: 'Year', shortcut: 'Y' },
+    { id: 'schedule', labelVi: 'Lịch biểu', labelEn: 'Schedule', shortcut: 'A' },
+    { id: 'analytics', labelVi: 'Phân tích năng suất', labelEn: 'Analytics', shortcut: 'P' },
+  ];
+
+  const currentViewObj = viewOptions.find((v) => v.id === view) || viewOptions[0];
 
   return (
-    <header className="h-16 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-3 md:px-5 flex items-center justify-between gap-2 z-20 shrink-0 select-none">
-      {/* Left section: Hamburger, Brand Logo, Today, Navigation */}
-      <div className="flex items-center gap-2 md:gap-3">
+    <header className="h-16 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-3 sm:px-6 flex items-center justify-between gap-2 sm:gap-4 shrink-0 select-none z-30 transition-colors">
+      {/* Left: Hamburger, Brand, Navigation buttons */}
+      <div className="flex items-center gap-1 sm:gap-3">
         <button
           onClick={onToggleSidebar}
-          aria-label={lang === 'vi' ? 'Mở menu chính' : 'Main menu'}
+          title={lang === 'vi' ? 'Ẩn/hiện thanh bên' : 'Main menu'}
           className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 transition-colors cursor-pointer"
         >
           <Menu className="w-5 h-5" />
         </button>
 
-        {/* Google Calendar Logo */}
-        <div className="flex items-center gap-2 cursor-pointer select-none pr-1">
-          <div className="w-9 h-9 relative flex items-center justify-center rounded-lg shadow-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 overflow-hidden">
-            {/* Calendar top bar */}
-            <div className="absolute top-0 inset-x-0 h-2.5 bg-blue-600"></div>
-            <span className="text-sm font-bold text-blue-600 dark:text-blue-400 mt-1 font-mono">
-              {new Date().getDate()}
+        {/* Brand Logo & Name */}
+        <div
+          onClick={() => onViewChange('month')}
+          className="flex items-center gap-2 cursor-pointer group select-none mr-1 sm:mr-3"
+        >
+          <div className="w-9 h-9 rounded-xl bg-linear-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-sm group-hover:scale-105 transition-transform">
+            <CalIcon className="w-5 h-5" />
+          </div>
+          <div className="hidden md:flex flex-col">
+            <span className="font-semibold text-base leading-tight tracking-tight text-gray-800 dark:text-gray-100 font-sans">
+              Google <span className="font-bold text-blue-600 dark:text-blue-400">Calendar</span>
+            </span>
+            <span className="text-[10px] text-gray-400 font-medium tracking-wide">
+              {lang === 'vi' ? 'Pro • Lịch Thông Minh' : 'Pro • Smart Calendar'}
             </span>
           </div>
-          <span className="hidden sm:inline-block font-medium text-lg md:text-xl text-gray-800 dark:text-gray-100 font-sans tracking-tight">
-            Google <span className="text-gray-500 dark:text-gray-400 font-normal">{lang === 'vi' ? 'Lịch' : 'Calendar'}</span>
-          </span>
         </div>
 
-        {/* Today Button */}
+        {/* Today button */}
         <button
-          onClick={onNavigateToday}
-          className="ml-0.5 sm:ml-2 px-2 sm:px-3 py-1 sm:py-1.5 border border-gray-300 dark:border-gray-700 rounded-md text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors shadow-xs cursor-pointer shrink-0"
+          onClick={onToday}
+          className="px-3.5 py-1.5 border border-gray-300 dark:border-gray-700 rounded-md text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer"
         >
           {lang === 'vi' ? 'Hôm nay' : 'Today'}
         </button>
 
-        {/* Prev / Next Chevrons */}
+        {/* Prev / Next buttons */}
         <div className="flex items-center">
           <button
-            onClick={onNavigatePrev}
-            aria-label={lang === 'vi' ? 'Kỳ trước' : 'Previous period'}
-            className="p-1 sm:p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 transition-colors cursor-pointer"
+            onClick={onPrev}
+            title={lang === 'vi' ? 'Thời gian trước' : 'Previous'}
+            className="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 transition-colors cursor-pointer"
           >
-            <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
+            <ChevronLeft className="w-5 h-5" />
           </button>
           <button
-            onClick={onNavigateNext}
-            aria-label={lang === 'vi' ? 'Kỳ tiếp theo' : 'Next period'}
-            className="p-1 sm:p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 transition-colors cursor-pointer"
+            onClick={onNext}
+            title={lang === 'vi' ? 'Thời gian tới' : 'Next'}
+            className="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 transition-colors cursor-pointer"
           >
-            <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
+            <ChevronRight className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Date Title */}
-        <h1 className="text-sm sm:text-base md:text-xl font-medium text-gray-800 dark:text-gray-100 truncate pl-0.5 sm:pl-1">
-          {getHeaderDateTitle()}
-        </h1>
+        {/* Undo / Redo for Drag & Drop */}
+        {canUndo && (
+          <button
+            onClick={onUndo}
+            title={lang === 'vi' ? 'Hoàn tác kéo thả (Ctrl+Z)' : 'Undo (Ctrl+Z)'}
+            className="p-1.5 rounded-full bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100 text-blue-600 dark:text-blue-400 transition-colors cursor-pointer"
+          >
+            <Undo className="w-4 h-4" />
+          </button>
+        )}
+        {canRedo && (
+          <button
+            onClick={onRedo}
+            title={lang === 'vi' ? 'Làm lại (Ctrl+Shift+Z)' : 'Redo (Ctrl+Shift+Z)'}
+            className="p-1.5 rounded-full bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100 text-blue-600 dark:text-blue-400 transition-colors cursor-pointer"
+          >
+            <Redo className="w-4 h-4" />
+          </button>
+        )}
+
+        {/* Month & Year Title */}
+        <h2 className="text-base sm:text-lg font-medium text-gray-800 dark:text-gray-100 ml-1 sm:ml-2 font-sans truncate">
+          {currentMonthName} {currentYear}
+        </h2>
       </div>
 
-      {/* Middle section: Search Bar */}
-      <div className="flex-1 max-w-xl mx-2 hidden md:block">
-        <div className="relative">
+      {/* Center: Search Bar */}
+      <div className="hidden md:flex items-center flex-1 max-w-xs lg:max-w-md mx-2">
+        <div className="relative w-full">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
             <Search className="w-4 h-4" />
           </div>
@@ -176,85 +202,52 @@ export const Header: React.FC<HeaderProps> = ({
             type="text"
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
-            onFocus={() => setIsSearchFocused(true)}
-            onBlur={() => setTimeout(() => setIsSearchFocused(false), 200)}
-            placeholder={
-              lang === 'vi'
-                ? 'Tìm kiếm sự kiện, phòng họp, người tham dự...'
-                : 'Search events, rooms, people...'
-            }
-            className="w-full pl-9 pr-8 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200/70 dark:hover:bg-gray-700/70 focus:bg-white dark:focus:bg-gray-900 border border-transparent focus:border-blue-500 text-sm text-gray-800 dark:text-gray-100 placeholder-gray-500 focus:outline-none transition-all shadow-2xs"
+            placeholder={lang === 'vi' ? 'Tìm kiếm sự kiện, công việc...' : 'Search events, tasks...'}
+            className="w-full pl-9 pr-4 py-1.5 bg-gray-100 dark:bg-gray-800 text-sm text-gray-800 dark:text-gray-100 rounded-full border-none focus:outline-hidden focus:ring-2 focus:ring-blue-500 placeholder-gray-400 transition-all"
           />
-          {searchQuery && (
-            <button
-              onClick={() => onSearchChange('')}
-              className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-gray-400 hover:text-gray-600 cursor-pointer"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          )}
-
-          {/* Floating Search Suggestions */}
-          {isSearchFocused && searchQuery.trim() && (
-            <div className="absolute top-full left-0 right-0 mt-1.5 bg-white dark:bg-gray-850 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl py-2 z-50 max-h-72 overflow-y-auto animate-in fade-in zoom-in-95">
-              {events.filter((e) =>
-                e.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                (e.location && e.location.toLowerCase().includes(searchQuery.toLowerCase()))
-              ).length === 0 ? (
-                <div className="px-4 py-3 text-xs text-gray-400 text-center">
-                  {lang === 'vi' ? 'Không có sự kiện nào khớp.' : 'No matching events.'}
-                </div>
-              ) : (
-                events
-                  .filter((e) =>
-                    e.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                    (e.location && e.location.toLowerCase().includes(searchQuery.toLowerCase()))
-                  )
-                  .slice(0, 5)
-                  .map((ev) => (
-                    <div
-                      key={ev.id}
-                      onMouseDown={() => {
-                        onSelectEvent?.(ev);
-                        onSearchChange('');
-                      }}
-                      className="px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-750 flex items-center justify-between cursor-pointer transition-colors"
-                    >
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <div
-                          className="w-2.5 h-2.5 rounded-full shrink-0"
-                          style={{ backgroundColor: ev.color }}
-                        />
-                        <span className="text-xs font-medium text-gray-800 dark:text-gray-100 truncate">
-                          {ev.title}
-                        </span>
-                      </div>
-                      <span className="text-[11px] text-gray-400 font-mono shrink-0 ml-2">
-                        {ev.startDate} {!ev.allDay && ev.startTime ? `• ${ev.startTime}` : ''}
-                      </span>
-                    </div>
-                  ))
-              )}
-            </div>
-          )}
         </div>
       </div>
 
-      {/* Right section: Multi-Hub, Quick Add, View Switcher, Utility Buttons, Profile */}
-      <div className="flex items-center gap-1.5 md:gap-2">
-        {/* Multi-Hub: Đồng bộ Google, Pomodoro, Tiền tệ, Học tập, Stress */}
+      {/* Right: Actions, Analytics, Sync, View dropdown, User Avatar */}
+      <div className="flex items-center gap-1.5 sm:gap-2">
+        {/* Productivity Analytics Button */}
         <button
-          onClick={onOpenMultiHub}
-          title={lang === 'vi' ? 'Mở Trung tâm đa năng: Đồng bộ Google, Quản lí Thời gian, Tiền tệ, Học tập, Stress' : 'Open Multi-Hub: Google Sync, Time, Finance, Study, Stress'}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-pink-500/10 hover:from-indigo-500/20 hover:to-pink-500/20 border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 rounded-full text-xs font-semibold cursor-pointer transition-all shadow-xs"
+          onClick={() => onViewChange('analytics')}
+          title={lang === 'vi' ? 'Phân tích thời gian & năng suất' : 'Productivity Analytics'}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all border cursor-pointer ${
+            view === 'analytics'
+              ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+              : 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 border-indigo-200 dark:border-indigo-800'
+          }`}
         >
-          <Layers className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
-          <span className="hidden sm:inline">{lang === 'vi' ? 'Trung tâm đa năng' : 'Multi-Hub'}</span>
-          {isSyncing ? (
-            <RefreshCw className="w-3 h-3 text-blue-600 animate-spin" />
-          ) : isLoggedInGoogle ? (
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" title="Đã kết nối Google" />
-          ) : null}
+          <Activity className="w-3.5 h-3.5" />
+          <span className="hidden sm:inline">{lang === 'vi' ? 'Phân tích' : 'Analytics'}</span>
+        </button>
+
+        {/* Cloud Sync Button & Status Badge */}
+        <button
+          onClick={onOpenCloudSync || onOpenExportImport}
+          title={lang === 'vi' ? 'Đồng bộ đám mây & iCal' : 'Cloud Sync & iCal'}
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-medium border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer"
+        >
+          <Cloud
+            className={`w-3.5 h-3.5 ${
+              syncState === 'syncing'
+                ? 'text-amber-500 animate-spin'
+                : syncState === 'synced'
+                ? 'text-emerald-500'
+                : 'text-gray-400'
+            }`}
+          />
+          <span className="hidden lg:inline text-[11px] font-mono font-medium">
+            {syncState === 'synced'
+              ? lang === 'vi'
+                ? 'Đã sync'
+                : 'Synced'
+              : syncState === 'syncing'
+              ? '...'
+              : 'Offline'}
+          </span>
         </button>
 
         {/* Quick Add with Natural Language */}
@@ -264,7 +257,7 @@ export const Header: React.FC<HeaderProps> = ({
           className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/60 rounded-full text-xs font-medium border border-blue-200 dark:border-blue-800 cursor-pointer transition-colors"
         >
           <Sparkles className="w-3.5 h-3.5 text-blue-500" />
-          <span className="hidden lg:inline">{lang === 'vi' ? 'Tạo thông minh' : 'Quick Add'}</span>
+          <span className="hidden xl:inline">{lang === 'vi' ? 'Tạo nhanh' : 'Quick Add'}</span>
         </button>
 
         {/* View Switcher Dropdown */}
@@ -283,7 +276,7 @@ export const Header: React.FC<HeaderProps> = ({
                 className="fixed inset-0 z-30"
                 onClick={() => setShowViewDropdown(false)}
               ></div>
-              <div className="absolute right-0 mt-1 w-44 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg py-1.5 z-40">
+              <div className="absolute right-0 mt-1 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg py-1.5 z-40">
                 {viewOptions.map((opt) => (
                   <button
                     key={opt.id}
@@ -305,15 +298,6 @@ export const Header: React.FC<HeaderProps> = ({
             </>
           )}
         </div>
-
-        {/* Export / Import Button */}
-        <button
-          onClick={onOpenExportImport}
-          title={lang === 'vi' ? 'Xuất / Nhập tệp .ics' : 'Export / Import .ics'}
-          className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 transition-colors cursor-pointer"
-        >
-          <Download className="w-4 h-4" />
-        </button>
 
         {/* Language switch */}
         <button
@@ -343,63 +327,13 @@ export const Header: React.FC<HeaderProps> = ({
           <HelpCircle className="w-4 h-4" />
         </button>
 
-        {/* User Avatar */}
-        <div className="relative">
-          <button
-            onClick={() => setShowProfileMenu(!showProfileMenu)}
-            className="w-8 h-8 rounded-full bg-linear-to-tr from-blue-600 to-indigo-600 text-white font-medium text-xs flex items-center justify-center ring-2 ring-transparent hover:ring-blue-300 transition-all cursor-pointer shadow-xs ml-1"
-          >
-            {userEmail[0].toUpperCase()}
-          </button>
-
-          {showProfileMenu && (
-            <>
-              <div
-                className="fixed inset-0 z-30"
-                onClick={() => setShowProfileMenu(false)}
-              ></div>
-              <div className="absolute right-0 mt-2 w-72 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl p-4 z-40">
-                <div className="flex items-center gap-3 pb-3 border-b border-gray-100 dark:border-gray-700">
-                  <div className="w-10 h-10 rounded-full bg-blue-600 text-white font-bold text-base flex items-center justify-center shrink-0">
-                    {userEmail[0].toUpperCase()}
-                  </div>
-                  <div className="overflow-hidden">
-                    <p className="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate">
-                      Google Workspace
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{userEmail}</p>
-                  </div>
-                </div>
-
-                <div className="mt-3 space-y-1 text-xs text-gray-600 dark:text-gray-300">
-                  <div className="flex items-center justify-between py-1">
-                    <span>{lang === 'vi' ? 'Trạng thái đồng bộ' : 'Sync status'}</span>
-                    <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-medium">
-                      <Check className="w-3.5 h-3.5" /> {lang === 'vi' ? 'Đã lưu cục bộ' : 'Saved locally'}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between py-1">
-                    <span>{lang === 'vi' ? 'Múi giờ' : 'Timezone'}</span>
-                    <span className="font-mono text-gray-500">GMT+07:00 (Asia/Ho_Chi_Minh)</span>
-                  </div>
-                </div>
-
-                <div className="mt-3 pt-2.5 border-t border-gray-100 dark:border-gray-700">
-                  <button
-                    onClick={() => {
-                      setShowProfileMenu(false);
-                      onOpenMultiHub?.();
-                    }}
-                    className="w-full py-2 px-3 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 rounded-lg text-xs font-semibold flex items-center justify-center gap-2 cursor-pointer transition-colors"
-                  >
-                    <Layers className="w-4 h-4 text-indigo-500" />
-                    <span>{lang === 'vi' ? 'Mở Trung tâm đa năng & Đồng bộ' : 'Open Multi-Hub & Sync'}</span>
-                  </button>
-                </div>
-              </div>
-            </>
-          )}
-        </div>
+        {/* User Profile */}
+        <button
+          onClick={() => setShowProfileMenu(!showProfileMenu)}
+          className="w-8 h-8 rounded-full bg-linear-to-tr from-blue-600 to-indigo-600 text-white font-medium text-xs flex items-center justify-center ring-2 ring-transparent hover:ring-blue-300 transition-all cursor-pointer shadow-xs ml-1"
+        >
+          {userEmail[0].toUpperCase()}
+        </button>
       </div>
     </header>
   );

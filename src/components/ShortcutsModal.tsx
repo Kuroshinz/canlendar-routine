@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { X, Keyboard } from 'lucide-react';
 
 interface ShortcutsModalProps {
@@ -16,11 +16,15 @@ export const ShortcutsModal: React.FC<ShortcutsModalProps> = ({ isOpen, onClose,
     { key: 'M', descVi: 'Chuyển sang chế độ xem Tháng', descEn: 'Month view' },
     { key: 'W', descVi: 'Chuyển sang chế độ xem Tuần', descEn: 'Week view' },
     { key: 'D', descVi: 'Chuyển sang chế độ xem Ngày', descEn: 'Day view' },
+    { key: 'X', descVi: 'Chuyển sang chế độ xem 4 Ngày', descEn: '4-Day view' },
     { key: 'A', descVi: 'Chuyển sang Lịch biểu (Schedule)', descEn: 'Schedule / Agenda view' },
+    { key: 'P', descVi: 'Mở Bảng Phân Tích Năng Suất', descEn: 'Productivity Analytics view' },
     { key: 'Y', descVi: 'Chuyển sang chế độ xem Năm', descEn: 'Year view' },
     { key: 'C', descVi: 'Tạo mới sự kiện', descEn: 'Create event' },
+    { key: 'Ctrl + Z', descVi: 'Hoàn tác di chuyển / co giãn sự kiện', descEn: 'Undo drag / resize' },
+    { key: 'Ctrl + Shift + Z', descVi: 'Làm lại thao tác vừa hoàn tác', descEn: 'Redo move / resize' },
     { key: '/', descVi: 'Tìm kiếm nhanh sự kiện', descEn: 'Focus search' },
-    { key: 'Esc', descVi: 'Đóng hộp thoại đang mở', descEn: 'Close active modal' },
+    { key: 'Esc', descVi: 'Hủy kéo thả hoặc đóng hộp thoại', descEn: 'Cancel drag or close active modal' },
     { key: '?', descVi: 'Hiển thị danh sách phím tắt này', descEn: 'Show keyboard shortcuts' },
   ];
 

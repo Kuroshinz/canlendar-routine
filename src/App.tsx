@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -9,32 +9,41 @@ import {
   CalendarCategory,
   CalendarViewType,
   EventType,
+  SyncState,
   DEFAULT_CALENDARS,
 } from './types/calendar';
 import { INITIAL_EVENTS } from './data/initialEvents';
 import { formatDateString } from './utils/calendarUtils';
 import { playNotificationSound } from './utils/sound';
+import { useCalendarDnD } from './hooks/useCalendarDnD';
 import { Header } from './components/Header';
 import { Sidebar } from './components/Sidebar';
 import { MonthView } from './components/MonthView';
 import { TimeGridView } from './components/TimeGridView';
 import { YearView } from './components/YearView';
 import { ScheduleView } from './components/ScheduleView';
+import { TimeAnalyticsView } from './components/analytics/TimeAnalyticsView';
 import { EventModal } from './components/EventModal';
 import { EventDetailCard } from './components/EventDetailCard';
 import { QuickAddModal } from './components/QuickAddModal';
 import { ShortcutsModal } from './components/ShortcutsModal';
 import { ExportImportModal } from './components/ExportImportModal';
+import { CloudSyncModal } from './components/sync/CloudSyncModal';
 import { RightSidebar } from './components/RightSidebar';
 import { GoogleMeetRoom } from './components/GoogleMeetRoom';
 import { MultiHubDrawer } from './components/MultiHubDrawer';
 import { User } from 'firebase/auth';
 import { initAuth, googleSignIn, logout, getAccessToken } from './services/auth';
 import { fetchGoogleCalendarEvents, createGoogleCalendarEvent } from './services/googleCalendarSync';
+import {
+  subscribeUserEvents,
+  saveEventToFirestore,
+  deleteEventFromFirestore,
+} from './services/firestoreSync';
 import { Bell } from 'lucide-react';
 
 export default function App() {
-  // 1. Language state (defaults to Vietnamese as requested)
+  // 1. Language state
   const [lang, setLang] = useState<'vi' | 'en'>(() => {
     return (localStorage.getItem('gcal_lang') as 'vi' | 'en') || 'vi';
   });
@@ -62,7 +71,7 @@ export default function App() {
   };
 
   // 3. Current active date & view
-  const [currentDate, setCurrentDate] = useState<Date>(() => new Date(2026, 9, 29)); // Default to Oct 29, 2026
+  const [currentDate, setCurrentDate] = useState<Date>(() => new Date(2026, 9, 29)); // Oct 29, 2026
   const [view, setView] = useState<CalendarViewType>(() => {
     return (localStorage.getItem('gcal_view') as CalendarViewType) || 'month';
   });
@@ -72,7 +81,7 @@ export default function App() {
     localStorage.setItem('gcal_view', newView);
   };
 
-  // 4. Events & Categories persistence
+  // 4. Events & Categories persistence (Offline-First)
   const [events, setEvents] = useState<CalendarEvent[]>(() => {
     try {
       const saved = localStorage.getItem('gcal_events');
@@ -137,26 +146,148 @@ export default function App() {
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
   const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
   const [isExportImportOpen, setIsExportImportOpen] = useState(false);
+  const [isCloudSyncOpen, setIsCloudSyncOpen] = useState(false);
   const [isMultiHubOpen, setIsMultiHubOpen] = useState(false);
 
-  // Google OAuth & Sync State
+  // Google OAuth & Cloud Sync State
   const [user, setUser] = useState<User | null>(null);
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
+  const [syncState, setSyncState] = useState<SyncState>('offline');
   const [lastSyncedTime, setLastSyncedTime] = useState<string | null>(null);
 
+  // 8. Event saving / updating handler
+  const handleSaveEvent = useCallback((savedEvent: CalendarEvent) => {
+    setEvents((prev) => {
+      const idx = prev.findIndex((e) => e.id === savedEvent.id);
+      if (idx >= 0) {
+        const copy = [...prev];
+        copy[idx] = savedEvent;
+        return copy;
+      }
+      return [savedEvent, ...prev];
+    });
+
+    // Cloud sync push if logged in
+    if (user) {
+      setSyncState('syncing');
+      saveEventToFirestore(user.uid, savedEvent)
+        .then(() => setSyncState('synced'))
+        .catch(() => setSyncState('error'));
+    }
+
+    // Google Calendar Push if token available
+    getAccessToken()
+      .then((token) => {
+        if (token && !savedEvent.id.startsWith('gcal-')) {
+          createGoogleCalendarEvent(token, savedEvent).catch((e) =>
+            console.warn('Background Google Calendar sync error:', e)
+          );
+        }
+      })
+      .catch(() => {});
+  }, [user]);
+
+  const handleDeleteEvent = useCallback((eventId: string) => {
+    setEvents((prev) => prev.filter((e) => e.id !== eventId));
+    if (selectedEventForDetail?.id === eventId) {
+      setSelectedEventForDetail(null);
+    }
+    if (user) {
+      deleteEventFromFirestore(user.uid, eventId).catch(console.warn);
+    }
+  }, [selectedEventForDetail, user]);
+
+  const handleToggleCompleteTask = (eventId: string) => {
+    setEvents((prev) =>
+      prev.map((e) => (e.id === eventId ? { ...e, isCompleted: !e.isCompleted } : e))
+    );
+  };
+
+  const handleMoveEvent = useCallback((eventId: string, newDateStr: string) => {
+    setEvents((prev) =>
+      prev.map((e) => {
+        if (e.id === eventId) {
+          const updated = {
+            ...e,
+            startDate: newDateStr,
+            endDate: newDateStr,
+            updatedAt: Date.now(),
+          };
+          if (user) {
+            saveEventToFirestore(user.uid, updated).catch(console.warn);
+          }
+          return updated;
+        }
+        return e;
+      })
+    );
+  }, [user]);
+
+  // 9. Drag & Drop and Resizing Engine
+  const {
+    dndState,
+    startDrag,
+    startResize,
+    updatePointerMove,
+    finishDnD,
+    cancelDnD,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+  } = useCalendarDnD(handleSaveEvent, lang);
+
+  // 10. Firebase Auth & Realtime Firestore sync subscription
   useEffect(() => {
-    const unsubscribe = initAuth(
+    const unsubscribeAuth = initAuth(
       (authedUser) => {
         setUser(authedUser);
+        setSyncState('synced');
       },
       () => {
         setUser(null);
+        setSyncState('offline');
       }
     );
     return () => {
-      if (unsubscribe) unsubscribe();
+      if (unsubscribeAuth) unsubscribeAuth();
     };
   }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    setSyncState('syncing');
+
+    const unsubscribeFirestore = subscribeUserEvents(
+      user.uid,
+      (remoteEvents) => {
+        if (remoteEvents.length > 0) {
+          setEvents((prev) => {
+            const remoteMap = new Map(remoteEvents.map((r) => [r.id, r]));
+            const merged = prev.map((local) => {
+              const remote = remoteMap.get(local.id);
+              if (!remote) return local;
+              remoteMap.delete(local.id);
+              // Choose latest updated
+              return (remote.updatedAt || 0) > (local.updatedAt || 0) ? remote : local;
+            });
+            // Add any new remote events
+            return [...merged, ...Array.from(remoteMap.values())];
+          });
+        }
+        setSyncState('synced');
+        setLastSyncedTime(new Date().toLocaleTimeString(lang === 'vi' ? 'vi-VN' : 'en-US'));
+      },
+      (err) => {
+        console.warn('Firestore subscription warning:', err);
+        setSyncState('offline');
+      }
+    );
+
+    return () => {
+      if (unsubscribeFirestore) unsubscribeFirestore();
+    };
+  }, [user, lang]);
 
   // In-app reminder notification toast
   const [activeAlert, setActiveAlert] = useState<{ title: string; time: string } | null>(null);
@@ -209,7 +340,6 @@ export default function App() {
   // Keyboard shortcuts listener
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Ignore if user is inside an input or textarea
       const target = e.target as HTMLElement;
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
         return;
@@ -221,6 +351,8 @@ export default function App() {
         setIsQuickAddOpen(false);
         setIsShortcutsOpen(false);
         setIsExportImportOpen(false);
+        setIsCloudSyncOpen(false);
+        cancelDnD();
         return;
       }
 
@@ -236,8 +368,12 @@ export default function App() {
         handleViewChange('week');
       } else if (e.key === 'd' || e.key === 'D') {
         handleViewChange('day');
+      } else if (e.key === 'x' || e.key === 'X') {
+        handleViewChange('fourDay');
       } else if (e.key === 'a' || e.key === 'A') {
         handleViewChange('schedule');
+      } else if (e.key === 'p' || e.key === 'P') {
+        handleViewChange('analytics');
       } else if (e.key === 'y' || e.key === 'Y') {
         handleViewChange('year');
       } else if (e.key === 'c' || e.key === 'C') {
@@ -254,7 +390,7 @@ export default function App() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleNavigateToday, handleNavigateNext, handleNavigatePrev]);
+  }, [handleNavigateToday, handleNavigateNext, handleNavigatePrev, cancelDnD]);
 
   // Reminder alert checker
   useEffect(() => {
@@ -270,7 +406,6 @@ export default function App() {
           const evTotalMin = eh * 60 + em;
           const diff = evTotalMin - nowTotalMin;
 
-          // Alert if event starts in 10 minutes
           if (diff === 10) {
             playNotificationSound();
             setActiveAlert({
@@ -318,15 +453,13 @@ export default function App() {
     setIsEventModalOpen(true);
   };
 
-  // Google Sync & Auth Handlers
+  // Google OAuth Handlers
   const handleGoogleSignIn = async () => {
     try {
       const res = await googleSignIn();
       if (res?.user) {
         setUser(res.user);
-        if (res.accessToken) {
-          await handleSyncGoogleCalendar(res.accessToken);
-        }
+        setSyncState('synced');
       }
     } catch (err) {
       console.error('Google Sign In failed:', err);
@@ -337,6 +470,7 @@ export default function App() {
     try {
       await logout();
       setUser(null);
+      setSyncState('offline');
     } catch (err) {
       console.error('Sign Out failed:', err);
     }
@@ -365,63 +499,12 @@ export default function App() {
         second: '2-digit',
       });
       setLastSyncedTime(timeStr);
+      setSyncState('synced');
     } catch (err) {
       console.error('Failed to sync Google Calendar:', err);
     } finally {
       setIsSyncing(false);
     }
-  };
-
-  // Event handlers
-  const handleSaveEvent = (savedEvent: CalendarEvent) => {
-    setEvents((prev) => {
-      const idx = prev.findIndex((e) => e.id === savedEvent.id);
-      if (idx >= 0) {
-        const copy = [...prev];
-        copy[idx] = savedEvent;
-        return copy;
-      }
-      return [savedEvent, ...prev];
-    });
-
-    // Background push to Google Calendar if signed in
-    getAccessToken()
-      .then((token) => {
-        if (token && !savedEvent.id.startsWith('gcal-')) {
-          createGoogleCalendarEvent(token, savedEvent).catch((e) =>
-            console.warn('Background sync error:', e)
-          );
-        }
-      })
-      .catch(() => {});
-  };
-
-  const handleDeleteEvent = (eventId: string) => {
-    setEvents((prev) => prev.filter((e) => e.id !== eventId));
-    if (selectedEventForDetail?.id === eventId) {
-      setSelectedEventForDetail(null);
-    }
-  };
-
-  const handleToggleCompleteTask = (eventId: string) => {
-    setEvents((prev) =>
-      prev.map((e) => (e.id === eventId ? { ...e, isCompleted: !e.isCompleted } : e))
-    );
-  };
-
-  const handleMoveEvent = (eventId: string, newDateStr: string) => {
-    setEvents((prev) =>
-      prev.map((e) => {
-        if (e.id === eventId) {
-          return {
-            ...e,
-            startDate: newDateStr,
-            endDate: newDateStr,
-          };
-        }
-        return e;
-      })
-    );
   };
 
   return (
@@ -452,25 +535,29 @@ export default function App() {
         currentDate={currentDate}
         view={view}
         onViewChange={handleViewChange}
-        onNavigatePrev={handleNavigatePrev}
-        onNavigateNext={handleNavigateNext}
-        onNavigateToday={handleNavigateToday}
+        onPrev={handleNavigatePrev}
+        onNext={handleNavigateNext}
+        onToday={handleNavigateToday}
         onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         onOpenQuickAdd={() => setIsQuickAddOpen(true)}
         onOpenShortcuts={() => setIsShortcutsOpen(true)}
         onOpenExportImport={() => setIsExportImportOpen(true)}
+        onOpenCloudSync={() => setIsCloudSyncOpen(true)}
         onOpenMultiHub={() => setIsMultiHubOpen(true)}
         lang={lang}
         onToggleLang={toggleLang}
         darkMode={darkMode}
         onToggleDarkMode={toggleDarkMode}
-        userEmail={user?.email || 'nghuyenthiennhannghuyen@gmail.com'}
+        userEmail={user?.email || 'user@example.com'}
         isLoggedInGoogle={Boolean(user)}
         isSyncing={isSyncing}
-        events={events}
-        onSelectEvent={(ev) => setSelectedEventForDetail(ev)}
+        syncState={syncState}
+        canUndo={canUndo}
+        canRedo={canRedo}
+        onUndo={undo}
+        onRedo={redo}
       />
 
       {/* Main Body Area: Sidebar + Active View + Right Utility Dock */}
@@ -479,7 +566,6 @@ export default function App() {
           currentDate={currentDate}
           onSelectDate={(d) => {
             setCurrentDate(d);
-            // On mobile close sidebar upon picking date
             if (window.innerWidth < 1024) {
               setIsSidebarOpen(false);
             }
@@ -516,6 +602,21 @@ export default function App() {
               visibleCategoryIds={visibleCategoryIds}
               onSelectEvent={(ev) => setSelectedEventForDetail(ev)}
               onSlotClick={(dateStr, timeStr) => openCreateModal('event', dateStr, timeStr)}
+              lang={lang}
+              dndState={dndState}
+              onStartDrag={startDrag}
+              onStartResize={startResize}
+              onPointerMove={updatePointerMove}
+              onFinishDnD={finishDnD}
+              onCancelDnD={cancelDnD}
+            />
+          )}
+
+          {view === 'analytics' && (
+            <TimeAnalyticsView
+              events={events}
+              categories={categories}
+              currentDate={currentDate}
               lang={lang}
             />
           )}
@@ -621,6 +722,23 @@ export default function App() {
         lang={lang}
       />
 
+      {/* Cloud Sync & iCal Modal */}
+      <CloudSyncModal
+        isOpen={isCloudSyncOpen}
+        onClose={() => setIsCloudSyncOpen(false)}
+        user={user}
+        onGoogleSignIn={handleGoogleSignIn}
+        onGoogleSignOut={handleGoogleSignOut}
+        events={events}
+        categories={categories}
+        onImportEvents={(imported) => {
+          setEvents((prev) => [...imported, ...prev]);
+        }}
+        syncState={syncState}
+        lastSyncedTime={lastSyncedTime}
+        lang={lang}
+      />
+
       {/* Google Meet In-App Room Simulator */}
       {activeMeetEvent && (
         <GoogleMeetRoom
@@ -630,7 +748,7 @@ export default function App() {
         />
       )}
 
-      {/* Multi-Hub: Đồng bộ Google & Quản lí Cuộc sống (Thời gian, Tiền tệ, Học tập, Stress) */}
+      {/* Multi-Hub: Đồng bộ Google & Quản lý Cuộc sống (Pomodoro, Tài chính, Học tập, Sức khỏe) */}
       <MultiHubDrawer
         isOpen={isMultiHubOpen}
         onClose={() => setIsMultiHubOpen(false)}
