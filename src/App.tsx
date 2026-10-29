@@ -38,6 +38,7 @@ import { User } from 'firebase/auth';
 import { initAuth, googleSignIn, logout, getAccessToken, AppUser } from './services/auth';
 import { fetchGoogleCalendarEvents, createGoogleCalendarEvent } from './services/googleCalendarSync';
 import { fetchCalendarFromICalUrl } from './services/googleCalendarUrlSync';
+import { executeRealGoogleSync } from './services/realGoogleAuth';
 import {
   subscribeUserEvents,
   saveEventToFirestore,
@@ -518,22 +519,24 @@ export default function App() {
   const handleGoogleSignIn = async () => {
     try {
       setIsSyncing(true);
-      const res = await googleSignIn();
-      if (res?.user) {
-        setUser(res.user);
+      // Attempt official real Google OAuth login via Google Identity Services
+      const realRes = await executeRealGoogleSync();
+      if (realRes?.user) {
+        setUser(realRes.user);
         setSyncState('synced');
+        if (realRes.events && realRes.events.length > 0) {
+          setEvents(realRes.events);
+        }
         setActiveAlert({
-          title: lang === 'vi' ? 'Đã đăng nhập Google thành công!' : 'Google Account Connected!',
-          time: res.user.email || 'Google',
+          title: lang === 'vi' ? 'Đã kết nối Google Calendar thành công!' : 'Google Calendar Connected!',
+          time: realRes.user.email || 'Google',
         });
         setLastSyncedTime(new Date().toLocaleTimeString(lang === 'vi' ? 'vi-VN' : 'en-US'));
-        // Automatically sync events if token available
-        if (res.accessToken) {
-          handleSyncGoogleCalendar(res.accessToken);
-        }
+        return;
       }
-    } catch (err) {
-      console.error('Google Sign In failed:', err);
+    } catch (realErr: any) {
+      console.info('Google GIS direct popup requires origin or token setup, opening Sync Modal:', realErr);
+      setIsCloudSyncOpen(true);
     } finally {
       setIsSyncing(false);
     }
