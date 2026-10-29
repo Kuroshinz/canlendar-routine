@@ -67,7 +67,16 @@ export const MonthView: React.FC<MonthViewProps> = ({
       <div className="flex-1 grid grid-cols-7 grid-rows-5 md:grid-rows-5 lg:grid-rows-6 border-l border-t border-gray-200 dark:border-gray-800 overflow-y-auto">
         {days.map((dayItem, index) => {
           const dateStr = dayItem.dateString;
-          const dayEvents = activeEvents.filter((ev) => doesEventOccurOnDate(ev, dateStr));
+          // Sort events: All-day / multi-day first, then chronologically by startTime
+          const dayEvents = activeEvents
+            .filter((ev) => doesEventOccurOnDate(ev, dateStr))
+            .sort((a, b) => {
+              const aAllDay = a.allDay || a.startDate !== a.endDate;
+              const bAllDay = b.allDay || b.startDate !== b.endDate;
+              if (aAllDay && !bAllDay) return -1;
+              if (!aAllDay && bAllDay) return 1;
+              return (a.startTime || '00:00').localeCompare(b.startTime || '00:00');
+            });
 
           // Max visible events in cell before +N more
           const MAX_VISIBLE = 3;
@@ -192,7 +201,7 @@ export const MonthView: React.FC<MonthViewProps> = ({
                     );
                   }
 
-                  // High-Contrast Crisp Chip for Timed Events
+                  // Authentic Google Calendar Timed Event Row (Clean dot + time + title, no curved parenthesis border)
                   return (
                     <div
                       key={ev.id}
@@ -215,20 +224,17 @@ export const MonthView: React.FC<MonthViewProps> = ({
                         });
                       }}
                       onMouseLeave={() => setHoveredEvent(null)}
-                      style={{
-                        borderLeftColor: ev.color,
-                      }}
-                      className="px-2 py-1 rounded-md text-[11px] truncate flex items-center gap-1.5 transition-all hover:brightness-105 hover:shadow-xs cursor-grab active:cursor-grabbing border-l-[3px] bg-gray-100/90 dark:bg-[#1e232b] text-gray-900 dark:text-gray-100 border-t border-r border-b border-gray-200/60 dark:border-gray-700/60 shadow-2xs"
+                      className="px-1.5 py-0.5 rounded-sm text-[11px] truncate flex items-center gap-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-grab active:cursor-grabbing group/item"
                     >
-                      {/* Color dot */}
+                      {/* Single crisp colored dot */}
                       <span
-                        className="w-2 h-2 rounded-full shrink-0 shadow-xs"
+                        className="w-2 h-2 rounded-full shrink-0 shadow-2xs group-hover/item:scale-125 transition-transform"
                         style={{ backgroundColor: ev.color }}
                       />
 
                       {/* Start time */}
                       {ev.startTime && (
-                        <span className="text-[10px] font-mono font-bold text-gray-600 dark:text-gray-300 shrink-0">
+                        <span className="text-[10px] font-mono font-medium text-gray-500 dark:text-gray-400 shrink-0">
                           {ev.startTime}
                         </span>
                       )}
@@ -240,8 +246,8 @@ export const MonthView: React.FC<MonthViewProps> = ({
                       )}
 
                       <span
-                        className={`truncate font-semibold ${
-                          ev.isCompleted ? 'line-through opacity-60' : ''
+                        className={`truncate text-gray-800 dark:text-gray-200 group-hover/item:text-blue-600 dark:group-hover/item:text-blue-400 font-medium ${
+                          ev.isCompleted ? 'line-through opacity-50' : ''
                         }`}
                       >
                         {ev.title}

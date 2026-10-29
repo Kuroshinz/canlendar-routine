@@ -37,6 +37,7 @@ import { MultiHubDrawer } from './components/MultiHubDrawer';
 import { User } from 'firebase/auth';
 import { initAuth, googleSignIn, logout, getAccessToken } from './services/auth';
 import { fetchGoogleCalendarEvents, createGoogleCalendarEvent } from './services/googleCalendarSync';
+import { fetchCalendarFromICalUrl } from './services/googleCalendarUrlSync';
 import {
   subscribeUserEvents,
   saveEventToFirestore,
@@ -90,9 +91,13 @@ export default function App() {
   // 4. Events & Categories persistence (Offline-First)
   const [events, setEvents] = useState<CalendarEvent[]>(() => {
     try {
-      const saved = localStorage.getItem('gcal_events');
-      if (saved) return JSON.parse(saved);
+      const v = localStorage.getItem('gcal_events_v');
+      if (v === '2.1') {
+        const saved = localStorage.getItem('gcal_events');
+        if (saved) return JSON.parse(saved);
+      }
     } catch {}
+    localStorage.setItem('gcal_events_v', '2.1');
     return INITIAL_EVENTS;
   });
 
@@ -316,6 +321,31 @@ export default function App() {
       if (unsubscribeFirestore) unsubscribeFirestore();
     };
   }, [user, lang]);
+
+  // Auto-sync from saved Google Calendar iCal URL if present
+  useEffect(() => {
+    const savedUrl = localStorage.getItem('gcal_sync_url');
+    if (savedUrl) {
+      setSyncState('syncing');
+      fetchCalendarFromICalUrl(savedUrl)
+        .then((remoteEvents) => {
+          if (remoteEvents.length > 0) {
+            setEvents((prev) => {
+              const map = new Map(prev.map((e) => [e.id, e]));
+              for (const item of remoteEvents) {
+                map.set(item.id, item);
+              }
+              return Array.from(map.values());
+            });
+            setLastSyncedTime(new Date().toLocaleTimeString(lang === 'vi' ? 'vi-VN' : 'en-US'));
+            setSyncState('synced');
+          }
+        })
+        .catch(() => {
+          setSyncState('offline');
+        });
+    }
+  }, [lang]);
 
   // In-app reminder notification toast
   const [activeAlert, setActiveAlert] = useState<{ title: string; time: string } | null>(null);
@@ -803,11 +833,20 @@ export default function App() {
         events={events}
         categories={categories}
         onImportEvents={(imported) => {
-          setEvents((prev) => [...imported, ...prev]);
+          setEvents((prev) => {
+            const map = new Map(prev.map((e) => [e.id, e]));
+            for (const item of imported) {
+              map.set(item.id, item);
+            }
+            return Array.from(map.values());
+          });
+          setLastSyncedTime(new Date().toLocaleTimeString(lang === 'vi' ? 'vi-VN' : 'en-US'));
+          setSyncState('synced');
         }}
         syncState={syncState}
         lastSyncedTime={lastSyncedTime}
         lang={lang}
+        onSyncGoogleCalendar={handleSyncGoogleCalendar}
       />
 
       {/* Google Meet In-App Room Simulator */}
