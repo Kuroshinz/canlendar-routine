@@ -626,7 +626,7 @@ export default function App() {
         onToggleLang={toggleLang}
         darkMode={darkMode}
         onToggleDarkMode={toggleDarkMode}
-        userEmail={user?.email || ''}
+        userEmail={user?.email || 'Google'}
         onGoogleSignIn={handleGoogleSignIn}
         isLoggedInGoogle={Boolean(user)}
         isSyncing={isSyncing}

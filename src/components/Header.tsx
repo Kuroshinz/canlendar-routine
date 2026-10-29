@@ -342,7 +342,7 @@ export const Header: React.FC<HeaderProps> = ({
           onClick={() => setShowProfileMenu(!showProfileMenu)}
           className="w-8 h-8 rounded-full bg-linear-to-tr from-blue-600 to-indigo-600 text-white font-medium text-xs flex items-center justify-center ring-2 ring-transparent hover:ring-blue-300 transition-all cursor-pointer shadow-xs ml-1"
         >
-          {userEmail[0].toUpperCase()}
+          {(userEmail && userEmail.length > 0 ? userEmail[0] : 'G').toUpperCase()}
         </button>
       </div>
     </header>
