@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { CalendarEvent } from '../types/calendar';
 import { formatDateString, getMonthDays, doesEventOccurOnDate } from '../utils/calendarUtils';
 import { getLunarDate } from '../utils/lunarUtils';
+import { playNotificationSound } from '../utils/sound';
 import { Check, Video } from 'lucide-react';
 
 interface MonthViewProps {
@@ -90,6 +91,7 @@ export const MonthView: React.FC<MonthViewProps> = ({
                 const eventId = e.dataTransfer.getData('text/plain');
                 if (eventId && onMoveEvent) {
                   onMoveEvent(eventId, dateStr);
+                  playNotificationSound();
                 }
               }}
               className={`min-h-[95px] border-r border-b border-gray-200 dark:border-gray-800 p-1 flex flex-col transition-colors cursor-pointer group ${
@@ -166,7 +168,7 @@ export const MonthView: React.FC<MonthViewProps> = ({
                         backgroundColor: isMultiDayOrAllDay ? ev.color : 'transparent',
                         borderColor: ev.color,
                       }}
-                      className={`px-2 py-0.5 rounded-md text-[11px] truncate flex items-center gap-1.5 transition-all hover:brightness-95 cursor-pointer ${
+                      className={`px-2 py-0.5 rounded-md text-[11px] truncate flex items-center gap-1.5 transition-all hover:brightness-95 cursor-grab active:cursor-grabbing ${
                         isMultiDayOrAllDay
                           ? 'text-white font-medium shadow-2xs hover:shadow-xs'
                           : 'hover:bg-blue-50/50 dark:hover:bg-blue-900/30 border-l-3'
@@ -188,13 +190,13 @@ export const MonthView: React.FC<MonthViewProps> = ({
                       {ev.meetUrl && <Video className="w-2.5 h-2.5 shrink-0 opacity-80" />}
 
                       {ev.type === 'task' && (
-                        <Check className="w-2.5 h-2.5 shrink-0 text-emerald-500 stroke-[3]" />
+                        <Check className="w-2.5 h-2.5 shrink-0 stroke-[3] text-purple-500" />
                       )}
 
                       <span
                         className={`truncate ${
-                          ev.isCompleted ? 'line-through opacity-70 text-gray-500' : ''
-                        }`}
+                          ev.isCompleted ? 'line-through opacity-70' : ''
+                        } ${!isMultiDayOrAllDay ? 'text-gray-800 dark:text-gray-200' : ''}`}
                       >
                         {ev.title}
                       </span>
@@ -202,13 +204,13 @@ export const MonthView: React.FC<MonthViewProps> = ({
                   );
                 })}
 
-                {/* +N more button */}
+                {/* +N More Events Button */}
                 {hiddenCount > 0 && (
                   <button
                     onClick={(e) => handleOverflowClick(e, dateStr)}
-                    className="text-[10px] font-semibold text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 text-left px-1.5 py-0.5 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer"
+                    className="text-[11px] font-medium text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 px-1.5 py-0.5 rounded text-left transition-colors w-fit"
                   >
-                    +{hiddenCount} {lang === 'vi' ? 'sự kiện khác' : 'more'}
+                    +{hiddenCount} {lang === 'vi' ? 'sự kiện nữa' : 'more'}
                   </button>
                 )}
               </div>
@@ -217,78 +219,74 @@ export const MonthView: React.FC<MonthViewProps> = ({
         })}
       </div>
 
-      {/* Overflow popover */}
+      {/* Overflow Popup Modal */}
       {overflowDate && overflowAnchor && (
-        <>
+        <div
+          className="fixed inset-0 z-40"
+          onClick={() => {
+            setOverflowDate(null);
+            setOverflowAnchor(null);
+          }}
+        >
           <div
-            className="fixed inset-0 z-40"
-            onClick={() => {
-              setOverflowDate(null);
-              setOverflowAnchor(null);
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              top: `${Math.min(overflowAnchor.top, window.innerHeight - 280)}px`,
+              left: `${overflowAnchor.left}px`,
             }}
-          />
-          <div
-            style={{ top: overflowAnchor.top, left: overflowAnchor.left }}
-            className="fixed z-50 w-64 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 p-3 max-h-72 overflow-y-auto animate-in fade-in zoom-in-95"
+            className="absolute z-50 w-64 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 p-3 max-h-72 overflow-y-auto animate-in fade-in zoom-in-95 duration-100"
           >
-            <div className="flex items-center justify-between pb-2 border-b border-gray-100 dark:border-gray-700 mb-2">
-              <span className="text-xs font-bold text-gray-700 dark:text-gray-200">
+            <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-700 pb-2 mb-2">
+              <span className="text-xs font-semibold text-gray-700 dark:text-gray-200">
                 {overflowDate}
               </span>
               <button
-                onClick={() => {
-                  setOverflowDate(null);
-                  setOverflowAnchor(null);
-                }}
-                className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                onClick={() => setOverflowDate(null)}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-sm font-bold px-1"
               >
-                ✕
+                &times;
               </button>
             </div>
-            <div className="space-y-1.5">
+            <div className="flex flex-col gap-1.5">
               {activeEvents
                 .filter((ev) => doesEventOccurOnDate(ev, overflowDate))
                 .map((ev) => (
                   <div
                     key={ev.id}
                     onClick={(e) => {
-                      onSelectEvent(ev, e.currentTarget);
                       setOverflowDate(null);
+                      onSelectEvent(ev, e.currentTarget);
                     }}
                     style={{ backgroundColor: ev.color }}
-                    className="p-1.5 rounded text-white text-xs font-medium cursor-pointer shadow-xs hover:brightness-95 transition-all truncate"
+                    className="px-2.5 py-1 rounded-md text-xs text-white font-medium shadow-xs cursor-pointer hover:brightness-95 flex items-center gap-1.5 truncate"
                   >
-                    {!ev.allDay && ev.startTime ? `${ev.startTime} ` : ''}
-                    {ev.title}
+                    {ev.meetUrl && <Video className="w-3 h-3 shrink-0" />}
+                    {ev.type === 'task' && <Check className="w-3 h-3 shrink-0 stroke-[3]" />}
+                    <span className="truncate">{ev.title}</span>
+                    <span className="ml-auto text-[10px] font-mono opacity-80 shrink-0">
+                      {ev.startTime}
+                    </span>
                   </div>
                 ))}
             </div>
           </div>
-        </>
+        </div>
       )}
 
-      {/* Lightweight Hover Preview Tooltip */}
+      {/* Hover preview tooltip */}
       {hoveredEvent && (
         <div
-          style={{ top: hoveredEvent.top, left: hoveredEvent.left }}
-          className="fixed z-40 w-56 p-2.5 bg-gray-900/95 dark:bg-gray-800/95 backdrop-blur-md text-white rounded-xl shadow-xl pointer-events-none animate-in fade-in duration-100 text-xs space-y-1 border border-white/10"
+          style={{ top: `${hoveredEvent.top}px`, left: `${hoveredEvent.left}px` }}
+          className="fixed z-50 bg-gray-900/90 text-white text-xs px-2.5 py-1.5 rounded-lg shadow-xl border border-white/10 backdrop-blur-xs pointer-events-none max-w-xs animate-in fade-in duration-100"
         >
-          <div className="flex items-center gap-2">
-            <div
-              className="w-2.5 h-2.5 rounded-full shrink-0"
-              style={{ backgroundColor: hoveredEvent.event.color }}
-            />
-            <p className="font-semibold truncate">{hoveredEvent.event.title}</p>
+          <div className="font-semibold">{hoveredEvent.event.title}</div>
+          <div className="text-[10px] text-gray-300 font-mono mt-0.5">
+            {hoveredEvent.event.startTime} – {hoveredEvent.event.endTime}
           </div>
-          <p className="text-[11px] text-gray-300 font-mono">
-            {hoveredEvent.event.allDay
-              ? (lang === 'vi' ? 'Cả ngày' : 'All day')
-              : `${hoveredEvent.event.startTime} – ${hoveredEvent.event.endTime}`}
-          </p>
           {hoveredEvent.event.location && (
-            <p className="text-[10px] text-gray-400 truncate">
+            <div className="text-[10px] text-gray-400 mt-0.5 truncate">
               📍 {hoveredEvent.event.location}
-            </p>
+            </div>
           )}
         </div>
       )}
