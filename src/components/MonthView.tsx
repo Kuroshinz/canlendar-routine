@@ -64,7 +64,7 @@ export const MonthView: React.FC<MonthViewProps> = ({
       </div>
 
       {/* Month Days Grid */}
-      <div className="flex-1 grid grid-cols-7 auto-rows-[minmax(104px,1fr)] border-l border-t border-gray-200 dark:border-gray-800 overflow-y-auto">
+      <div className="flex-1 grid grid-cols-7 auto-rows-[minmax(128px,1fr)] border-l border-t border-gray-200 dark:border-gray-800 overflow-y-auto">
         {days.map((dayItem, index) => {
           const dateStr = dayItem.dateString;
           // Sort events: All-day / multi-day first, then chronologically by startTime
@@ -78,9 +78,11 @@ export const MonthView: React.FC<MonthViewProps> = ({
               return (a.startTime || '00:00').localeCompare(b.startTime || '00:00');
             });
 
-          // Max chips that fit a cell *including* the "+N more" row.
-          // When there is overflow we render one chip fewer so the "+N" line
-          // always has room and never overlaps the row below.
+          // Max chip rows that fit a cell *including* the "+N more" row.
+          // Cell overhead is 42px (padding + day header); each row is 18px with
+          // a 4px gap, so 4 rows fit a 128px grid row exactly. When there is
+          // overflow we render one chip fewer so the "+N" line always fits and
+          // can never overlap the week row below.
           const MAX_CHIPS = 4;
           const hasOverflow = dayEvents.length > MAX_CHIPS;
           const visibleCount = hasOverflow ? MAX_CHIPS - 1 : dayEvents.length;
