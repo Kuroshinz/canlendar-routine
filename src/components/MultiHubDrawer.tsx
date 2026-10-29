@@ -18,6 +18,7 @@ import {
   User as UserIcon,
 } from 'lucide-react';
 import { User } from 'firebase/auth';
+import { AppUser } from '../services/auth';
 import { CalendarEvent } from '../types/calendar';
 import { ExpenseEntry, StudyItem, DailyWellnessCheck, PomodoroState } from '../types/multiHub';
 import { playNotificationSound } from '../utils/sound';
@@ -26,7 +27,7 @@ interface MultiHubDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   events: CalendarEvent[];
-  user: User | null;
+  user: AppUser | User | null;
   onGoogleSignIn: () => Promise<void>;
   onGoogleSignOut: () => Promise<void>;
   onSyncGoogleCalendar: () => Promise<void>;

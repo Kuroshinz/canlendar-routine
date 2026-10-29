@@ -34,6 +34,7 @@ interface HeaderProps {
   onOpenShortcuts: () => void;
   onOpenExportImport: () => void;
   onOpenCloudSync?: () => void;
+  onGoogleSignIn?: () => Promise<void>;
   onOpenMultiHub?: () => void;
   searchQuery: string;
   onSearchChange: (query: string) => void;
@@ -63,6 +64,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenShortcuts,
   onOpenExportImport,
   onOpenCloudSync,
+  onGoogleSignIn,
   onOpenMultiHub,
   searchQuery,
   onSearchChange,
@@ -224,31 +226,39 @@ export const Header: React.FC<HeaderProps> = ({
           <span className="hidden sm:inline">{lang === 'vi' ? 'Phân tích' : 'Analytics'}</span>
         </button>
 
-        {/* Cloud Sync Button & Status Badge */}
-        <button
-          onClick={onOpenCloudSync || onOpenExportImport}
-          title={lang === 'vi' ? 'Đồng bộ đám mây & iCal' : 'Cloud Sync & iCal'}
-          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-medium border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer"
-        >
-          <Cloud
-            className={`w-3.5 h-3.5 ${
-              syncState === 'syncing'
-                ? 'text-amber-500 animate-spin'
-                : syncState === 'synced'
-                ? 'text-emerald-500'
-                : 'text-gray-400'
-            }`}
-          />
-          <span className="hidden lg:inline text-[11px] font-mono font-medium">
-            {syncState === 'synced'
-              ? lang === 'vi'
-                ? 'Đã sync'
-                : 'Synced'
-              : syncState === 'syncing'
-              ? '...'
-              : 'Offline'}
-          </span>
-        </button>
+        {/* Google Authentication & Sync Button */}
+        {isLoggedInGoogle ? (
+          <button
+            onClick={onOpenCloudSync || onOpenExportImport}
+            title={lang === 'vi' ? 'Tài khoản Google đã kết nối • Bấm để đồng bộ' : 'Google Connected • Click to sync'}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-700/60 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-all cursor-pointer shadow-2xs"
+          >
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+            <span className="hidden md:inline font-mono text-[11px] font-semibold truncate max-w-[150px]">
+              {userEmail}
+            </span>
+            <span className="md:hidden font-bold text-[11px]">
+              {lang === 'vi' ? 'Đã đồng bộ' : 'Synced'}
+            </span>
+            <RefreshCw className={`w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0 ${isSyncing ? 'animate-spin' : ''}`} />
+          </button>
+        ) : (
+          <button
+            onClick={onGoogleSignIn || onOpenCloudSync}
+            title={lang === 'vi' ? 'Đăng nhập Google để đồng bộ lịch ngay lập tức' : 'Sign in with Google to sync calendar'}
+            className="flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 shadow-xs cursor-pointer hover:shadow-sm transition-all"
+          >
+            {/* Google official 4-color G icon */}
+            <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24">
+              <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"/>
+              <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24z"/>
+              <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.98 0 12s.45 3.82 1.25 5.42l4.03-3.15z"/>
+              <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
+            </svg>
+            <span className="hidden sm:inline font-sans">{lang === 'vi' ? 'Đăng nhập Google' : 'Sign in with Google'}</span>
+            <span className="sm:hidden font-sans">Google</span>
+          </button>
+        )}
 
         {/* Quick Add with Natural Language */}
         <button

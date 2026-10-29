@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { User } from 'firebase/auth';
+import { AppUser } from '../../services/auth';
 import { CalendarEvent, CalendarCategory, SyncState } from '../../types/calendar';
 import { downloadICalFile, parseICalToEvents } from '../../services/icalService';
 import { batchUploadEvents } from '../../services/firestoreSync';
@@ -26,7 +27,7 @@ import {
 interface CloudSyncModalProps {
   isOpen: boolean;
   onClose: () => void;
-  user: User | null;
+  user: AppUser | User | null;
   onGoogleSignIn: () => Promise<void>;
   onGoogleSignOut: () => Promise<void>;
   events: CalendarEvent[];

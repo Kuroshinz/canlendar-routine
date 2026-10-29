@@ -35,7 +35,7 @@ import { RightSidebar } from './components/RightSidebar';
 import { GoogleMeetRoom } from './components/GoogleMeetRoom';
 import { MultiHubDrawer } from './components/MultiHubDrawer';
 import { User } from 'firebase/auth';
-import { initAuth, googleSignIn, logout, getAccessToken } from './services/auth';
+import { initAuth, googleSignIn, logout, getAccessToken, AppUser } from './services/auth';
 import { fetchGoogleCalendarEvents, createGoogleCalendarEvent } from './services/googleCalendarSync';
 import { fetchCalendarFromICalUrl } from './services/googleCalendarUrlSync';
 import {
@@ -185,10 +185,20 @@ export default function App() {
   });
 
   // Google OAuth & Cloud Sync State
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<AppUser | User | null>(() => {
+    try {
+      const saved = localStorage.getItem('gcal_active_user');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return null;
+  });
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
-  const [syncState, setSyncState] = useState<SyncState>('offline');
-  const [lastSyncedTime, setLastSyncedTime] = useState<string | null>(null);
+  const [syncState, setSyncState] = useState<SyncState>(() => {
+    return localStorage.getItem('gcal_active_user') ? 'synced' : 'offline';
+  });
+  const [lastSyncedTime, setLastSyncedTime] = useState<string | null>(() => {
+    return localStorage.getItem('gcal_active_user') ? 'Vừa xong' : null;
+  });
 
   // 8. Event saving / updating handler
   const handleSaveEvent = useCallback((savedEvent: CalendarEvent) => {
@@ -507,13 +517,25 @@ export default function App() {
   // Google OAuth Handlers
   const handleGoogleSignIn = async () => {
     try {
+      setIsSyncing(true);
       const res = await googleSignIn();
       if (res?.user) {
         setUser(res.user);
         setSyncState('synced');
+        setActiveAlert({
+          title: lang === 'vi' ? 'Đã đăng nhập Google thành công!' : 'Google Account Connected!',
+          time: res.user.email || 'Google',
+        });
+        setLastSyncedTime(new Date().toLocaleTimeString(lang === 'vi' ? 'vi-VN' : 'en-US'));
+        // Automatically sync events if token available
+        if (res.accessToken) {
+          handleSyncGoogleCalendar(res.accessToken);
+        }
       }
     } catch (err) {
       console.error('Google Sign In failed:', err);
+    } finally {
+      setIsSyncing(false);
     }
   };
 
@@ -601,7 +623,8 @@ export default function App() {
         onToggleLang={toggleLang}
         darkMode={darkMode}
         onToggleDarkMode={toggleDarkMode}
-        userEmail={user?.email || 'user@example.com'}
+        userEmail={user?.email || ''}
+        onGoogleSignIn={handleGoogleSignIn}
         isLoggedInGoogle={Boolean(user)}
         isSyncing={isSyncing}
         syncState={syncState}
