@@ -29,10 +29,10 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
 
   const suggestions = lang === 'vi'
     ? [
-        'Há»p chiáº¿n lÆ°á»£c lÃºc 10h sÃ¡ng mai',
-        'Ä‚n trÆ°a cÃ¹ng nhÃ³m thiáº¿t káº¿ lÃºc 12h thá»© 6',
-        'Gáº·p khÃ¡ch hÃ ng lÃºc 15h30 chiá»u mai',
-        'Táº­p gym lÃºc 18h hÃ ng ngÃ y',
+        'Họp chiến lược lúc 10h sáng mai',
+        'Ăn trưa cùng nhóm thiết kế lúc 12h thứ 6',
+        'Gặp khách hàng lúc 15h30 chiều mai',
+        'Tập gym lúc 18h hàng ngày',
       ]
     : [
         'Team retrospective at 10am tomorrow',
@@ -71,7 +71,7 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
           <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
             <Sparkles className="w-5 h-5 text-blue-500" />
             <h3 className="text-sm font-bold">
-              {lang === 'vi' ? 'Táº¡o nhanh sá»± kiá»‡n thÃ´ng minh' : 'Quick Create with Natural Language'}
+              {lang === 'vi' ? 'Tạo nhanh sự kiện thông minh' : 'Quick Create with Natural Language'}
             </h3>
           </div>
           <button
@@ -90,7 +90,7 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
               onChange={(e) => setInputText(e.target.value)}
               placeholder={
                 lang === 'vi'
-                  ? 'VÃ­ dá»¥: Há»p bÃ¡o cÃ¡o tiáº¿n Ä‘á»™ 14h ngÃ y mai'
+                  ? 'Ví dụ: Họp báo cáo tiến độ 14h ngày mai'
                   : 'E.g.: Product review tomorrow at 2pm'
               }
               autoFocus
@@ -102,7 +102,7 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
           {parsed && (
             <div className="p-3 bg-gray-50 dark:bg-gray-800/80 rounded-xl border border-gray-200 dark:border-gray-700 text-xs space-y-1.5">
               <span className="font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-[10px]">
-                {lang === 'vi' ? 'Káº¿t quáº£ phÃ¢n tÃ­ch:' : 'Parsed Result:'}
+                {lang === 'vi' ? 'Kết quả phân tích:' : 'Parsed Result:'}
               </span>
               <div className="font-semibold text-gray-800 dark:text-gray-100 text-sm">
                 {parsed.title}
@@ -114,7 +114,7 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
                 </span>
                 <span className="flex items-center gap-1">
                   <Clock className="w-3.5 h-3.5 text-blue-500" />
-                  {parsed.startTime} â€“ {parsed.endTime}
+                  {parsed.startTime} – {parsed.endTime}
                 </span>
               </div>
             </div>
@@ -123,7 +123,7 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
           {/* Sample Prompts */}
           <div>
             <span className="text-[11px] font-medium text-gray-400 block mb-1.5">
-              {lang === 'vi' ? 'Gá»£i Ã½ cÃ¢u lá»‡nh máº«u:' : 'Suggestions:'}
+              {lang === 'vi' ? 'Gợi ý câu lệnh mẫu:' : 'Suggestions:'}
             </span>
             <div className="flex flex-wrap gap-1.5">
               {suggestions.map((s, idx) => (
@@ -146,14 +146,14 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
               onClick={onClose}
               className="px-4 py-2 text-xs font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg cursor-pointer"
             >
-              {lang === 'vi' ? 'Há»§y' : 'Cancel'}
+              {lang === 'vi' ? 'Hủy' : 'Cancel'}
             </button>
             <button
               type="submit"
               disabled={!parsed || !parsed.title.trim()}
               className="flex items-center gap-1.5 px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg text-xs font-semibold shadow-xs transition-colors cursor-pointer"
             >
-              <span>{lang === 'vi' ? 'Táº¡o sá»± kiá»‡n' : 'Add event'}</span>
+              <span>{lang === 'vi' ? 'Tạo sự kiện' : 'Add event'}</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>
