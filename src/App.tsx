@@ -38,7 +38,7 @@ import { User } from 'firebase/auth';
 import { initAuth, logout, getAccessToken, AppUser } from './services/auth';
 import { fetchGoogleCalendarEvents, createGoogleCalendarEvent } from './services/googleCalendarSync';
 import { fetchCalendarFromICalUrl } from './services/googleCalendarUrlSync';
-import { executeRealGoogleSync } from './services/realGoogleAuth';
+import { executeRealGoogleSync, hasOwnClientId } from './services/realGoogleAuth';
 import {
   subscribeUserEvents,
   saveEventToFirestore,
@@ -517,6 +517,15 @@ export default function App() {
 
   // Google OAuth Handlers
   const handleGoogleSignIn = async () => {
+    // The shared sample Client ID cannot authorize this origin, so the Google
+    // consent popup would only end on a "400: origin_mismatch" error page.
+    // Send the user straight to the real sync dialog (own Client ID, access
+    // token, or secret iCal URL) instead of opening a dead popup.
+    if (!hasOwnClientId()) {
+      setIsCloudSyncOpen(true);
+      return;
+    }
+
     try {
       setIsSyncing(true);
       // Attempt official real Google OAuth login via Google Identity Services

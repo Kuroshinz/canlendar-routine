@@ -23,6 +23,18 @@ export const DEFAULT_GOOGLE_CLIENT_ID =
   ENV_GOOGLE_CLIENT_ID || firebaseConfig.oAuthClientId || '';
 
 /**
+ * True only when the user supplied their own OAuth Client ID (env or dialog).
+ * The shared sample client only authorizes its own registered origins, so the
+ * GIS popup is guaranteed to fail with `400: origin_mismatch` on any other
+ * origin. In that case the caller should open the sync dialog instead of
+ * launching a popup that ends on a Google error page.
+ */
+export function hasOwnClientId(): boolean {
+  if (ENV_GOOGLE_CLIENT_ID) return true;
+  return Boolean(localStorage.getItem('gcal_custom_client_id'));
+}
+
+/**
  * Fetch real user profile from Google UserInfo endpoint
  */
 export async function fetchGoogleUserInfo(accessToken: string): Promise<AppUser> {

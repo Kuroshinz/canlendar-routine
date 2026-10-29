@@ -245,7 +245,11 @@ export const Header: React.FC<HeaderProps> = ({
         ) : (
           <button
             onClick={onGoogleSignIn || onOpenCloudSync}
-            title={lang === 'vi' ? 'Đăng nhập Google để đồng bộ lịch ngay lập tức' : 'Sign in with Google to sync calendar'}
+            title={
+              lang === 'vi'
+                ? 'Kết nối Google Calendar thật (OAuth, Access Token hoặc URL iCal)'
+                : 'Connect real Google Calendar (OAuth, access token, or iCal URL)'
+            }
             className="flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 shadow-xs cursor-pointer hover:shadow-sm transition-all"
           >
             {/* Google official 4-color G icon */}
@@ -255,7 +259,7 @@ export const Header: React.FC<HeaderProps> = ({
               <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.98 0 12s.45 3.82 1.25 5.42l4.03-3.15z"/>
               <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
             </svg>
-            <span className="hidden sm:inline font-sans">{lang === 'vi' ? 'Đăng nhập Google' : 'Sign in with Google'}</span>
+            <span className="hidden sm:inline font-sans">{lang === 'vi' ? 'Kết nối Google' : 'Connect Google'}</span>
             <span className="sm:hidden font-sans">Google</span>
           </button>
         )}
