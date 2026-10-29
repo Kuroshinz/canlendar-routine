@@ -7,7 +7,13 @@ import {
   doesEventOccurOnDate,
   computeEventLayout,
 } from '../utils/calendarUtils';
-import { timeStringToMinutes, formatLiveDuration } from '../utils/dndUtils';
+import {
+  timeStringToMinutes,
+  minutesToTimeString,
+  snapDeltaMinutes,
+  formatLiveDuration,
+  HOUR_HEIGHT,
+} from '../utils/dndUtils';
 import { Video, MapPin, Check, Clock } from 'lucide-react';
 
 interface TimeGridViewProps {
@@ -16,7 +22,8 @@ interface TimeGridViewProps {
   events: CalendarEvent[];
   visibleCategoryIds: Set<string>;
   onSelectEvent: (event: CalendarEvent, targetElement: HTMLElement) => void;
-  onSlotClick: (dateStr: string, timeStr: string) => void;
+  onSlotClick: (dateStr: string, timeStr: string, clientX?: number, clientY?: number) => void;
+  onSlotRangeSelect?: (dateStr: string, startTime: string, endTime: string, clientX: number, clientY: number) => void;
   lang: 'vi' | 'en';
   // DnD & Resize Props
   dndState?: DnDState;
@@ -27,6 +34,15 @@ interface TimeGridViewProps {
   onCancelDnD?: () => void;
 }
 
+interface DragCreationState {
+  isCreating: boolean;
+  dateStr: string;
+  startY: number;
+  startTime: string;
+  currentEndTime: string;
+  durationMinutes: number;
+}
+
 export const TimeGridView: React.FC<TimeGridViewProps> = ({
   currentDate,
   viewType,
@@ -34,6 +50,7 @@ export const TimeGridView: React.FC<TimeGridViewProps> = ({
   visibleCategoryIds,
   onSelectEvent,
   onSlotClick,
+  onSlotRangeSelect,
   lang,
   dndState,
   onStartDrag,
@@ -44,6 +61,9 @@ export const TimeGridView: React.FC<TimeGridViewProps> = ({
 }) => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const gridContainerRef = useRef<HTMLDivElement>(null);
+
+  // Drag-to-Create state
+  const [dragCreation, setDragCreation] = useState<DragCreationState | null>(null);
 
   // Compute the columns of dates
   let days: Date[] = [];
@@ -76,47 +96,75 @@ export const TimeGridView: React.FC<TimeGridViewProps> = ({
   const weekdayNamesVi = ['CN', 'THỨ 2', 'THỨ 3', 'THỨ 4', 'THỨ 5', 'THỨ 6', 'THỨ 7'];
   const weekdayNamesEn = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 
-  // Global Pointer Events for Drag & Resize
+  // Global Pointer Events for Existing Events Drag & Resize
   const isInteracting = Boolean(dndState?.isDragging || dndState?.isResizing);
 
   const handleGlobalPointerMove = useCallback(
     (e: PointerEvent) => {
-      if (!isInteracting || !onPointerMove || !gridContainerRef.current) return;
+      // 1. Existing event DnD
+      if (isInteracting && onPointerMove && gridContainerRef.current) {
+        const rect = gridContainerRef.current.getBoundingClientRect();
+        const relativeX = e.clientX - rect.left;
+        const colWidth = rect.width / days.length;
+        const colIndex = Math.max(0, Math.min(days.length - 1, Math.floor(relativeX / colWidth)));
+        const targetDate = formatDateString(days[colIndex]);
 
-      const rect = gridContainerRef.current.getBoundingClientRect();
-      const relativeX = e.clientX - rect.left;
+        onPointerMove(e.clientY, targetDate);
 
-      // Determine column based on relativeX
-      const colWidth = rect.width / days.length;
-      const colIndex = Math.max(0, Math.min(days.length - 1, Math.floor(relativeX / colWidth)));
-      const targetDate = formatDateString(days[colIndex]);
+        if (scrollContainerRef.current) {
+          const scrollRect = scrollContainerRef.current.getBoundingClientRect();
+          if (e.clientY < scrollRect.top + 50) {
+            scrollContainerRef.current.scrollTop -= 10;
+          } else if (e.clientY > scrollRect.bottom - 50) {
+            scrollContainerRef.current.scrollTop += 10;
+          }
+        }
+      }
 
-      onPointerMove(e.clientY, targetDate);
+      // 2. Drag to Create
+      if (dragCreation?.isCreating) {
+        const deltaY = e.clientY - dragCreation.startY;
+        const deltaMins = snapDeltaMinutes((deltaY / HOUR_HEIGHT) * 60, 15);
+        const startM = timeStringToMinutes(dragCreation.startTime);
+        const endM = Math.max(startM + 15, Math.min(24 * 60, startM + Math.max(15, deltaMins)));
+        const duration = endM - startM;
 
-      // Auto-scroll if near top or bottom edges of scrollContainer
-      if (scrollContainerRef.current) {
-        const scrollRect = scrollContainerRef.current.getBoundingClientRect();
-        const topThreshold = scrollRect.top + 50;
-        const bottomThreshold = scrollRect.bottom - 50;
+        setDragCreation((prev) =>
+          prev
+            ? {
+                ...prev,
+                currentEndTime: minutesToTimeString(endM),
+                durationMinutes: duration,
+              }
+            : null
+        );
+      }
+    },
+    [isInteracting, onPointerMove, days, dragCreation]
+  );
 
-        if (e.clientY < topThreshold) {
-          scrollContainerRef.current.scrollTop -= 10;
-        } else if (e.clientY > bottomThreshold) {
-          scrollContainerRef.current.scrollTop += 10;
+  const handleGlobalPointerUp = useCallback(
+    (e: PointerEvent) => {
+      if (isInteracting && onFinishDnD) {
+        onFinishDnD();
+      }
+
+      if (dragCreation?.isCreating) {
+        const { dateStr, startTime, currentEndTime, durationMinutes } = dragCreation;
+        setDragCreation(null);
+
+        if (durationMinutes > 15 && onSlotRangeSelect) {
+          onSlotRangeSelect(dateStr, startTime, currentEndTime, e.clientX, e.clientY);
+        } else {
+          onSlotClick(dateStr, startTime, e.clientX, e.clientY);
         }
       }
     },
-    [isInteracting, onPointerMove, days]
+    [isInteracting, onFinishDnD, dragCreation, onSlotRangeSelect, onSlotClick]
   );
 
-  const handleGlobalPointerUp = useCallback(() => {
-    if (isInteracting && onFinishDnD) {
-      onFinishDnD();
-    }
-  }, [isInteracting, onFinishDnD]);
-
   useEffect(() => {
-    if (isInteracting) {
+    if (isInteracting || dragCreation?.isCreating) {
       window.addEventListener('pointermove', handleGlobalPointerMove);
       window.addEventListener('pointerup', handleGlobalPointerUp);
       return () => {
@@ -124,7 +172,7 @@ export const TimeGridView: React.FC<TimeGridViewProps> = ({
         window.removeEventListener('pointerup', handleGlobalPointerUp);
       };
     }
-  }, [isInteracting, handleGlobalPointerMove, handleGlobalPointerUp]);
+  }, [isInteracting, dragCreation?.isCreating, handleGlobalPointerMove, handleGlobalPointerUp]);
 
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden bg-white dark:bg-gray-900 select-none">
@@ -184,7 +232,7 @@ export const TimeGridView: React.FC<TimeGridViewProps> = ({
                 return (
                   <div
                     key={idx}
-                    onClick={() => onSlotClick(dateStr, '09:00')}
+                    onClick={(e) => onSlotClick(dateStr, '09:00', e.clientX, e.clientY)}
                     className="p-1 border-r border-gray-200 dark:border-gray-800 min-h-[36px] flex flex-col gap-1 cursor-pointer"
                   >
                     {allDayEvents.map((ev) => (
@@ -235,7 +283,7 @@ export const TimeGridView: React.FC<TimeGridViewProps> = ({
                 const isToday = dateStr === todayStr;
                 const layoutMap = computeEventLayout(activeEvents, dateStr);
 
-                // Check if ghost preview belongs to this day column
+                // Existing event ghost
                 const showGhostHere =
                   isInteracting &&
                   dndState?.currentPreview &&
@@ -254,6 +302,13 @@ export const TimeGridView: React.FC<TimeGridViewProps> = ({
                   1.5
                 );
 
+                // Drag to create box
+                const isCreatingHere = dragCreation?.isCreating && dragCreation.dateStr === dateStr;
+                const createStartMins = isCreatingHere ? timeStringToMinutes(dragCreation.startTime) : 0;
+                const createEndMins = isCreatingHere ? timeStringToMinutes(dragCreation.currentEndTime) : 0;
+                const createTopPercent = (createStartMins / (24 * 60)) * 100;
+                const createHeightPercent = Math.max(((createEndMins - createStartMins) / (24 * 60)) * 100, 1.2);
+
                 return (
                   <div
                     key={colIdx}
@@ -265,7 +320,18 @@ export const TimeGridView: React.FC<TimeGridViewProps> = ({
                       return (
                         <div
                           key={hour}
-                          onClick={() => onSlotClick(dateStr, timeFormatted)}
+                          onPointerDown={(e) => {
+                            if (e.button !== 0 || isInteracting) return;
+                            // Start Drag-to-Create
+                            setDragCreation({
+                              isCreating: true,
+                              dateStr,
+                              startY: e.clientY,
+                              startTime: timeFormatted,
+                              currentEndTime: `${String(Math.min(23, hour + 1)).padStart(2, '0')}:00`,
+                              durationMinutes: 60,
+                            });
+                          }}
                           className="h-14 border-b border-gray-100 dark:border-gray-800/80 hover:bg-blue-50/20 dark:hover:bg-blue-900/10 cursor-pointer relative"
                         >
                           {/* Half-hour subtle dashed line */}
@@ -273,6 +339,29 @@ export const TimeGridView: React.FC<TimeGridViewProps> = ({
                         </div>
                       );
                     })}
+
+                    {/* Live Drag-to-Create Selection Box */}
+                    {isCreatingHere && dragCreation && (
+                      <div
+                        style={{
+                          top: `${createTopPercent}%`,
+                          height: `${createHeightPercent}%`,
+                          left: '4px',
+                          right: '4px',
+                        }}
+                        className="absolute z-30 rounded-lg bg-blue-500/25 border-2 border-blue-500 shadow-md pointer-events-none flex flex-col justify-between p-1.5"
+                      >
+                        <div className="bg-blue-600 text-white text-[10px] font-mono font-bold px-2 py-0.5 rounded shadow-sm w-fit flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          <span>
+                            {dragCreation.startTime} – {dragCreation.currentEndTime} ({formatLiveDuration(dragCreation.durationMinutes, lang)})
+                          </span>
+                        </div>
+                        <span className="text-[11px] font-semibold text-blue-700 dark:text-blue-300">
+                          {lang === 'vi' ? '(Thả chuột để thêm sự kiện)' : '(Release to create event)'}
+                        </span>
+                      </div>
+                    )}
 
                     {/* Real-time Current Time Line (Red) */}
                     {isToday && (
@@ -285,7 +374,7 @@ export const TimeGridView: React.FC<TimeGridViewProps> = ({
                       </div>
                     )}
 
-                    {/* Ghost Preview Card when Dragging or Resizing */}
+                    {/* Ghost Preview Card when Dragging or Resizing existing event */}
                     {showGhostHere && dndState?.initialEvent && (
                       <div
                         style={{
@@ -328,8 +417,8 @@ export const TimeGridView: React.FC<TimeGridViewProps> = ({
                         <div
                           key={ev.id}
                           onPointerDown={(e) => {
-                            // Don't trigger drag if clicking links or details
-                            if (e.button !== 0) return; // Only left-click
+                            if (e.button !== 0) return;
+                            e.stopPropagation();
                             onStartDrag?.(ev, e.clientX, e.clientY);
                           }}
                           onClick={(e) => {

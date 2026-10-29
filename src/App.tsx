@@ -26,6 +26,8 @@ import { TimeAnalyticsView } from './components/analytics/TimeAnalyticsView';
 import { EventModal } from './components/EventModal';
 import { EventDetailCard } from './components/EventDetailCard';
 import { QuickAddModal } from './components/QuickAddModal';
+import { MiniEventPopover } from './components/MiniEventPopover';
+import { DayPlannerDrawer } from './components/DayPlannerDrawer';
 import { ShortcutsModal } from './components/ShortcutsModal';
 import { ExportImportModal } from './components/ExportImportModal';
 import { CloudSyncModal } from './components/sync/CloudSyncModal';
@@ -149,6 +151,30 @@ export default function App() {
   const [isCloudSyncOpen, setIsCloudSyncOpen] = useState(false);
   const [isMultiHubOpen, setIsMultiHubOpen] = useState(false);
 
+  // Mini Inline Event Popover state
+  const [miniPopover, setMiniPopover] = useState<{
+    isOpen: boolean;
+    position: { top: number; left: number } | null;
+    dateStr: string;
+    startTime: string;
+    endTime: string;
+  }>({
+    isOpen: false,
+    position: null,
+    dateStr: '',
+    startTime: '09:00',
+    endTime: '10:00',
+  });
+
+  // Day Planner Drawer state
+  const [dayPlanner, setDayPlanner] = useState<{
+    isOpen: boolean;
+    dateStr: string;
+  }>({
+    isOpen: false,
+    dateStr: formatDateString(new Date(2026, 9, 29)),
+  });
+
   // Google OAuth & Cloud Sync State
   const [user, setUser] = useState<User | null>(null);
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
@@ -268,10 +294,8 @@ export default function App() {
               const remote = remoteMap.get(local.id);
               if (!remote) return local;
               remoteMap.delete(local.id);
-              // Choose latest updated
               return (remote.updatedAt || 0) > (local.updatedAt || 0) ? remote : local;
             });
-            // Add any new remote events
             return [...merged, ...Array.from(remoteMap.values())];
           });
         }
@@ -352,6 +376,8 @@ export default function App() {
         setIsShortcutsOpen(false);
         setIsExportImportOpen(false);
         setIsCloudSyncOpen(false);
+        setMiniPopover((prev) => ({ ...prev, isOpen: false }));
+        setDayPlanner((prev) => ({ ...prev, isOpen: false }));
         cancelDnD();
         return;
       }
@@ -392,35 +418,6 @@ export default function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleNavigateToday, handleNavigateNext, handleNavigatePrev, cancelDnD]);
 
-  // Reminder alert checker
-  useEffect(() => {
-    const timer = setInterval(() => {
-      const todayStr = formatDateString(new Date());
-      const nowH = new Date().getHours();
-      const nowM = new Date().getMinutes();
-      const nowTotalMin = nowH * 60 + nowM;
-
-      for (const ev of events) {
-        if (!ev.allDay && ev.startDate === todayStr && ev.startTime) {
-          const [eh, em] = ev.startTime.split(':').map(Number);
-          const evTotalMin = eh * 60 + em;
-          const diff = evTotalMin - nowTotalMin;
-
-          if (diff === 10) {
-            playNotificationSound();
-            setActiveAlert({
-              title: ev.title,
-              time: ev.startTime,
-            });
-            break;
-          }
-        }
-      }
-    }, 60000);
-
-    return () => clearInterval(timer);
-  }, [events]);
-
   // Category toggles
   const handleToggleCategory = (id: string) => {
     setCategories((prev) =>
@@ -451,6 +448,26 @@ export default function App() {
     setModalDate(dateStr || formatDateString(currentDate));
     setModalTime(timeStr || '09:00');
     setIsEventModalOpen(true);
+  };
+
+  // Inline Quick Add trigger on MonthView or TimeGridView click
+  const handleOpenInlineQuickAdd = (
+    dateStr: string,
+    startTime: string = '09:00',
+    endTime: string = '10:00',
+    clientX?: number,
+    clientY?: number
+  ) => {
+    const left = clientX !== undefined ? clientX : window.innerWidth / 2 - 180;
+    const top = clientY !== undefined ? clientY : window.innerHeight / 2 - 170;
+
+    setMiniPopover({
+      isOpen: true,
+      position: { top, left },
+      dateStr,
+      startTime,
+      endTime,
+    });
   };
 
   // Google OAuth Handlers
@@ -588,7 +605,12 @@ export default function App() {
               events={events}
               visibleCategoryIds={visibleCategoryIds}
               onSelectEvent={(ev) => setSelectedEventForDetail(ev)}
-              onCellClick={(dateStr) => openCreateModal('event', dateStr)}
+              onCellClick={(dateStr, clientX, clientY) => {
+                handleOpenInlineQuickAdd(dateStr, '09:00', '10:00', clientX, clientY);
+              }}
+              onOpenDayPlanner={(dateStr) => {
+                setDayPlanner({ isOpen: true, dateStr });
+              }}
               onMoveEvent={handleMoveEvent}
               lang={lang}
             />
@@ -601,7 +623,15 @@ export default function App() {
               events={events}
               visibleCategoryIds={visibleCategoryIds}
               onSelectEvent={(ev) => setSelectedEventForDetail(ev)}
-              onSlotClick={(dateStr, timeStr) => openCreateModal('event', dateStr, timeStr)}
+              onSlotClick={(dateStr, timeStr, clientX, clientY) => {
+                const parts = timeStr.split(':');
+                const nextH = Math.min(23, parseInt(parts[0], 10) + 1);
+                const nextTime = `${String(nextH).padStart(2, '0')}:${parts[1]}`;
+                handleOpenInlineQuickAdd(dateStr, timeStr, nextTime, clientX, clientY);
+              }}
+              onSlotRangeSelect={(dateStr, startTime, endTime, clientX, clientY) => {
+                handleOpenInlineQuickAdd(dateStr, startTime, endTime, clientX, clientY);
+              }}
               lang={lang}
               dndState={dndState}
               onStartDrag={startDrag}
@@ -651,6 +681,43 @@ export default function App() {
         {/* Right Google Workspace Utility Dock (Keep, Tasks, Contacts, Maps) */}
         <RightSidebar lang={lang} />
       </div>
+
+      {/* Mini Inline Event Creation Popover */}
+      <MiniEventPopover
+        isOpen={miniPopover.isOpen}
+        position={miniPopover.position}
+        dateStr={miniPopover.dateStr}
+        startTime={miniPopover.startTime}
+        endTime={miniPopover.endTime}
+        categories={categories}
+        onSave={handleSaveEvent}
+        onOpenFullModal={(dateStr, startTime, endTime, title) => {
+          setEventToEdit(null);
+          setModalDate(dateStr);
+          setModalTime(startTime);
+          setIsEventModalOpen(true);
+        }}
+        onClose={() => setMiniPopover((prev) => ({ ...prev, isOpen: false }))}
+        lang={lang}
+      />
+
+      {/* Dedicated Day Planner Drawer */}
+      <DayPlannerDrawer
+        isOpen={dayPlanner.isOpen}
+        onClose={() => setDayPlanner((prev) => ({ ...prev, isOpen: false }))}
+        selectedDateStr={dayPlanner.dateStr}
+        onSelectDate={(dateStr) => setDayPlanner((prev) => ({ ...prev, dateStr }))}
+        events={events}
+        categories={categories}
+        onSelectEvent={(ev) => setSelectedEventForDetail(ev)}
+        onAddEventClick={(dateStr, timeStr) => {
+          const parts = timeStr.split(':');
+          const nextH = Math.min(23, parseInt(parts[0], 10) + 1);
+          const nextTime = `${String(nextH).padStart(2, '0')}:${parts[1]}`;
+          handleOpenInlineQuickAdd(dateStr, timeStr, nextTime);
+        }}
+        lang={lang}
+      />
 
       {/* Event Details Floating Card */}
       {selectedEventForDetail && (
