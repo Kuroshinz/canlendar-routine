@@ -1,8 +1,10 @@
-export type CalendarViewType = 'month' | 'week' | 'day' | 'fourDay' | 'year' | 'schedule';
+﻿export type CalendarViewType = 'month' | 'week' | 'day' | 'fourDay' | 'year' | 'schedule' | 'analytics';
 
 export type EventType = 'event' | 'task' | 'reminder';
 
 export type RecurrenceType = 'none' | 'daily' | 'weekly' | 'monthly' | 'yearly';
+
+export type SyncState = 'synced' | 'syncing' | 'offline' | 'error';
 
 export interface EventGuest {
   email: string;
@@ -30,6 +32,7 @@ export interface CalendarEvent {
   type: EventType;
   isCompleted?: boolean; // For tasks & reminders
   createdAt: number;
+  updatedAt?: number;
 }
 
 export interface CalendarCategory {
@@ -46,6 +49,33 @@ export interface GoogleColor {
   name: string;
   nameVi: string;
   hex: string;
+}
+
+export interface LiveTimePreview {
+  date: string;
+  startTime: string;
+  endTime: string;
+  durationMinutes: number;
+}
+
+export interface DnDState {
+  isDragging: boolean;
+  isResizing: boolean;
+  eventId: string | null;
+  initialEvent: CalendarEvent | null;
+  currentPreview: LiveTimePreview | null;
+  dragStartX: number;
+  dragStartY: number;
+  originalStartTime: string;
+  originalEndTime: string;
+  originalDate: string;
+}
+
+export interface WeeklyGoal {
+  id: string;
+  category: string;
+  targetHours: number;
+  color?: string;
 }
 
 export const GOOGLE_COLORS: GoogleColor[] = [

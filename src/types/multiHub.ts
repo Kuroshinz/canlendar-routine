@@ -1,4 +1,4 @@
-export interface ExpenseEntry {
+﻿export interface ExpenseEntry {
   id: string;
   title: string;
   amount: number;
@@ -33,4 +33,28 @@ export interface PomodoroState {
   isRunning: boolean;
   mode: 'work' | 'shortBreak' | 'longBreak';
   sessionsCompleted: number;
+}
+
+export interface CategoryBreakdownItem {
+  categoryId: string;
+  categoryName: string;
+  color: string;
+  minutes: number;
+  percentage: number;
+}
+
+export interface OverloadDayItem {
+  date: string;
+  totalHours: number;
+  reason: string;
+}
+
+export interface AnalyticsMetrics {
+  totalMinutes: number;
+  totalEvents: number;
+  deepWorkMinutes: number;
+  meetingMinutes: number;
+  categoryBreakdown: CategoryBreakdownItem[];
+  isOverloaded: boolean;
+  overloadedDays: OverloadDayItem[];
 }
