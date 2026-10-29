@@ -1,4 +1,12 @@
-@import "tailwindcss";
+﻿@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --color-gray-750: #262c36;
+  --color-gray-850: #1a1e24;
+  --color-gray-950: #0d1117;
+}
 
 @layer base {
   body {

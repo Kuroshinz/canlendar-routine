@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import {
   X,
   Clock,
@@ -142,7 +142,7 @@ export const EventModal: React.FC<EventModalProps> = ({
     e.preventDefault();
     const finalEvent: CalendarEvent = {
       id: eventToEdit ? eventToEdit.id : `ev-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-      title: title.trim() || (lang === 'vi' ? '(Chưa có tiêu đề)' : '(Untitled)'),
+      title: title.trim() || (lang === 'vi' ? '(ChÆ°a cÃ³ tiÃªu Ä‘á»)' : '(Untitled)'),
       type,
       startDate,
       startTime: allDay ? '00:00' : startTime,
@@ -167,7 +167,7 @@ export const EventModal: React.FC<EventModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/45 backdrop-blur-xs">
-      <div className="bg-white dark:bg-gray-850 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 w-full max-w-xl max-h-[92vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+      <div className="bg-white dark:bg-[#1a1e24] rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 w-full max-w-xl max-h-[92vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
         {/* Header Bar */}
         <div className="px-5 py-3 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between bg-gray-50/70 dark:bg-gray-900/50">
           <div className="flex items-center gap-1.5 p-1 bg-gray-200/60 dark:bg-gray-800 rounded-lg">
@@ -183,10 +183,10 @@ export const EventModal: React.FC<EventModalProps> = ({
                 }`}
               >
                 {t === 'event'
-                  ? lang === 'vi' ? 'Sự kiện' : 'Event'
+                  ? lang === 'vi' ? 'Sá»± kiá»‡n' : 'Event'
                   : t === 'task'
-                  ? lang === 'vi' ? 'Tác vụ' : 'Task'
-                  : lang === 'vi' ? 'Nhắc nhở' : 'Reminder'}
+                  ? lang === 'vi' ? 'TÃ¡c vá»¥' : 'Task'
+                  : lang === 'vi' ? 'Nháº¯c nhá»Ÿ' : 'Reminder'}
               </button>
             ))}
           </div>
@@ -199,7 +199,7 @@ export const EventModal: React.FC<EventModalProps> = ({
                   onDelete(eventToEdit.id);
                   onClose();
                 }}
-                title={lang === 'vi' ? 'Xóa sự kiện' : 'Delete event'}
+                title={lang === 'vi' ? 'XÃ³a sá»± kiá»‡n' : 'Delete event'}
                 className="p-1.5 rounded-full hover:bg-red-50 dark:hover:bg-red-950/40 text-gray-500 hover:text-red-600 transition-colors cursor-pointer"
               >
                 <Trash2 className="w-4 h-4" />
@@ -208,7 +208,7 @@ export const EventModal: React.FC<EventModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="p-1.5 rounded-full hover:bg-gray-200 dark:hover:bg-gray-750 text-gray-500 dark:text-gray-400 cursor-pointer"
+              className="p-1.5 rounded-full hover:bg-gray-200 dark:hover:bg-[#242931] text-gray-500 dark:text-gray-400 cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
@@ -223,7 +223,7 @@ export const EventModal: React.FC<EventModalProps> = ({
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder={lang === 'vi' ? 'Thêm tiêu đề' : 'Add title'}
+              placeholder={lang === 'vi' ? 'ThÃªm tiÃªu Ä‘á»' : 'Add title'}
               autoFocus
               className="w-full text-xl md:text-2xl font-normal text-gray-900 dark:text-gray-100 placeholder-gray-400 border-b border-gray-300 dark:border-gray-700 focus:border-blue-600 pb-2 focus:outline-none bg-transparent transition-colors"
             />
@@ -248,7 +248,7 @@ export const EventModal: React.FC<EventModalProps> = ({
                     className="px-2.5 py-1.5 border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-xs text-gray-800 dark:text-gray-100 focus:outline-blue-500"
                   />
                 )}
-                <span className="text-gray-400">–</span>
+                <span className="text-gray-400">â€“</span>
                 {!allDay && (
                   <input
                     type="time"
@@ -273,7 +273,7 @@ export const EventModal: React.FC<EventModalProps> = ({
                     onChange={(e) => setAllDay(e.target.checked)}
                     className="rounded text-blue-600 focus:ring-blue-500"
                   />
-                  <span>{lang === 'vi' ? 'Cả ngày' : 'All day'}</span>
+                  <span>{lang === 'vi' ? 'Cáº£ ngÃ y' : 'All day'}</span>
                 </label>
 
                 {/* Recurrence Dropdown */}
@@ -282,11 +282,11 @@ export const EventModal: React.FC<EventModalProps> = ({
                   onChange={(e) => setRecurrence(e.target.value as RecurrenceType)}
                   className="px-2.5 py-1 border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-xs text-gray-700 dark:text-gray-200 focus:outline-blue-500"
                 >
-                  <option value="none">{lang === 'vi' ? 'Không lặp lại' : 'Does not repeat'}</option>
-                  <option value="daily">{lang === 'vi' ? 'Hàng ngày' : 'Daily'}</option>
-                  <option value="weekly">{lang === 'vi' ? 'Hàng tuần' : 'Weekly'}</option>
-                  <option value="monthly">{lang === 'vi' ? 'Hàng tháng' : 'Monthly'}</option>
-                  <option value="yearly">{lang === 'vi' ? 'Hàng năm' : 'Yearly'}</option>
+                  <option value="none">{lang === 'vi' ? 'KhÃ´ng láº·p láº¡i' : 'Does not repeat'}</option>
+                  <option value="daily">{lang === 'vi' ? 'HÃ ng ngÃ y' : 'Daily'}</option>
+                  <option value="weekly">{lang === 'vi' ? 'HÃ ng tuáº§n' : 'Weekly'}</option>
+                  <option value="monthly">{lang === 'vi' ? 'HÃ ng thÃ¡ng' : 'Monthly'}</option>
+                  <option value="yearly">{lang === 'vi' ? 'HÃ ng nÄƒm' : 'Yearly'}</option>
                 </select>
               </div>
             </div>
@@ -303,7 +303,7 @@ export const EventModal: React.FC<EventModalProps> = ({
                   className="px-3.5 py-2 bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100 dark:hover:bg-blue-900/60 text-blue-600 dark:text-blue-400 rounded-lg text-xs font-semibold flex items-center gap-2 border border-blue-200 dark:border-blue-800 transition-colors cursor-pointer"
                 >
                   <Video className="w-4 h-4 text-blue-500" />
-                  <span>{lang === 'vi' ? 'Thêm hội nghị truyền hình Google Meet' : 'Add Google Meet video conferencing'}</span>
+                  <span>{lang === 'vi' ? 'ThÃªm há»™i nghá»‹ truyá»n hÃ¬nh Google Meet' : 'Add Google Meet video conferencing'}</span>
                 </button>
               ) : (
                 <div className="flex items-center justify-between p-2.5 bg-blue-50/70 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 rounded-lg">
@@ -317,7 +317,7 @@ export const EventModal: React.FC<EventModalProps> = ({
                     <button
                       type="button"
                       onClick={handleCopyMeet}
-                      title={lang === 'vi' ? 'Sao chép đường liên kết' : 'Copy link'}
+                      title={lang === 'vi' ? 'Sao chÃ©p Ä‘Æ°á»ng liÃªn káº¿t' : 'Copy link'}
                       className="p-1 hover:bg-blue-200/50 dark:hover:bg-blue-900 rounded text-blue-600 cursor-pointer"
                     >
                       {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
@@ -342,7 +342,7 @@ export const EventModal: React.FC<EventModalProps> = ({
               type="text"
               value={location}
               onChange={(e) => setLocation(e.target.value)}
-              placeholder={lang === 'vi' ? 'Thêm vị trí (phòng họp, địa chỉ...)' : 'Add location or room'}
+              placeholder={lang === 'vi' ? 'ThÃªm vá»‹ trÃ­ (phÃ²ng há»p, Ä‘á»‹a chá»‰...)' : 'Add location or room'}
               className="flex-1 px-3 py-1.5 border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-xs text-gray-800 dark:text-gray-100 focus:outline-blue-500"
             />
           </div>
@@ -356,7 +356,7 @@ export const EventModal: React.FC<EventModalProps> = ({
                 value={guestInput}
                 onChange={(e) => setGuestInput(e.target.value)}
                 onKeyDown={handleAddGuest}
-                placeholder={lang === 'vi' ? 'Thêm người tham dự (nhập email rồi nhấn Enter)' : 'Add guests (type email and hit Enter)'}
+                placeholder={lang === 'vi' ? 'ThÃªm ngÆ°á»i tham dá»± (nháº­p email rá»“i nháº¥n Enter)' : 'Add guests (type email and hit Enter)'}
                 className="w-full px-3 py-1.5 border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-xs text-gray-800 dark:text-gray-100 focus:outline-blue-500"
               />
 
@@ -373,7 +373,7 @@ export const EventModal: React.FC<EventModalProps> = ({
                         onClick={() => handleRemoveGuest(g.email)}
                         className="text-gray-400 hover:text-red-500 cursor-pointer"
                       >
-                        ×
+                        Ã—
                       </button>
                     </span>
                   ))}
@@ -430,12 +430,12 @@ export const EventModal: React.FC<EventModalProps> = ({
               onChange={(e) => setReminderMinutes(parseInt(e.target.value, 10))}
               className="px-3 py-1.5 border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-xs text-gray-800 dark:text-gray-100 focus:outline-blue-500"
             >
-              <option value="5">{lang === 'vi' ? '5 phút trước' : '5 minutes before'}</option>
-              <option value="10">{lang === 'vi' ? '10 phút trước' : '10 minutes before'}</option>
-              <option value="15">{lang === 'vi' ? '15 phút trước' : '15 minutes before'}</option>
-              <option value="30">{lang === 'vi' ? '30 phút trước' : '30 minutes before'}</option>
-              <option value="60">{lang === 'vi' ? '1 giờ trước' : '1 hour before'}</option>
-              <option value="1440">{lang === 'vi' ? '1 ngày trước' : '1 day before'}</option>
+              <option value="5">{lang === 'vi' ? '5 phÃºt trÆ°á»›c' : '5 minutes before'}</option>
+              <option value="10">{lang === 'vi' ? '10 phÃºt trÆ°á»›c' : '10 minutes before'}</option>
+              <option value="15">{lang === 'vi' ? '15 phÃºt trÆ°á»›c' : '15 minutes before'}</option>
+              <option value="30">{lang === 'vi' ? '30 phÃºt trÆ°á»›c' : '30 minutes before'}</option>
+              <option value="60">{lang === 'vi' ? '1 giá» trÆ°á»›c' : '1 hour before'}</option>
+              <option value="1440">{lang === 'vi' ? '1 ngÃ y trÆ°á»›c' : '1 day before'}</option>
             </select>
           </div>
 
@@ -446,7 +446,7 @@ export const EventModal: React.FC<EventModalProps> = ({
               rows={3}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder={lang === 'vi' ? 'Thêm mô tả hoặc tài liệu đính kèm...' : 'Add description or notes...'}
+              placeholder={lang === 'vi' ? 'ThÃªm mÃ´ táº£ hoáº·c tÃ i liá»‡u Ä‘Ã­nh kÃ¨m...' : 'Add description or notes...'}
               className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-xs text-gray-800 dark:text-gray-100 focus:outline-blue-500"
             />
           </div>
@@ -458,13 +458,13 @@ export const EventModal: React.FC<EventModalProps> = ({
               onClick={onClose}
               className="px-4 py-2 rounded-lg text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer"
             >
-              {lang === 'vi' ? 'Hủy bỏ' : 'Cancel'}
+              {lang === 'vi' ? 'Há»§y bá»' : 'Cancel'}
             </button>
             <button
               type="submit"
               className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-xs transition-colors cursor-pointer"
             >
-              {lang === 'vi' ? 'Lưu sự kiện' : 'Save'}
+              {lang === 'vi' ? 'LÆ°u sá»± kiá»‡n' : 'Save'}
             </button>
           </div>
         </form>
@@ -472,3 +472,4 @@ export const EventModal: React.FC<EventModalProps> = ({
     </div>
   );
 };
+

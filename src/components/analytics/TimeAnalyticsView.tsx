@@ -174,7 +174,7 @@ export const TimeAnalyticsView: React.FC<TimeAnalyticsViewProps> = ({
       {/* 4 Metric Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {/* Total Time */}
-        <div className="bg-white dark:bg-gray-850 p-4 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs flex items-center gap-3.5">
+        <div className="bg-white dark:bg-[#1a1e24] p-4 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs flex items-center gap-3.5">
           <div className="w-11 h-11 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
             <Clock className="w-5 h-5" />
           </div>
@@ -189,7 +189,7 @@ export const TimeAnalyticsView: React.FC<TimeAnalyticsViewProps> = ({
         </div>
 
         {/* Total Events */}
-        <div className="bg-white dark:bg-gray-850 p-4 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs flex items-center gap-3.5">
+        <div className="bg-white dark:bg-[#1a1e24] p-4 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs flex items-center gap-3.5">
           <div className="w-11 h-11 rounded-xl bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0">
             <CalIcon className="w-5 h-5" />
           </div>
@@ -204,7 +204,7 @@ export const TimeAnalyticsView: React.FC<TimeAnalyticsViewProps> = ({
         </div>
 
         {/* Deep Work */}
-        <div className="bg-white dark:bg-gray-850 p-4 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs flex items-center gap-3.5">
+        <div className="bg-white dark:bg-[#1a1e24] p-4 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs flex items-center gap-3.5">
           <div className="w-11 h-11 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
             <Zap className="w-5 h-5" />
           </div>
@@ -222,7 +222,7 @@ export const TimeAnalyticsView: React.FC<TimeAnalyticsViewProps> = ({
         </div>
 
         {/* Meetings */}
-        <div className="bg-white dark:bg-gray-850 p-4 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs flex items-center gap-3.5">
+        <div className="bg-white dark:bg-[#1a1e24] p-4 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs flex items-center gap-3.5">
           <div className="w-11 h-11 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
             <Video className="w-5 h-5" />
           </div>
@@ -240,7 +240,7 @@ export const TimeAnalyticsView: React.FC<TimeAnalyticsViewProps> = ({
       {/* Main Grid: Left Doughnut Chart / Right Burnout & Goals */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Category Breakdown Chart Card */}
-        <div className="lg:col-span-7 bg-white dark:bg-gray-850 p-6 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs flex flex-col">
+        <div className="lg:col-span-7 bg-white dark:bg-[#1a1e24] p-6 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs flex flex-col">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <TrendingUp className="w-5 h-5 text-blue-600 dark:text-blue-400" />
@@ -271,3 +271,4 @@ export const TimeAnalyticsView: React.FC<TimeAnalyticsViewProps> = ({
     </div>
   );
 };
+

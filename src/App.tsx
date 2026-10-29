@@ -50,17 +50,21 @@ export default function App() {
     return (localStorage.getItem('gcal_lang') as 'vi' | 'en') || 'vi';
   });
 
-  // 2. Dark mode state
+  // 2. Dark mode state (defaults to true for sleek dark theme)
   const [darkMode, setDarkMode] = useState<boolean>(() => {
-    return localStorage.getItem('gcal_theme') === 'dark';
+    const saved = localStorage.getItem('gcal_theme');
+    if (saved) return saved === 'dark';
+    return true;
   });
 
   useEffect(() => {
     if (darkMode) {
       document.documentElement.classList.add('dark');
+      document.body.classList.add('dark');
       localStorage.setItem('gcal_theme', 'dark');
     } else {
       document.documentElement.classList.remove('dark');
+      document.body.classList.remove('dark');
       localStorage.setItem('gcal_theme', 'light');
     }
   }, [darkMode]);
@@ -831,3 +835,4 @@ export default function App() {
     </div>
   );
 }
+

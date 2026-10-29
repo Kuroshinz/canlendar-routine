@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import {
   Plus,
   ChevronLeft,
@@ -69,8 +69,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const selectedDateStr = formatDateString(currentDate);
 
   const monthNamesVi = [
-    'Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6',
-    'Tháng 7', 'Tháng 8', 'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12'
+    'ThÃ¡ng 1', 'ThÃ¡ng 2', 'ThÃ¡ng 3', 'ThÃ¡ng 4', 'ThÃ¡ng 5', 'ThÃ¡ng 6',
+    'ThÃ¡ng 7', 'ThÃ¡ng 8', 'ThÃ¡ng 9', 'ThÃ¡ng 10', 'ThÃ¡ng 11', 'ThÃ¡ng 12'
   ];
   const monthNamesEn = [
     'January', 'February', 'March', 'April', 'May', 'June',
@@ -105,7 +105,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <div className="relative mb-5">
           <button
             onClick={() => setShowCreateDropdown(!showCreateDropdown)}
-            className="flex items-center gap-3 px-5 py-3 rounded-full bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-750 text-gray-700 dark:text-gray-100 font-medium text-sm border border-gray-200 dark:border-gray-700 shadow-md hover:shadow-lg transition-all cursor-pointer group"
+            className="flex items-center gap-3 px-5 py-3 rounded-full bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-[#242931] text-gray-700 dark:text-gray-100 font-medium text-sm border border-gray-200 dark:border-gray-700 shadow-md hover:shadow-lg transition-all cursor-pointer group"
           >
             {/* Google colored plus icon */}
             <svg className="w-8 h-8" viewBox="0 0 36 36">
@@ -115,7 +115,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <path fill="#EA4335" d="M20 16v14h-4V16H2v-4h14V2h4v14z" opacity="0.2" />
             </svg>
             <span className="text-base tracking-wide font-sans">
-              {lang === 'vi' ? 'Tạo mới' : 'Create'}
+              {lang === 'vi' ? 'Táº¡o má»›i' : 'Create'}
             </span>
             <ChevronDown className="w-4 h-4 ml-1 text-gray-400 group-hover:text-gray-600 transition-colors" />
           </button>
@@ -135,7 +135,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-left text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
                 >
                   <CalendarIcon className="w-4 h-4 text-blue-500" />
-                  <span>{lang === 'vi' ? 'Sự kiện' : 'Event'}</span>
+                  <span>{lang === 'vi' ? 'Sá»± kiá»‡n' : 'Event'}</span>
                 </button>
                 <button
                   onClick={() => {
@@ -145,7 +145,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-left text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
                 >
                   <CheckSquare className="w-4 h-4 text-purple-500" />
-                  <span>{lang === 'vi' ? 'Tác vụ' : 'Task'}</span>
+                  <span>{lang === 'vi' ? 'TÃ¡c vá»¥' : 'Task'}</span>
                 </button>
                 <button
                   onClick={() => {
@@ -155,7 +155,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-left text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
                 >
                   <Bell className="w-4 h-4 text-emerald-500" />
-                  <span>{lang === 'vi' ? 'Nhắc nhở' : 'Reminder'}</span>
+                  <span>{lang === 'vi' ? 'Nháº¯c nhá»Ÿ' : 'Reminder'}</span>
                 </button>
               </div>
             </>
@@ -171,14 +171,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <div className="flex items-center gap-1">
               <button
                 onClick={handlePrevMiniMonth}
-                aria-label="Tháng trước"
+                aria-label="ThÃ¡ng trÆ°á»›c"
                 className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400 cursor-pointer"
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
               <button
                 onClick={handleNextMiniMonth}
-                aria-label="Tháng sau"
+                aria-label="ThÃ¡ng sau"
                 className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400 cursor-pointer"
               >
                 <ChevronRight className="w-4 h-4" />
@@ -224,11 +224,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <div className="pt-2 border-t border-gray-100 dark:border-gray-800 flex-1">
           <div className="flex items-center justify-between mb-2 px-1">
             <span className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-              {lang === 'vi' ? 'Lịch của tôi' : 'My calendars'}
+              {lang === 'vi' ? 'Lá»‹ch cá»§a tÃ´i' : 'My calendars'}
             </span>
             <button
               onClick={() => setShowAddCalendarInput(!showAddCalendarInput)}
-              title={lang === 'vi' ? 'Thêm lịch mới' : 'Add other calendar'}
+              title={lang === 'vi' ? 'ThÃªm lá»‹ch má»›i' : 'Add other calendar'}
               className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400 cursor-pointer"
             >
               <Plus className="w-3.5 h-3.5" />
@@ -239,7 +239,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <form onSubmit={handleCreateNewCalendar} className="mb-3 p-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
               <input
                 type="text"
-                placeholder={lang === 'vi' ? 'Tên lịch mới...' : 'Calendar name...'}
+                placeholder={lang === 'vi' ? 'TÃªn lá»‹ch má»›i...' : 'Calendar name...'}
                 value={newCalName}
                 onChange={(e) => setNewCalName(e.target.value)}
                 autoFocus
@@ -258,13 +258,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     onClick={() => setShowAddCalendarInput(false)}
                     className="text-xs px-2 py-1 text-gray-500 hover:text-gray-700"
                   >
-                    {lang === 'vi' ? 'Hủy' : 'Cancel'}
+                    {lang === 'vi' ? 'Há»§y' : 'Cancel'}
                   </button>
                   <button
                     type="submit"
                     className="text-xs px-2 py-1 bg-blue-600 text-white rounded font-medium hover:bg-blue-700"
                   >
-                    {lang === 'vi' ? 'Lưu' : 'Save'}
+                    {lang === 'vi' ? 'LÆ°u' : 'Save'}
                   </button>
                 </div>
               </div>
@@ -299,7 +299,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       e.stopPropagation();
                       onDeleteCategory(cat.id);
                     }}
-                    title={lang === 'vi' ? 'Xóa lịch' : 'Delete calendar'}
+                    title={lang === 'vi' ? 'XÃ³a lá»‹ch' : 'Delete calendar'}
                     className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-red-500 transition-opacity cursor-pointer"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
@@ -312,9 +312,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         {/* Footer info: Google standard notice */}
         <div className="pt-3 border-t border-gray-100 dark:border-gray-800 text-[11px] text-gray-400 dark:text-gray-500 px-1">
-          <p>{lang === 'vi' ? 'Điều khoản & Quyền riêng tư' : 'Terms & Privacy'}</p>
+          <p>{lang === 'vi' ? 'Äiá»u khoáº£n & Quyá»n riÃªng tÆ°' : 'Terms & Privacy'}</p>
         </div>
       </aside>
     </>
   );
 };
+

@@ -1,6 +1,6 @@
 ﻿import React, { useState, useEffect, useRef } from 'react';
 import { CalendarEvent, CalendarCategory, EventType, GOOGLE_COLORS } from '../types/calendar';
-import { X, Clock, Video, MapPin, AlignLeft, Check, Sparkles } from 'lucide-react';
+import { X, Clock, Video, Check } from 'lucide-react';
 
 interface MiniEventPopoverProps {
   isOpen: boolean;
@@ -46,7 +46,6 @@ export const MiniEventPopover: React.FC<MiniEventPopoverProps> = ({
     }
   }, [isOpen, dateStr, startTime, endTime]);
 
-  // Click outside to close
   useEffect(() => {
     const handleOutsideClick = (e: MouseEvent) => {
       if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) {
@@ -61,7 +60,6 @@ export const MiniEventPopover: React.FC<MiniEventPopoverProps> = ({
 
   if (!isOpen || !position) return null;
 
-  // Format date display: e.g. "Thứ Năm, 29 thg 10"
   const dateObj = new Date(dateStr + 'T00:00:00');
   const weekdayVi = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'][dateObj.getDay()];
   const weekdayEn = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][dateObj.getDay()];
@@ -93,7 +91,6 @@ export const MiniEventPopover: React.FC<MiniEventPopoverProps> = ({
     onClose();
   };
 
-  // Adjust popover position so it stays within viewport
   const popoverWidth = 360;
   const popoverHeight = 340;
   let adjustedLeft = position.left;
@@ -113,11 +110,10 @@ export const MiniEventPopover: React.FC<MiniEventPopoverProps> = ({
     <div
       ref={popoverRef}
       style={{ top: `${adjustedTop}px`, left: `${adjustedLeft}px` }}
-      className="fixed z-50 w-[360px] bg-white dark:bg-gray-850 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden animate-in fade-in zoom-in-95 duration-150"
+      className="fixed z-50 w-[360px] bg-white dark:bg-[#1a1e24] rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700/80 overflow-hidden animate-in fade-in zoom-in-95 duration-150"
     >
-      {/* Top Drag bar / Action buttons */}
-      <div className="flex items-center justify-between px-4 pt-3 pb-1">
-        {/* Type Switcher Tabs */}
+      {/* Top Header */}
+      <div className="flex items-center justify-between px-4 pt-3 pb-1 border-b border-gray-100 dark:border-gray-800">
         <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 p-0.5 rounded-lg text-xs font-medium">
           <button
             type="button"
@@ -151,8 +147,7 @@ export const MiniEventPopover: React.FC<MiniEventPopoverProps> = ({
         </button>
       </div>
 
-      <form onSubmit={handleSubmit} className="p-4 pt-2 flex flex-col gap-3.5">
-        {/* Title Input */}
+      <form onSubmit={handleSubmit} className="p-4 flex flex-col gap-3.5">
         <div>
           <input
             ref={inputRef}
@@ -164,8 +159,8 @@ export const MiniEventPopover: React.FC<MiniEventPopoverProps> = ({
           />
         </div>
 
-        {/* Date & Time pill */}
-        <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-800/60 p-2.5 rounded-xl border border-gray-100 dark:border-gray-800">
+        {/* Date & Time display */}
+        <div className="flex items-center gap-2 text-xs text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-[#121518] p-2.5 rounded-xl border border-gray-100 dark:border-gray-800">
           <Clock className="w-4 h-4 text-gray-400 shrink-0" />
           <div className="flex-1 font-medium">
             <span>{dateLabel}</span>
@@ -176,14 +171,14 @@ export const MiniEventPopover: React.FC<MiniEventPopoverProps> = ({
           </div>
         </div>
 
-        {/* Quick Google Meet button */}
+        {/* Quick Google Meet */}
         <button
           type="button"
           onClick={() => setHasMeet(!hasMeet)}
           className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium border transition-all ${
             hasMeet
               ? 'bg-blue-50 dark:bg-blue-950/40 border-blue-300 dark:border-blue-800 text-blue-600 dark:text-blue-400 shadow-xs'
-              : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300'
+              : 'border-gray-200 dark:border-gray-700/80 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300'
           }`}
         >
           <Video className="w-4 h-4 text-blue-500 shrink-0" />
@@ -192,10 +187,10 @@ export const MiniEventPopover: React.FC<MiniEventPopoverProps> = ({
               ? (lang === 'vi' ? 'Đã thêm Google Meet' : 'Google Meet added')
               : (lang === 'vi' ? 'Thêm hội nghị truyền hình Google Meet' : 'Add Google Meet video conferencing')}
           </span>
-          {hasMeet && <Check className="w-3.5 h-3.5 ml-auto text-blue-600" />}
+          {hasMeet && <Check className="w-3.5 h-3.5 ml-auto text-blue-600 dark:text-blue-400" />}
         </button>
 
-        {/* Color Palette Selector */}
+        {/* Color Palette */}
         <div className="flex items-center justify-between gap-1 pt-1">
           <span className="text-[11px] font-medium text-gray-400">
             {lang === 'vi' ? 'Màu sắc' : 'Color'}:
@@ -218,7 +213,7 @@ export const MiniEventPopover: React.FC<MiniEventPopoverProps> = ({
           </div>
         </div>
 
-        {/* Footer Buttons */}
+        {/* Footer */}
         <div className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-gray-800 mt-1">
           <button
             type="button"

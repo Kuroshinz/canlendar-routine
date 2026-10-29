@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+﻿import React, { useRef, useState } from 'react';
 import { X, Download, Upload, RotateCcw, Volume2, CheckCircle2 } from 'lucide-react';
 import { CalendarEvent } from '../types/calendar';
 import { exportToIcs, parseIcsContent } from '../utils/calendarUtils';
@@ -42,7 +42,7 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    showNotification(lang === 'vi' ? 'Đã tải xuống tệp .ics thành công!' : 'ICS file downloaded successfully!');
+    showNotification(lang === 'vi' ? 'ÄÃ£ táº£i xuá»‘ng tá»‡p .ics thÃ nh cÃ´ng!' : 'ICS file downloaded successfully!');
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -59,7 +59,7 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
           const parsed = JSON.parse(content);
           if (Array.isArray(parsed)) {
             onImportEvents(parsed);
-            showNotification(lang === 'vi' ? `Đã nhập ${parsed.length} sự kiện từ JSON!` : `Imported ${parsed.length} events from JSON!`);
+            showNotification(lang === 'vi' ? `ÄÃ£ nháº­p ${parsed.length} sá»± kiá»‡n tá»« JSON!` : `Imported ${parsed.length} events from JSON!`);
           }
         } else {
           // Assume .ics
@@ -67,7 +67,7 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
           if (parsedPartial.length > 0) {
             const completedEvents: CalendarEvent[] = parsedPartial.map((p, idx) => ({
               id: p.id || `imported-${Date.now()}-${idx}`,
-              title: p.title || 'Sự kiện nhập',
+              title: p.title || 'Sá»± kiá»‡n nháº­p',
               description: p.description,
               location: p.location,
               startDate: p.startDate || new Date().toISOString().split('T')[0],
@@ -82,13 +82,13 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
               createdAt: Date.now(),
             }));
             onImportEvents(completedEvents);
-            showNotification(lang === 'vi' ? `Đã nhập ${completedEvents.length} sự kiện từ .ics!` : `Imported ${completedEvents.length} events from .ics!`);
+            showNotification(lang === 'vi' ? `ÄÃ£ nháº­p ${completedEvents.length} sá»± kiá»‡n tá»« .ics!` : `Imported ${completedEvents.length} events from .ics!`);
           } else {
-            alert(lang === 'vi' ? 'Không thể đọc dữ liệu sự kiện từ tệp này.' : 'Could not parse events from this file.');
+            alert(lang === 'vi' ? 'KhÃ´ng thá»ƒ Ä‘á»c dá»¯ liá»‡u sá»± kiá»‡n tá»« tá»‡p nÃ y.' : 'Could not parse events from this file.');
           }
         }
       } catch (err) {
-        alert(lang === 'vi' ? 'Lỗi khi đọc tệp.' : 'Error reading file.');
+        alert(lang === 'vi' ? 'Lá»—i khi Ä‘á»c tá»‡p.' : 'Error reading file.');
       }
     };
     reader.readAsText(file);
@@ -97,10 +97,10 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/45 backdrop-blur-2xs">
-      <div className="bg-white dark:bg-gray-850 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95">
+      <div className="bg-white dark:bg-[#1a1e24] rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95">
         <div className="px-5 py-3.5 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
           <h3 className="text-base font-bold text-gray-800 dark:text-gray-100">
-            {lang === 'vi' ? 'Dữ liệu & Cài đặt' : 'Data & Settings'}
+            {lang === 'vi' ? 'Dá»¯ liá»‡u & CÃ i Ä‘áº·t' : 'Data & Settings'}
           </h3>
           <button
             onClick={onClose}
@@ -122,11 +122,11 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
           <div className="p-3.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/40 flex items-center justify-between gap-3">
             <div>
               <h4 className="text-xs font-semibold text-gray-800 dark:text-gray-200">
-                {lang === 'vi' ? 'Xuất tệp iCalendar (.ics)' : 'Export iCalendar (.ics)'}
+                {lang === 'vi' ? 'Xuáº¥t tá»‡p iCalendar (.ics)' : 'Export iCalendar (.ics)'}
               </h4>
               <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
                 {lang === 'vi'
-                  ? 'Đồng bộ với Google Calendar thực, Outlook, Apple Calendar'
+                  ? 'Äá»“ng bá»™ vá»›i Google Calendar thá»±c, Outlook, Apple Calendar'
                   : 'Compatible with Google Calendar, Outlook, Apple Calendar'}
               </p>
             </div>
@@ -135,7 +135,7 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
               className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-medium shadow-xs transition-colors cursor-pointer shrink-0"
             >
               <Download className="w-3.5 h-3.5" />
-              <span>{lang === 'vi' ? 'Xuất' : 'Export'}</span>
+              <span>{lang === 'vi' ? 'Xuáº¥t' : 'Export'}</span>
             </button>
           </div>
 
@@ -143,10 +143,10 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
           <div className="p-3.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/40 flex items-center justify-between gap-3">
             <div>
               <h4 className="text-xs font-semibold text-gray-800 dark:text-gray-200">
-                {lang === 'vi' ? 'Nhập tệp (.ics hoặc .json)' : 'Import (.ics or .json)'}
+                {lang === 'vi' ? 'Nháº­p tá»‡p (.ics hoáº·c .json)' : 'Import (.ics or .json)'}
               </h4>
               <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
-                {lang === 'vi' ? 'Thêm lịch từ tệp đã xuất từ trước' : 'Add events from existing backup'}
+                {lang === 'vi' ? 'ThÃªm lá»‹ch tá»« tá»‡p Ä‘Ã£ xuáº¥t tá»« trÆ°á»›c' : 'Add events from existing backup'}
               </p>
             </div>
             <input
@@ -161,7 +161,7 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
               className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-650 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-lg text-xs font-medium shadow-xs transition-colors cursor-pointer shrink-0"
             >
               <Upload className="w-3.5 h-3.5" />
-              <span>{lang === 'vi' ? 'Nhập' : 'Import'}</span>
+              <span>{lang === 'vi' ? 'Nháº­p' : 'Import'}</span>
             </button>
           </div>
 
@@ -169,10 +169,10 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
           <div className="p-3.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/40 flex items-center justify-between gap-3">
             <div>
               <h4 className="text-xs font-semibold text-gray-800 dark:text-gray-200">
-                {lang === 'vi' ? 'Kiểm tra chuông báo' : 'Test Reminder Chime'}
+                {lang === 'vi' ? 'Kiá»ƒm tra chuÃ´ng bÃ¡o' : 'Test Reminder Chime'}
               </h4>
               <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
-                {lang === 'vi' ? 'Âm thanh thông báo khi đến giờ sự kiện' : 'Pleasant audio notification chime'}
+                {lang === 'vi' ? 'Ã‚m thanh thÃ´ng bÃ¡o khi Ä‘áº¿n giá» sá»± kiá»‡n' : 'Pleasant audio notification chime'}
               </p>
             </div>
             <button
@@ -180,7 +180,7 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
               className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-medium shadow-xs transition-colors cursor-pointer shrink-0"
             >
               <Volume2 className="w-3.5 h-3.5" />
-              <span>{lang === 'vi' ? 'Thử' : 'Test'}</span>
+              <span>{lang === 'vi' ? 'Thá»­' : 'Test'}</span>
             </button>
           </div>
 
@@ -188,23 +188,23 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
           <div className="p-3.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/40 flex items-center justify-between gap-3">
             <div>
               <h4 className="text-xs font-semibold text-gray-800 dark:text-gray-200">
-                {lang === 'vi' ? 'Khôi phục dữ liệu mẫu' : 'Reset to Sample Events'}
+                {lang === 'vi' ? 'KhÃ´i phá»¥c dá»¯ liá»‡u máº«u' : 'Reset to Sample Events'}
               </h4>
               <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
-                {lang === 'vi' ? 'Tải lại danh sách sự kiện ban đầu' : 'Reload original sample calendar events'}
+                {lang === 'vi' ? 'Táº£i láº¡i danh sÃ¡ch sá»± kiá»‡n ban Ä‘áº§u' : 'Reload original sample calendar events'}
               </p>
             </div>
             <button
               onClick={() => {
-                if (confirm(lang === 'vi' ? 'Bạn có chắc chắn muốn nạp lại dữ liệu mẫu?' : 'Reset to sample events?')) {
+                if (confirm(lang === 'vi' ? 'Báº¡n cÃ³ cháº¯c cháº¯n muá»‘n náº¡p láº¡i dá»¯ liá»‡u máº«u?' : 'Reset to sample events?')) {
                   onResetEvents();
-                  showNotification(lang === 'vi' ? 'Đã khôi phục dữ liệu mẫu!' : 'Sample events restored!');
+                  showNotification(lang === 'vi' ? 'ÄÃ£ khÃ´i phá»¥c dá»¯ liá»‡u máº«u!' : 'Sample events restored!');
                 }
               }}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-lg text-xs font-medium transition-colors cursor-pointer shrink-0"
             >
               <RotateCcw className="w-3.5 h-3.5" />
-              <span>{lang === 'vi' ? 'Đặt lại' : 'Reset'}</span>
+              <span>{lang === 'vi' ? 'Äáº·t láº¡i' : 'Reset'}</span>
             </button>
           </div>
         </div>
@@ -212,3 +212,4 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
     </div>
   );
 };
+

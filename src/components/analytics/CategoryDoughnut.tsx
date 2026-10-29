@@ -118,7 +118,7 @@ export const CategoryDoughnut: React.FC<CategoryDoughnutProps> = ({
               className={`flex items-center justify-between p-2 rounded-lg transition-all cursor-pointer ${
                 isHovered
                   ? 'bg-gray-100/80 dark:bg-gray-800/80 shadow-xs scale-102'
-                  : 'hover:bg-gray-50 dark:hover:bg-gray-850'
+                  : 'hover:bg-gray-50 dark:hover:bg-[#1a1e24]'
               }`}
             >
               <div className="flex items-center gap-2.5 truncate">
@@ -145,3 +145,4 @@ export const CategoryDoughnut: React.FC<CategoryDoughnutProps> = ({
     </div>
   );
 };
+

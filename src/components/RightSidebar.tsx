@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import {
   CheckSquare,
   FileText,
@@ -37,14 +37,14 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({ lang }) => {
   const [notes, setNotes] = useState<NoteItem[]>([
     {
       id: 'n-1',
-      title: 'Ý tưởng Sprint 42',
-      content: 'Tối ưu hoá hiệu năng lưới lịch khi có >100 sự kiện và bổ sung phím tắt nhanh.',
+      title: 'Ã tÆ°á»Ÿng Sprint 42',
+      content: 'Tá»‘i Æ°u hoÃ¡ hiá»‡u nÄƒng lÆ°á»›i lá»‹ch khi cÃ³ >100 sá»± kiá»‡n vÃ  bá»• sung phÃ­m táº¯t nhanh.',
       color: '#FEF3C7', // soft yellow
     },
     {
       id: 'n-2',
-      title: 'Địa chỉ nhà hàng họp nhóm',
-      content: 'Pizza 4P\'s Saigon Centre - Đặt bàn lúc 12:00, liên hệ Hương Mai.',
+      title: 'Äá»‹a chá»‰ nhÃ  hÃ ng há»p nhÃ³m',
+      content: 'Pizza 4P\'s Saigon Centre - Äáº·t bÃ n lÃºc 12:00, liÃªn há»‡ HÆ°Æ¡ng Mai.',
       color: '#E0F2FE', // soft blue
     },
   ]);
@@ -53,9 +53,9 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({ lang }) => {
 
   // Tasks state
   const [tasks, setTasks] = useState<QuickTaskItem[]>([
-    { id: 't-1', text: 'Gửi biên bản cuộc họp sáng nay', completed: true, dueDate: 'Hôm nay' },
-    { id: 't-2', text: 'Cập nhật tài liệu kỹ thuật API', completed: false, dueDate: '30 thg 10' },
-    { id: 't-3', text: 'Chuẩn bị slide thuyết trình demo', completed: false, dueDate: '31 thg 10' },
+    { id: 't-1', text: 'Gá»­i biÃªn báº£n cuá»™c há»p sÃ¡ng nay', completed: true, dueDate: 'HÃ´m nay' },
+    { id: 't-2', text: 'Cáº­p nháº­t tÃ i liá»‡u ká»¹ thuáº­t API', completed: false, dueDate: '30 thg 10' },
+    { id: 't-3', text: 'Chuáº©n bá»‹ slide thuyáº¿t trÃ¬nh demo', completed: false, dueDate: '31 thg 10' },
   ]);
   const [newTaskInput, setNewTaskInput] = useState('');
 
@@ -74,7 +74,7 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({ lang }) => {
         id: `t-${Date.now()}`,
         text: newTaskInput.trim(),
         completed: false,
-        dueDate: lang === 'vi' ? 'Hôm nay' : 'Today',
+        dueDate: lang === 'vi' ? 'HÃ´m nay' : 'Today',
       },
     ]);
     setNewTaskInput('');
@@ -88,7 +88,7 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({ lang }) => {
     setNotes((prev) => [
       {
         id: `n-${Date.now()}`,
-        title: newNoteTitle.trim() || (lang === 'vi' ? 'Ghi chú mới' : 'New note'),
+        title: newNoteTitle.trim() || (lang === 'vi' ? 'Ghi chÃº má»›i' : 'New note'),
         content: newNoteContent.trim(),
         color: randomColor,
       },
@@ -106,7 +106,7 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({ lang }) => {
     <div className="hidden md:flex relative z-20 shrink-0">
       {/* Slide-out Drawer Panel when an icon is selected */}
       {activePanel && (
-        <div className="w-80 bg-white dark:bg-gray-850 border-l border-gray-200 dark:border-gray-800 shadow-xl flex flex-col h-full animate-in slide-in-from-right duration-200">
+        <div className="w-80 bg-white dark:bg-[#1a1e24] border-l border-gray-200 dark:border-gray-800 shadow-xl flex flex-col h-full animate-in slide-in-from-right duration-200">
           {/* Drawer Header */}
           <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -136,7 +136,7 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({ lang }) => {
                     <Users className="w-3.5 h-3.5" />
                   </div>
                   <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-100">
-                    {lang === 'vi' ? 'Danh bạ' : 'Contacts'}
+                    {lang === 'vi' ? 'Danh báº¡' : 'Contacts'}
                   </h3>
                 </>
               )}
@@ -154,7 +154,7 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({ lang }) => {
 
             <button
               onClick={() => setActivePanel(null)}
-              className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-750 text-gray-400 hover:text-gray-600 cursor-pointer"
+              className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-[#242931] text-gray-400 hover:text-gray-600 cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>
@@ -170,14 +170,14 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({ lang }) => {
                     type="text"
                     value={newNoteTitle}
                     onChange={(e) => setNewNoteTitle(e.target.value)}
-                    placeholder={lang === 'vi' ? 'Tiêu đề ghi chú...' : 'Title...'}
+                    placeholder={lang === 'vi' ? 'TiÃªu Ä‘á» ghi chÃº...' : 'Title...'}
                     className="w-full text-xs font-semibold px-2 py-1 bg-transparent border-b border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-100 focus:outline-none"
                   />
                   <textarea
                     rows={2}
                     value={newNoteContent}
                     onChange={(e) => setNewNoteContent(e.target.value)}
-                    placeholder={lang === 'vi' ? 'Tạo một ghi chú...' : 'Take a note...'}
+                    placeholder={lang === 'vi' ? 'Táº¡o má»™t ghi chÃº...' : 'Take a note...'}
                     className="w-full text-xs px-2 py-1 bg-transparent text-gray-700 dark:text-gray-200 focus:outline-none resize-none"
                   />
                   <div className="flex justify-end">
@@ -186,7 +186,7 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({ lang }) => {
                       disabled={!newNoteTitle.trim() && !newNoteContent.trim()}
                       className="px-3 py-1 bg-amber-500 hover:bg-amber-600 disabled:opacity-40 text-white rounded-md text-xs font-medium cursor-pointer"
                     >
-                      {lang === 'vi' ? 'Lưu' : 'Done'}
+                      {lang === 'vi' ? 'LÆ°u' : 'Done'}
                     </button>
                   </div>
                 </form>
@@ -222,7 +222,7 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({ lang }) => {
                     type="text"
                     value={newTaskInput}
                     onChange={(e) => setNewTaskInput(e.target.value)}
-                    placeholder={lang === 'vi' ? 'Thêm một tác vụ...' : 'Add a task...'}
+                    placeholder={lang === 'vi' ? 'ThÃªm má»™t tÃ¡c vá»¥...' : 'Add a task...'}
                     className="flex-1 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 text-xs text-gray-800 dark:text-gray-100 bg-white dark:bg-gray-800 focus:outline-blue-500"
                   />
                   <button
@@ -273,10 +273,10 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({ lang }) => {
             {activePanel === 'contacts' && (
               <div className="space-y-2">
                 {[
-                  { name: 'Nhân Nguyễn', email: 'nghuyenthiennhannghuyen@gmail.com', role: 'Chủ sở hữu' },
-                  { name: 'Hương Mai', email: 'designer@company.com', role: 'Lead UI/UX' },
-                  { name: 'Tuấn Anh', email: 'dev.lead@company.com', role: 'Tech Lead' },
-                  { name: 'David Trần', email: 'client.director@partner.com', role: 'Khách hàng đối tác' },
+                  { name: 'NhÃ¢n Nguyá»…n', email: 'nghuyenthiennhannghuyen@gmail.com', role: 'Chá»§ sá»Ÿ há»¯u' },
+                  { name: 'HÆ°Æ¡ng Mai', email: 'designer@company.com', role: 'Lead UI/UX' },
+                  { name: 'Tuáº¥n Anh', email: 'dev.lead@company.com', role: 'Tech Lead' },
+                  { name: 'David Tráº§n', email: 'client.director@partner.com', role: 'KhÃ¡ch hÃ ng Ä‘á»‘i tÃ¡c' },
                 ].map((c, i) => (
                   <div key={i} className="flex items-center gap-3 p-2.5 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/40">
                     <div className="w-8 h-8 rounded-full bg-linear-to-tr from-blue-500 to-indigo-600 text-white font-bold text-xs flex items-center justify-center shrink-0">
@@ -296,13 +296,13 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({ lang }) => {
             {activePanel === 'maps' && (
               <div className="space-y-3 text-xs">
                 <p className="text-gray-500 dark:text-gray-400">
-                  {lang === 'vi' ? 'Vị trí sự kiện đã lưu trên lịch:' : 'Saved event locations on calendar:'}
+                  {lang === 'vi' ? 'Vá»‹ trÃ­ sá»± kiá»‡n Ä‘Ã£ lÆ°u trÃªn lá»‹ch:' : 'Saved event locations on calendar:'}
                 </p>
                 {[
-                  { name: 'Pizza 4P\'s Saigon Centre', addr: '65 Lê Lợi, Bến Nghé, Quận 1, TP.HCM' },
-                  { name: 'California Fitness & Yoga Club', addr: 'Tầng 3, Crescent Mall, Quận 7' },
-                  { name: 'Trung tâm Hội nghị Quốc gia', addr: 'Đại lộ Thăng Long, Mễ Trì, Hà Nội' },
-                  { name: 'Phòng họp Paris (Tầng 5)', addr: 'Trụ sở chính công ty' },
+                  { name: 'Pizza 4P\'s Saigon Centre', addr: '65 LÃª Lá»£i, Báº¿n NghÃ©, Quáº­n 1, TP.HCM' },
+                  { name: 'California Fitness & Yoga Club', addr: 'Táº§ng 3, Crescent Mall, Quáº­n 7' },
+                  { name: 'Trung tÃ¢m Há»™i nghá»‹ Quá»‘c gia', addr: 'Äáº¡i lá»™ ThÄƒng Long, Má»… TrÃ¬, HÃ  Ná»™i' },
+                  { name: 'PhÃ²ng há»p Paris (Táº§ng 5)', addr: 'Trá»¥ sá»Ÿ chÃ­nh cÃ´ng ty' },
                 ].map((loc, i) => (
                   <div key={i} className="p-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50">
                     <div className="flex items-center gap-1.5 font-semibold text-gray-800 dark:text-gray-100 mb-1">
@@ -350,7 +350,7 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({ lang }) => {
           {/* Contacts Icon */}
           <button
             onClick={() => setActivePanel(activePanel === 'contacts' ? null : 'contacts')}
-            title={lang === 'vi' ? 'Danh bạ' : 'Contacts'}
+            title={lang === 'vi' ? 'Danh báº¡' : 'Contacts'}
             className={`w-10 h-10 rounded-full flex items-center justify-center transition-all cursor-pointer ${
               activePanel === 'contacts'
                 ? 'bg-indigo-100 dark:bg-indigo-950 text-indigo-600 ring-2 ring-indigo-500'
@@ -378,7 +378,7 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({ lang }) => {
           {/* Plus Add-on button */}
           <button
             onClick={() => setActivePanel(activePanel ? null : 'keep')}
-            title={lang === 'vi' ? 'Tiện ích bổ sung' : 'Get add-ons'}
+            title={lang === 'vi' ? 'Tiá»‡n Ã­ch bá»• sung' : 'Get add-ons'}
             className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 transition-colors cursor-pointer"
           >
             <Plus className="w-5 h-5" />
@@ -388,7 +388,7 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({ lang }) => {
         {/* Toggle Panel Chevron at bottom */}
         <button
           onClick={() => setActivePanel(activePanel ? null : 'keep')}
-          title={activePanel ? 'Đóng bảng tiện ích' : 'Mở bảng tiện ích'}
+          title={activePanel ? 'ÄÃ³ng báº£ng tiá»‡n Ã­ch' : 'Má»Ÿ báº£ng tiá»‡n Ã­ch'}
           className="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
         >
           {activePanel ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
@@ -397,3 +397,4 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({ lang }) => {
     </div>
   );
 };
+

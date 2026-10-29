@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { CalendarEvent } from '../types/calendar';
 import { formatDateString, getMonthDays, doesEventOccurOnDate } from '../utils/calendarUtils';
 
@@ -22,8 +22,8 @@ export const YearView: React.FC<YearViewProps> = ({
   const todayStr = formatDateString(new Date());
 
   const monthNamesVi = [
-    'Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6',
-    'Tháng 7', 'Tháng 8', 'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12'
+    'ThÃ¡ng 1', 'ThÃ¡ng 2', 'ThÃ¡ng 3', 'ThÃ¡ng 4', 'ThÃ¡ng 5', 'ThÃ¡ng 6',
+    'ThÃ¡ng 7', 'ThÃ¡ng 8', 'ThÃ¡ng 9', 'ThÃ¡ng 10', 'ThÃ¡ng 11', 'ThÃ¡ng 12'
   ];
   const monthNamesEn = [
     'January', 'February', 'March', 'April', 'May', 'June',
@@ -45,7 +45,7 @@ export const YearView: React.FC<YearViewProps> = ({
           return (
             <div
               key={m}
-              className="bg-gray-50/60 dark:bg-gray-850/40 rounded-xl p-3 border border-gray-100 dark:border-gray-800"
+              className="bg-gray-50/60 dark:bg-[#1a1e24]/40 rounded-xl p-3 border border-gray-100 dark:border-gray-800"
             >
               <h2 className="text-sm font-bold text-gray-800 dark:text-gray-100 mb-2 px-1">
                 {lang === 'vi' ? monthNamesVi[m] : monthNamesEn[m]}
@@ -77,7 +77,7 @@ export const YearView: React.FC<YearViewProps> = ({
                           ? 'bg-blue-600 text-white font-bold shadow-xs'
                           : hasEvents
                           ? 'font-semibold text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/50'
-                          : 'text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-750'
+                          : 'text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-[#242931]'
                       }`}
                     >
                       <span className="text-[11px]">{item.dayNumber}</span>
@@ -103,3 +103,4 @@ export const YearView: React.FC<YearViewProps> = ({
     </div>
   );
 };
+

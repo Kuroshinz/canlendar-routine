@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import {
   X,
   Edit2,
@@ -51,10 +51,10 @@ export const EventDetailCard: React.FC<EventDetailCardProps> = ({
   const getRecurrenceLabel = () => {
     if (!event.recurrence || event.recurrence === 'none') return null;
     const mapVi: Record<string, string> = {
-      daily: 'Hàng ngày',
-      weekly: 'Hàng tuần',
-      monthly: 'Hàng tháng',
-      yearly: 'Hàng năm',
+      daily: 'HÃ ng ngÃ y',
+      weekly: 'HÃ ng tuáº§n',
+      monthly: 'HÃ ng thÃ¡ng',
+      yearly: 'HÃ ng nÄƒm',
     };
     const mapEn: Record<string, string> = {
       daily: 'Daily',
@@ -67,7 +67,7 @@ export const EventDetailCard: React.FC<EventDetailCardProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/40 backdrop-blur-2xs">
-      <div className="bg-white dark:bg-gray-850 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+      <div className="bg-white dark:bg-[#1a1e24] rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-150">
         {/* Top colored accent line */}
         <div className="h-2" style={{ backgroundColor: event.color }} />
 
@@ -78,7 +78,7 @@ export const EventDetailCard: React.FC<EventDetailCardProps> = ({
               style={{ backgroundColor: `${event.color}20`, color: event.color }}
               className="px-2.5 py-0.5 rounded-full text-xs font-semibold"
             >
-              {category ? (lang === 'vi' ? category.nameVi : category.name) : 'Lịch'}
+              {category ? (lang === 'vi' ? category.nameVi : category.name) : 'Lá»‹ch'}
             </span>
             {event.type === 'task' && (
               <button
@@ -90,7 +90,7 @@ export const EventDetailCard: React.FC<EventDetailCardProps> = ({
                     event.isCompleted ? 'text-emerald-600 fill-emerald-100' : ''
                   }`}
                 />
-                <span>{event.isCompleted ? (lang === 'vi' ? 'Đã xong' : 'Completed') : (lang === 'vi' ? 'Đánh dấu hoàn thành' : 'Mark complete')}</span>
+                <span>{event.isCompleted ? (lang === 'vi' ? 'ÄÃ£ xong' : 'Completed') : (lang === 'vi' ? 'ÄÃ¡nh dáº¥u hoÃ n thÃ nh' : 'Mark complete')}</span>
               </button>
             )}
           </div>
@@ -98,8 +98,8 @@ export const EventDetailCard: React.FC<EventDetailCardProps> = ({
           <div className="flex items-center gap-1">
             <button
               onClick={() => onEdit(event)}
-              title={lang === 'vi' ? 'Chỉnh sửa sự kiện' : 'Edit event'}
-              className="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-750 text-gray-600 dark:text-gray-300 transition-colors cursor-pointer"
+              title={lang === 'vi' ? 'Chá»‰nh sá»­a sá»± kiá»‡n' : 'Edit event'}
+              className="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-[#242931] text-gray-600 dark:text-gray-300 transition-colors cursor-pointer"
             >
               <Edit2 className="w-4 h-4" />
             </button>
@@ -108,15 +108,15 @@ export const EventDetailCard: React.FC<EventDetailCardProps> = ({
                 onDelete(event.id);
                 onClose();
               }}
-              title={lang === 'vi' ? 'Xóa sự kiện' : 'Delete event'}
+              title={lang === 'vi' ? 'XÃ³a sá»± kiá»‡n' : 'Delete event'}
               className="p-1.5 rounded-full hover:bg-red-50 dark:hover:bg-red-950/40 text-gray-600 hover:text-red-600 transition-colors cursor-pointer"
             >
               <Trash2 className="w-4 h-4" />
             </button>
             <button
               onClick={onClose}
-              title={lang === 'vi' ? 'Đóng' : 'Close'}
-              className="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-750 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
+              title={lang === 'vi' ? 'ÄÃ³ng' : 'Close'}
+              className="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-[#242931] text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>
@@ -148,13 +148,13 @@ export const EventDetailCard: React.FC<EventDetailCardProps> = ({
             <div>
               <p className="font-medium text-gray-800 dark:text-gray-200">
                 {event.startDate}
-                {event.endDate && event.endDate !== event.startDate ? ` – ${event.endDate}` : ''}
+                {event.endDate && event.endDate !== event.startDate ? ` â€“ ${event.endDate}` : ''}
               </p>
               <p className="text-gray-500 dark:text-gray-400">
                 {event.allDay
-                  ? lang === 'vi' ? 'Cả ngày' : 'All day'
-                  : `${event.startTime} – ${event.endTime}`}
-                {getRecurrenceLabel() && ` • ${getRecurrenceLabel()}`}
+                  ? lang === 'vi' ? 'Cáº£ ngÃ y' : 'All day'
+                  : `${event.startTime} â€“ ${event.endTime}`}
+                {getRecurrenceLabel() && ` â€¢ ${getRecurrenceLabel()}`}
               </p>
             </div>
           </div>
@@ -170,11 +170,11 @@ export const EventDetailCard: React.FC<EventDetailCardProps> = ({
                   className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-xs transition-colors cursor-pointer"
                 >
                   <Video className="w-3.5 h-3.5" />
-                  <span>{lang === 'vi' ? 'Tham gia bằng Google Meet' : 'Join with Google Meet'}</span>
+                  <span>{lang === 'vi' ? 'Tham gia báº±ng Google Meet' : 'Join with Google Meet'}</span>
                 </button>
                 <button
                   onClick={handleCopyMeet}
-                  title={lang === 'vi' ? 'Sao chép đường liên kết' : 'Copy link'}
+                  title={lang === 'vi' ? 'Sao chÃ©p Ä‘Æ°á»ng liÃªn káº¿t' : 'Copy link'}
                   className="p-1.5 hover:bg-blue-200/50 dark:hover:bg-blue-900 text-blue-600 rounded-md transition-colors cursor-pointer"
                 >
                   {copiedLink ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
@@ -197,7 +197,7 @@ export const EventDetailCard: React.FC<EventDetailCardProps> = ({
               <Users className="w-4 h-4 text-gray-400 mt-0.5 shrink-0" />
               <div className="flex-1 space-y-1">
                 <p className="font-semibold text-gray-700 dark:text-gray-200">
-                  {event.guests.length} {lang === 'vi' ? 'người tham gia' : 'guests'}
+                  {event.guests.length} {lang === 'vi' ? 'ngÆ°á»i tham gia' : 'guests'}
                 </p>
                 <div className="space-y-1 pt-1">
                   {event.guests.map((g, idx) => (
@@ -225,3 +225,4 @@ export const EventDetailCard: React.FC<EventDetailCardProps> = ({
     </div>
   );
 };
+

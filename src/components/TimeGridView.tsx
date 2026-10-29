@@ -218,7 +218,7 @@ export const TimeGridView: React.FC<TimeGridViewProps> = ({
           </div>
 
           {/* All Day Events Section */}
-          <div className="flex border-b border-gray-200 dark:border-gray-800 bg-gray-50/40 dark:bg-gray-850/40 shrink-0 max-h-28 overflow-y-auto">
+          <div className="flex border-b border-gray-200 dark:border-gray-800 bg-gray-50/40 dark:bg-[#1a1e24]/40 shrink-0 max-h-28 overflow-y-auto">
             <div className="w-16 sm:w-20 border-r border-gray-200 dark:border-gray-800 p-2 text-[10px] font-medium text-gray-400 text-center flex items-center justify-center">
               {lang === 'vi' ? 'Cả ngày' : 'All day'}
             </div>
@@ -335,7 +335,7 @@ export const TimeGridView: React.FC<TimeGridViewProps> = ({
                           className="h-14 border-b border-gray-100 dark:border-gray-800/80 hover:bg-blue-50/20 dark:hover:bg-blue-900/10 cursor-pointer relative"
                         >
                           {/* Half-hour subtle dashed line */}
-                          <div className="absolute inset-x-0 top-1/2 border-b border-dashed border-gray-100 dark:border-gray-850/60 pointer-events-none" />
+                          <div className="absolute inset-x-0 top-1/2 border-b border-dashed border-gray-100 dark:border-[#1a1e24]/60 pointer-events-none" />
                         </div>
                       );
                     })}
@@ -483,3 +483,4 @@ export const TimeGridView: React.FC<TimeGridViewProps> = ({
     </div>
   );
 };
+

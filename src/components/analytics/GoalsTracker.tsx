@@ -49,7 +49,7 @@ export const GoalsTracker: React.FC<GoalsTrackerProps> = ({ categoryBreakdown, l
   };
 
   return (
-    <div className="bg-white dark:bg-gray-850 p-5 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs">
+    <div className="bg-white dark:bg-[#1a1e24] p-5 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <Target className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
@@ -149,3 +149,4 @@ export const GoalsTracker: React.FC<GoalsTrackerProps> = ({ categoryBreakdown, l
     </div>
   );
 };
+

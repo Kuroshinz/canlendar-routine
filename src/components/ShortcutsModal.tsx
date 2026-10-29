@@ -30,7 +30,7 @@ export const ShortcutsModal: React.FC<ShortcutsModalProps> = ({ isOpen, onClose,
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/45 backdrop-blur-2xs">
-      <div className="bg-white dark:bg-gray-850 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95">
+      <div className="bg-white dark:bg-[#1a1e24] rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95">
         <div className="px-5 py-3.5 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Keyboard className="w-5 h-5 text-blue-600 dark:text-blue-400" />
@@ -55,7 +55,7 @@ export const ShortcutsModal: React.FC<ShortcutsModalProps> = ({ isOpen, onClose,
               <span className="text-xs text-gray-700 dark:text-gray-300">
                 {lang === 'vi' ? sc.descVi : sc.descEn}
               </span>
-              <kbd className="px-2.5 py-1 text-xs font-mono font-semibold bg-gray-100 dark:bg-gray-750 text-gray-800 dark:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-md shadow-2xs">
+              <kbd className="px-2.5 py-1 text-xs font-mono font-semibold bg-gray-100 dark:bg-[#242931] text-gray-800 dark:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-md shadow-2xs">
                 {sc.key}
               </kbd>
             </div>
@@ -65,3 +65,4 @@ export const ShortcutsModal: React.FC<ShortcutsModalProps> = ({ isOpen, onClose,
     </div>
   );
 };
+

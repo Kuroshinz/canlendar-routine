@@ -55,7 +55,7 @@ export const MonthView: React.FC<MonthViewProps> = ({
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden bg-white dark:bg-gray-900 select-none">
       {/* Weekday headers */}
-      <div className="grid grid-cols-7 border-b border-gray-200 dark:border-gray-800 text-center py-2 bg-gray-50/70 dark:bg-gray-850/70 shrink-0">
+      <div className="grid grid-cols-7 border-b border-gray-200 dark:border-gray-800 text-center py-2 bg-gray-50/70 dark:bg-[#1a1e24]/70 shrink-0">
         {weekdays.map((day, idx) => (
           <div key={idx} className="text-xs font-semibold tracking-wider text-gray-500 dark:text-gray-400">
             {day}
@@ -192,7 +192,7 @@ export const MonthView: React.FC<MonthViewProps> = ({
                     );
                   }
 
-                  // Soft Tinted Chip for Timed Events (No weird parenthesis border)
+                  // High-Contrast Crisp Chip for Timed Events
                   return (
                     <div
                       key={ev.id}
@@ -216,19 +216,19 @@ export const MonthView: React.FC<MonthViewProps> = ({
                       }}
                       onMouseLeave={() => setHoveredEvent(null)}
                       style={{
-                        backgroundColor: `${ev.color}15`, // 10% soft tinted background
+                        borderLeftColor: ev.color,
                       }}
-                      className="px-1.5 py-0.5 rounded text-[11px] truncate flex items-center gap-1.5 transition-all hover:brightness-95 hover:shadow-2xs cursor-grab active:cursor-grabbing border border-transparent hover:border-black/10 dark:hover:border-white/10"
+                      className="px-2 py-1 rounded-md text-[11px] truncate flex items-center gap-1.5 transition-all hover:brightness-105 hover:shadow-xs cursor-grab active:cursor-grabbing border-l-[3px] bg-gray-100/90 dark:bg-[#1e232b] text-gray-900 dark:text-gray-100 border-t border-r border-b border-gray-200/60 dark:border-gray-700/60 shadow-2xs"
                     >
                       {/* Color dot */}
                       <span
-                        className="w-1.5 h-1.5 rounded-full shrink-0 shadow-2xs"
+                        className="w-2 h-2 rounded-full shrink-0 shadow-xs"
                         style={{ backgroundColor: ev.color }}
                       />
 
                       {/* Start time */}
                       {ev.startTime && (
-                        <span className="text-[10px] font-mono font-semibold text-gray-500 dark:text-gray-300 shrink-0">
+                        <span className="text-[10px] font-mono font-bold text-gray-600 dark:text-gray-300 shrink-0">
                           {ev.startTime}
                         </span>
                       )}
@@ -240,8 +240,8 @@ export const MonthView: React.FC<MonthViewProps> = ({
                       )}
 
                       <span
-                        className={`truncate font-medium text-gray-800 dark:text-gray-200 ${
-                          ev.isCompleted ? 'line-through opacity-70' : ''
+                        className={`truncate font-semibold ${
+                          ev.isCompleted ? 'line-through opacity-60' : ''
                         }`}
                       >
                         {ev.title}
@@ -336,3 +336,5 @@ export const MonthView: React.FC<MonthViewProps> = ({
     </div>
   );
 };
+
+
