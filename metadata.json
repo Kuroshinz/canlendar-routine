@@ -1,0 +1,6 @@
+{
+  "name": "Google Calendar - Lịch Thông Minh",
+  "description": "Ứng dụng quản lý lịch và sự kiện phong cách Google Calendar với chế độ xem tháng, tuần, ngày, lịch biểu, hội họp Google Meet và đồng bộ hóa.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
