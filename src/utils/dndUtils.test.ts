@@ -1,4 +1,4 @@
-﻿import {
+import {
   timeStringToMinutes,
   minutesToTimeString,
   snapMinutesToStep,

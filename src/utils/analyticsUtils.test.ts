@@ -1,4 +1,4 @@
-﻿import { computeAnalyticsMetrics, isMeetingEvent } from './analyticsUtils';
+import { computeAnalyticsMetrics, isMeetingEvent } from './analyticsUtils';
 import { CalendarEvent, DEFAULT_CALENDARS } from '../types/calendar';
 
 function assert(condition: boolean, msg: string) {

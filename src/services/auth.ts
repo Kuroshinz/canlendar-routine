@@ -14,8 +14,10 @@ export const auth = getAuth(app);
 
 const provider = new GoogleAuthProvider();
 provider.addScope('https://www.googleapis.com/auth/calendar.events');
+provider.addScope('https://www.googleapis.com/auth/calendar.readonly');
 
-let isSigningIn = false;
+const REAL_TOKEN_KEY = 'gcal_real_access_token';
+
 let cachedAccessToken: string | null = null;
 
 export interface AppUser {
@@ -25,76 +27,94 @@ export interface AppUser {
   photoURL: string | null;
 }
 
+/**
+ * Restore a previously authorized session. Only a *real* Google access token
+ * counts as a session; there is no synthetic/offline user.
+ */
 export const initAuth = (
   onAuthSuccess?: (user: AppUser, token: string) => void,
   onAuthFailure?: () => void
 ) => {
-  // Check local stored session first for instantaneous loading
-  const saved = localStorage.getItem('gcal_active_user');
-  if (saved) {
+  const savedUser = localStorage.getItem('gcal_active_user');
+  const savedToken = localStorage.getItem(REAL_TOKEN_KEY);
+
+  if (savedUser && savedToken) {
     try {
-      const parsed = JSON.parse(saved);
+      const parsed = JSON.parse(savedUser) as AppUser;
       if (parsed?.email) {
-        if (onAuthSuccess) onAuthSuccess(parsed, cachedAccessToken || 'google-token-active');
+        cachedAccessToken = savedToken;
+        if (onAuthSuccess) onAuthSuccess(parsed, savedToken);
+      } else {
+        if (onAuthFailure) onAuthFailure();
       }
-    } catch {}
+    } catch {
+      localStorage.removeItem('gcal_active_user');
+      localStorage.removeItem(REAL_TOKEN_KEY);
+      if (onAuthFailure) onAuthFailure();
+    }
+  } else if (onAuthFailure) {
+    onAuthFailure();
   }
 
   return onAuthStateChanged(auth, async (user: User | null) => {
-    if (user) {
-      const appUser: AppUser = {
-        uid: user.uid,
-        email: user.email,
-        displayName: user.displayName,
-        photoURL: user.photoURL,
-      };
-      localStorage.setItem('gcal_active_user', JSON.stringify(appUser));
-      if (onAuthSuccess) onAuthSuccess(appUser, cachedAccessToken || 'google-token-active');
-    }
+    if (!user) return;
+    // Firebase session alone carries no Calendar scope; keep it only when a real
+    // access token was already obtained through the OAuth popup.
+    const token = cachedAccessToken || localStorage.getItem(REAL_TOKEN_KEY);
+    if (!token) return;
+
+    const appUser: AppUser = {
+      uid: user.uid,
+      email: user.email,
+      displayName: user.displayName,
+      photoURL: user.photoURL,
+    };
+    localStorage.setItem('gcal_active_user', JSON.stringify(appUser));
+    if (onAuthSuccess) onAuthSuccess(appUser, token);
   });
 };
 
-export const googleSignIn = async (customEmail?: string): Promise<{ user: AppUser; accessToken: string }> => {
-  isSigningIn = true;
+/**
+ * Firebase Google popup sign-in. Throws on failure — the caller must fall back to
+ * the real OAuth / access-token / iCal-URL flows in CloudSyncModal. A fake local
+ * session is never fabricated.
+ */
+export const googleSignIn = async (): Promise<{ user: AppUser; accessToken: string }> => {
+  const result = await signInWithPopup(auth, provider);
+  const credential = GoogleAuthProvider.credentialFromResult(result);
+  const accessToken = credential?.accessToken;
 
-  // 1. First attempt Firebase Popup Sign-in
-  try {
-    const result = await signInWithPopup(auth, provider);
-    const credential = GoogleAuthProvider.credentialFromResult(result);
-    cachedAccessToken = credential?.accessToken || 'google-token-active';
-    const appUser: AppUser = {
-      uid: result.user.uid,
-      email: result.user.email,
-      displayName: result.user.displayName,
-      photoURL: result.user.photoURL,
-    };
-    localStorage.setItem('gcal_active_user', JSON.stringify(appUser));
-    return { user: appUser, accessToken: cachedAccessToken };
-  } catch (firebaseErr: any) {
-    console.info('Firebase popup auth notice (local development / domain constraint), activating seamless Google Account session:', firebaseErr?.code || firebaseErr);
-
-    // 2. Resilient Direct Google Authentication for Localhost
-    const email = customEmail || localStorage.getItem('gcal_preferred_email') || 'nghuyenthiennhannghuyen@gmail.com';
-    const name = email.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
-    
-    const appUser: AppUser = {
-      uid: `google-${Date.now()}`,
-      email: email,
-      displayName: name === 'Nghuyenthiennhannghuyen' ? 'Nhân Nguyễn' : name,
-      photoURL: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80',
-    };
-
-    cachedAccessToken = 'google-token-active';
-    localStorage.setItem('gcal_active_user', JSON.stringify(appUser));
-    localStorage.setItem('gcal_preferred_email', email);
-    return { user: appUser, accessToken: cachedAccessToken };
-  } finally {
-    isSigningIn = false;
+  if (!accessToken) {
+    throw new Error(
+      'Google không trả về access token. Vui lòng cấp quyền Calendar hoặc dùng Access Token / iCal URL trong hộp thoại đồng bộ.'
+    );
   }
+
+  cachedAccessToken = accessToken;
+  const appUser: AppUser = {
+    uid: result.user.uid,
+    email: result.user.email,
+    displayName: result.user.displayName,
+    photoURL: result.user.photoURL,
+  };
+
+  localStorage.setItem('gcal_active_user', JSON.stringify(appUser));
+  localStorage.setItem(REAL_TOKEN_KEY, accessToken);
+  return { user: appUser, accessToken };
 };
 
+/** Store a token obtained through Google Identity Services / OAuth Playground. */
+export const setAccessToken = (token: string) => {
+  cachedAccessToken = token;
+  localStorage.setItem(REAL_TOKEN_KEY, token);
+};
+
+/** Returns a real access token or null. Never returns a sentinel placeholder. */
 export const getAccessToken = async (): Promise<string | null> => {
-  return cachedAccessToken || 'google-token-active';
+  if (cachedAccessToken) return cachedAccessToken;
+  const stored = localStorage.getItem(REAL_TOKEN_KEY);
+  cachedAccessToken = stored || null;
+  return cachedAccessToken;
 };
 
 export const logout = async () => {
@@ -103,4 +123,5 @@ export const logout = async () => {
   } catch {}
   cachedAccessToken = null;
   localStorage.removeItem('gcal_active_user');
+  localStorage.removeItem(REAL_TOKEN_KEY);
 };

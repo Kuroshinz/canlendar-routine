@@ -60,6 +60,19 @@ export const CloudSyncModal: React.FC<CloudSyncModalProps> = ({
   const [gcalUrl, setGcalUrl] = useState(() => localStorage.getItem('gcal_sync_url') || '');
   const [oauthToken, setOauthToken] = useState(() => localStorage.getItem('gcal_real_access_token') || '');
   const [customClientId, setCustomClientId] = useState(() => localStorage.getItem('gcal_custom_client_id') || '');
+  const [showClientIdField, setShowClientIdField] = useState(
+    () => Boolean(localStorage.getItem('gcal_custom_client_id'))
+  );
+
+  const handleClientIdChange = (value: string) => {
+    setCustomClientId(value);
+    const trimmed = value.trim();
+    if (trimmed) {
+      localStorage.setItem('gcal_custom_client_id', trimmed);
+    } else {
+      localStorage.removeItem('gcal_custom_client_id');
+    }
+  };
   const [isSyncing, setIsSyncing] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -320,6 +333,13 @@ export const CloudSyncModal: React.FC<CloudSyncModalProps> = ({
                       {lang === 'vi'
                         ? 'Mở popup chính thức của Google để cấp quyền đọc lịch'
                         : 'Launch official Google consent screen to fetch your real calendar'}
+                      <span className="block text-[10px] font-mono text-gray-400 dark:text-gray-500 mt-0.5 break-all">
+                        {DEFAULT_GOOGLE_CLIENT_ID
+                          ? DEFAULT_GOOGLE_CLIENT_ID.slice(0, 28) + '…'
+                          : lang === 'vi'
+                          ? 'chưa cấu hình Client ID'
+                          : 'no Client ID configured'}
+                      </span>
                     </p>
                   </div>
                   <button
@@ -336,6 +356,53 @@ export const CloudSyncModal: React.FC<CloudSyncModalProps> = ({
                     <span>{isSyncing ? (lang === 'vi' ? 'Đang mở Google...' : 'Connecting...') : (lang === 'vi' ? 'Đăng Nhập Google' : 'Sign In with Google')}</span>
                   </button>
                 </div>
+              </div>
+
+              {/* Own OAuth Client ID (required when the shared sample client rejects this origin) */}
+              <div className="p-3.5 rounded-xl border border-amber-200 dark:border-amber-800/70 bg-amber-50/70 dark:bg-amber-950/30 space-y-2">
+                <button
+                  onClick={() => setShowClientIdField((v) => !v)}
+                  className="w-full flex items-center justify-between text-left cursor-pointer"
+                >
+                  <span className="text-xs font-bold text-amber-900 dark:text-amber-200 flex items-center gap-1.5">
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                    {lang === 'vi'
+                      ? 'Gặp lỗi 400: origin_mismatch? Dùng Client ID của bạn'
+                      : 'Seeing 400: origin_mismatch? Use your own Client ID'}
+                  </span>
+                  <span className="text-[11px] text-amber-700 dark:text-amber-300 underline">
+                    {showClientIdField ? (lang === 'vi' ? 'Ẩn' : 'Hide') : lang === 'vi' ? 'Thiết lập' : 'Set up'}
+                  </span>
+                </button>
+
+                {showClientIdField && (
+                  <div className="space-y-2 pt-1 animate-in fade-in duration-100">
+                    <p className="text-[11px] text-amber-800 dark:text-amber-200/90 leading-relaxed">
+                      {lang === 'vi'
+                        ? 'Client ID mặc định chỉ cho phép origin của chính nó. Tạo OAuth Client ID (Web application) trong Google Cloud Console, thêm origin hiện tại vào "Authorized JavaScript origins", rồi dán Client ID vào đây.'
+                        : 'The default client only authorizes its own origin. Create a Web application OAuth Client ID in Google Cloud Console, add this origin to "Authorized JavaScript origins", then paste the Client ID here.'}
+                    </p>
+                    <input
+                      type="text"
+                      placeholder="1234567890-xxxxxxxxxxxxxxxx.apps.googleusercontent.com"
+                      value={customClientId}
+                      onChange={(e) => handleClientIdChange(e.target.value)}
+                      className="w-full text-xs px-3 py-2 rounded-lg border border-amber-300 dark:border-amber-700 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 font-mono"
+                    />
+                    <p className="text-[10px] text-amber-700 dark:text-amber-300/80 font-mono break-all">
+                      origin: {typeof window !== 'undefined' ? window.location.origin : ''}
+                    </p>
+                    <a
+                      href="https://console.cloud.google.com/apis/credentials"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-[11px] text-blue-600 dark:text-blue-400 font-semibold underline inline-flex items-center gap-1"
+                    >
+                      {lang === 'vi' ? 'Mở Google Cloud Console' : 'Open Google Cloud Console'}
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </div>
+                )}
               </div>
 
               {/* Direct Access Token Input (For 100% reliable real sync without localhost domain mismatch) */}

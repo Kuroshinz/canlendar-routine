@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Utility functions for Drag-and-Drop and Event Resizing operations
  * Supporting 15-minute / 30-minute snap-to-grid on a time grid (56px per hour).
  */

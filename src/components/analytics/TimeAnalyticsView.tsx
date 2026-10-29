@@ -1,4 +1,4 @@
-﻿import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { CalendarEvent, CalendarCategory } from '../../types/calendar';
 import { computeAnalyticsMetrics } from '../../utils/analyticsUtils';
 import { formatDateString, getWeekDates } from '../../utils/calendarUtils';

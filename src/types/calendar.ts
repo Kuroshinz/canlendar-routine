@@ -1,4 +1,4 @@
-﻿export type CalendarViewType = 'month' | 'week' | 'day' | 'fourDay' | 'year' | 'schedule' | 'analytics';
+export type CalendarViewType = 'month' | 'week' | 'day' | 'fourDay' | 'year' | 'schedule' | 'analytics';
 
 export type EventType = 'event' | 'task' | 'reminder';
 

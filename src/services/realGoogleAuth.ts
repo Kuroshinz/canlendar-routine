@@ -9,8 +9,18 @@ declare global {
   }
 }
 
+/**
+ * Client ID resolution order (first non-empty wins):
+ *   1. explicit argument (user typed it in the sync dialog)
+ *   2. localStorage 'gcal_custom_client_id' (persisted from the dialog)
+ *   3. VITE_GOOGLE_CLIENT_ID (build-time env, e.g. Vercel project settings)
+ *   4. Firebase applet oAuthClientId (the shared sample client, which only
+ *      authorizes its own registered origins)
+ */
+const ENV_GOOGLE_CLIENT_ID = (import.meta.env?.VITE_GOOGLE_CLIENT_ID as string | undefined) || '';
+
 export const DEFAULT_GOOGLE_CLIENT_ID =
-  firebaseConfig.oAuthClientId || '853617678894-v4ta5bfcg641hjrarf2jn2mnqpgeg1at.apps.googleusercontent.com';
+  ENV_GOOGLE_CLIENT_ID || firebaseConfig.oAuthClientId || '';
 
 /**
  * Fetch real user profile from Google UserInfo endpoint
@@ -41,7 +51,17 @@ export async function fetchGoogleUserInfo(accessToken: string): Promise<AppUser>
  */
 export function requestRealGoogleOAuthToken(customClientId?: string): Promise<string> {
   return new Promise((resolve, reject) => {
-    const clientId = customClientId || localStorage.getItem('gcal_custom_client_id') || DEFAULT_GOOGLE_CLIENT_ID;
+    const clientId =
+      customClientId || localStorage.getItem('gcal_custom_client_id') || DEFAULT_GOOGLE_CLIENT_ID;
+
+    if (!clientId) {
+      reject(
+        new Error(
+          'Chưa có Google OAuth Client ID. Hãy nhập Client ID của bạn trong hộp thoại đồng bộ, hoặc dùng tab Access Token / URL iCal.'
+        )
+      );
+      return;
+    }
 
     if (typeof window === 'undefined') {
       reject(new Error('Window is not defined'));

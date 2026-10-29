@@ -1,4 +1,4 @@
-﻿import { exportEventsToICal, parseICalToEvents } from './icalService';
+import { exportEventsToICal, parseICalToEvents } from './icalService';
 import { CalendarEvent } from '../types/calendar';
 
 function assert(condition: boolean, msg: string) {

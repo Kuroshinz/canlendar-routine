@@ -1,4 +1,4 @@
-﻿# Tài Liệu Đặc Tả Thiết Kế: Smart Google Calendar Pro (Cải Tiến & Mở Rộng)
+# Tài Liệu Đặc Tả Thiết Kế: Smart Google Calendar Pro (Cải Tiến & Mở Rộng)
 
 - **Ngày tạo**: 2026-10-29
 - **Dự án**: `D:\Download\google-calendar---lịch-thông-minh`

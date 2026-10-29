@@ -1,4 +1,4 @@
-﻿import React, { useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { X, Download, Upload, RotateCcw, Volume2, CheckCircle2 } from 'lucide-react';
 import { CalendarEvent } from '../types/calendar';
 import { exportToIcs, parseIcsContent } from '../utils/calendarUtils';

@@ -1,4 +1,4 @@
-﻿import { CalendarEvent, CalendarCategory } from '../types/calendar';
+import { CalendarEvent, CalendarCategory } from '../types/calendar';
 import { AnalyticsMetrics, CategoryBreakdownItem, OverloadDayItem } from '../types/multiHub';
 import { timeStringToMinutes } from './dndUtils';
 

@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { OverloadDayItem } from '../../types/multiHub';
 import { AlertTriangle, CheckCircle, ShieldAlert, Sparkles } from 'lucide-react';
 

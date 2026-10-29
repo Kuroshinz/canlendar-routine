@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { WeeklyGoal } from '../../types/calendar';
 import { CategoryBreakdownItem } from '../../types/multiHub';
 import { Target, Plus, CheckCircle2, Trash2 } from 'lucide-react';

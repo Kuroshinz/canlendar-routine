@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { CalendarEvent, CalendarCategory, EventType, GOOGLE_COLORS } from '../types/calendar';
 import { X, Clock, Video, Check } from 'lucide-react';
 

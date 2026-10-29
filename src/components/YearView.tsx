@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { CalendarEvent } from '../types/calendar';
 import { formatDateString, getMonthDays, doesEventOccurOnDate } from '../utils/calendarUtils';
 

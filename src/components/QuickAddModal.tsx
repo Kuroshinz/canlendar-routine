@@ -1,4 +1,4 @@
-﻿import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { X, Sparkles, Clock, Calendar as CalIcon, ArrowRight } from 'lucide-react';
 import { parseNaturalLanguageInput } from '../utils/calendarUtils';
 import { CalendarEvent } from '../types/calendar';

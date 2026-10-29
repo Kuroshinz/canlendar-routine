@@ -1,4 +1,4 @@
-﻿import { CalendarEvent } from '../types/calendar';
+import { CalendarEvent } from '../types/calendar';
 
 function escapeICal(str: string): string {
   if (!str) return '';

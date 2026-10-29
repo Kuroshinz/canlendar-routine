@@ -1,4 +1,4 @@
-﻿import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { CalendarEvent, DnDState, LiveTimePreview } from '../types/calendar';
 import {
   calculateNewTime,

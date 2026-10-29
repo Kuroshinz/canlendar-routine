@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -35,7 +35,7 @@ import { RightSidebar } from './components/RightSidebar';
 import { GoogleMeetRoom } from './components/GoogleMeetRoom';
 import { MultiHubDrawer } from './components/MultiHubDrawer';
 import { User } from 'firebase/auth';
-import { initAuth, googleSignIn, logout, getAccessToken, AppUser } from './services/auth';
+import { initAuth, logout, getAccessToken, AppUser } from './services/auth';
 import { fetchGoogleCalendarEvents, createGoogleCalendarEvent } from './services/googleCalendarSync';
 import { fetchCalendarFromICalUrl } from './services/googleCalendarUrlSync';
 import { executeRealGoogleSync } from './services/realGoogleAuth';
@@ -557,7 +557,9 @@ export default function App() {
     try {
       const token = explicitToken || (await getAccessToken());
       if (!token) {
-        await handleGoogleSignIn();
+        // No real token yet: route the user to the real sync dialog
+        // (Google OAuth popup / access token / secret iCal URL).
+        setIsCloudSyncOpen(true);
         return;
       }
       const gEvents = await fetchGoogleCalendarEvents(token);
@@ -578,6 +580,13 @@ export default function App() {
       setSyncState('synced');
     } catch (err) {
       console.error('Failed to sync Google Calendar:', err);
+      setActiveAlert({
+        title:
+          lang === 'vi'
+            ? 'Đồng bộ Google Calendar thất bại — token có thể đã hết hạn, vui lòng kết nối lại.'
+            : 'Google Calendar sync failed — the token may have expired, please reconnect.',
+        time: new Date().toLocaleTimeString(lang === 'vi' ? 'vi-VN' : 'en-US'),
+      });
     } finally {
       setIsSyncing(false);
     }

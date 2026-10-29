@@ -1,4 +1,4 @@
-﻿import React, { useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { CalendarEvent, CalendarCategory } from '../types/calendar';
 import { formatDateString, doesEventOccurOnDate } from '../utils/calendarUtils';
 import { getLunarDate } from '../utils/lunarUtils';
