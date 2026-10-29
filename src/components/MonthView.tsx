@@ -64,7 +64,7 @@ export const MonthView: React.FC<MonthViewProps> = ({
       </div>
 
       {/* Month Days Grid */}
-      <div className="flex-1 grid grid-cols-7 grid-rows-5 md:grid-rows-5 lg:grid-rows-6 border-l border-t border-gray-200 dark:border-gray-800 overflow-y-auto">
+      <div className="flex-1 grid grid-cols-7 auto-rows-[minmax(104px,1fr)] border-l border-t border-gray-200 dark:border-gray-800 overflow-y-auto">
         {days.map((dayItem, index) => {
           const dateStr = dayItem.dateString;
           // Sort events: All-day / multi-day first, then chronologically by startTime
@@ -78,10 +78,14 @@ export const MonthView: React.FC<MonthViewProps> = ({
               return (a.startTime || '00:00').localeCompare(b.startTime || '00:00');
             });
 
-          // Max visible events in cell before +N more
-          const MAX_VISIBLE = 3;
-          const visibleList = dayEvents.slice(0, MAX_VISIBLE);
-          const hiddenCount = dayEvents.length - MAX_VISIBLE;
+          // Max chips that fit a cell *including* the "+N more" row.
+          // When there is overflow we render one chip fewer so the "+N" line
+          // always has room and never overlaps the row below.
+          const MAX_CHIPS = 4;
+          const hasOverflow = dayEvents.length > MAX_CHIPS;
+          const visibleCount = hasOverflow ? MAX_CHIPS - 1 : dayEvents.length;
+          const visibleList = dayEvents.slice(0, visibleCount);
+          const hiddenCount = dayEvents.length - visibleCount;
           const lunar = getLunarDate(dateStr);
           const isDragTarget = draggedOverDate === dateStr;
 
@@ -112,7 +116,7 @@ export const MonthView: React.FC<MonthViewProps> = ({
                   playNotificationSound();
                 }
               }}
-              className={`min-h-[105px] border-r border-b border-gray-200 dark:border-gray-800 p-1.5 flex flex-col transition-colors cursor-pointer group relative ${
+              className={`min-h-0 overflow-hidden border-r border-b border-gray-200 dark:border-gray-800 p-1.5 flex flex-col transition-colors cursor-pointer group relative ${
                 isDragTarget
                   ? 'bg-blue-100/60 dark:bg-blue-900/40 ring-2 ring-blue-500 ring-inset'
                   : !dayItem.isCurrentMonth
@@ -170,7 +174,7 @@ export const MonthView: React.FC<MonthViewProps> = ({
               </div>
 
               {/* Event items container */}
-              <div className="flex-1 flex flex-col gap-1 overflow-hidden">
+              <div className="flex-1 min-h-0 flex flex-col gap-1 overflow-hidden">
                 {visibleList.map((ev) => {
                   const isAllDayOrMultiDay = ev.allDay || (ev.startDate !== ev.endDate);
 
@@ -190,7 +194,7 @@ export const MonthView: React.FC<MonthViewProps> = ({
                           onSelectEvent(ev, e.currentTarget);
                         }}
                         style={{ backgroundColor: ev.color }}
-                        className="px-2 py-0.5 rounded text-[11px] font-medium text-white truncate flex items-center gap-1.5 shadow-2xs hover:brightness-105 cursor-grab active:cursor-grabbing transition-all"
+                        className="shrink-0 h-[18px] px-2 rounded text-[11px] font-medium text-white truncate flex items-center gap-1.5 shadow-2xs hover:brightness-110 cursor-grab active:cursor-grabbing transition-all"
                       >
                         {ev.meetUrl && <Video className="w-2.5 h-2.5 shrink-0 opacity-90" />}
                         {ev.type === 'task' && <Check className="w-2.5 h-2.5 shrink-0 stroke-[3]" />}
@@ -224,7 +228,7 @@ export const MonthView: React.FC<MonthViewProps> = ({
                         });
                       }}
                       onMouseLeave={() => setHoveredEvent(null)}
-                      className="px-1.5 py-0.5 rounded-sm text-[11px] truncate flex items-center gap-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-grab active:cursor-grabbing group/item"
+                      className="shrink-0 h-[18px] px-1.5 rounded-sm text-[11px] truncate flex items-center gap-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-grab active:cursor-grabbing group/item"
                     >
                       {/* Single crisp colored dot */}
                       <span
@@ -260,7 +264,7 @@ export const MonthView: React.FC<MonthViewProps> = ({
                 {hiddenCount > 0 && (
                   <button
                     onClick={(e) => handleOverflowClick(e, dateStr)}
-                    className="text-[10px] font-semibold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 px-1.5 py-0.5 rounded-md text-left transition-colors w-fit"
+                    className="shrink-0 h-[18px] max-w-full text-[10px] font-semibold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 px-1.5 rounded text-left transition-colors truncate whitespace-nowrap"
                   >
                     +{hiddenCount} {lang === 'vi' ? 'sự kiện nữa' : 'more'}
                   </button>
