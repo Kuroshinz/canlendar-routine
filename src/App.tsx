@@ -233,6 +233,19 @@ export default function App() {
 
   // 8. Event saving / updating handler
   const handleSaveEvent = useCallback((savedEvent: CalendarEvent) => {
+    // Editing a task-derived event updates the owning task instead of creating a
+    // duplicate calendar event in `gcal_events`.
+    if (savedEvent.id.startsWith('task-')) {
+      productivity.updateTask(savedEvent.id.slice('task-'.length), {
+        title: savedEvent.title,
+        notes: savedEvent.description,
+        dueDate: savedEvent.startDate,
+        startTime: savedEvent.allDay ? undefined : savedEvent.startTime,
+        endTime: savedEvent.allDay ? undefined : savedEvent.endTime,
+      });
+      return;
+    }
+
     setEvents((prev) => {
       const idx = prev.findIndex((e) => e.id === savedEvent.id);
       if (idx >= 0) {
@@ -261,9 +274,17 @@ export default function App() {
         }
       })
       .catch(() => {});
-  }, [user]);
+  }, [user, productivity.updateTask]);
 
   const handleDeleteEvent = useCallback((eventId: string) => {
+    // Task-derived calendar events are owned by the productivity store, not by
+    // the persisted `gcal_events` array — route the delete to their real owner.
+    if (eventId.startsWith('task-')) {
+      productivity.deleteTask(eventId.slice('task-'.length));
+      setSelectedEventForDetail(null);
+      return;
+    }
+
     setEvents((prev) => prev.filter((e) => e.id !== eventId));
     if (selectedEventForDetail?.id === eventId) {
       setSelectedEventForDetail(null);
@@ -271,15 +292,27 @@ export default function App() {
     if (user) {
       deleteEventFromFirestore(user.uid, eventId).catch(console.warn);
     }
-  }, [selectedEventForDetail, user]);
+  }, [selectedEventForDetail, user, productivity.deleteTask]);
 
   const handleToggleCompleteTask = (eventId: string) => {
+    if (eventId.startsWith('task-')) {
+      const taskId = eventId.slice('task-'.length);
+      const task = productivity.tasks.find((t) => t.id === taskId);
+      productivity.setTaskStatus(taskId, task?.status === 'completed' ? 'todo' : 'completed');
+      return;
+    }
+
     setEvents((prev) =>
       prev.map((e) => (e.id === eventId ? { ...e, isCompleted: !e.isCompleted } : e))
     );
   };
 
   const handleMoveEvent = useCallback((eventId: string, newDateStr: string) => {
+    if (eventId.startsWith('task-')) {
+      productivity.updateTask(eventId.slice('task-'.length), { dueDate: newDateStr });
+      return;
+    }
+
     setEvents((prev) =>
       prev.map((e) => {
         if (e.id === eventId) {
@@ -297,7 +330,7 @@ export default function App() {
         return e;
       })
     );
-  }, [user]);
+  }, [user, productivity.updateTask]);
 
   // 9. Drag & Drop and Resizing Engine
   const {
