@@ -13,7 +13,7 @@ import {
   DEFAULT_CALENDARS,
 } from './types/calendar';
 import { INITIAL_EVENTS } from './data/initialEvents';
-import { formatDateString } from './utils/calendarUtils';
+import { formatDateString, parseDateString } from './utils/calendarUtils';
 import { playNotificationSound } from './utils/sound';
 import { useCalendarDnD } from './hooks/useCalendarDnD';
 import { Header } from './components/Header';
@@ -34,6 +34,13 @@ import { CloudSyncModal } from './components/sync/CloudSyncModal';
 import { RightSidebar } from './components/RightSidebar';
 import { GoogleMeetRoom } from './components/GoogleMeetRoom';
 import { MultiHubDrawer } from './components/MultiHubDrawer';
+import { ProductivityDashboard } from './components/productivity/ProductivityDashboard';
+import { TasksGoalsView } from './components/productivity/TasksGoalsView';
+import { StudyFocusView } from './components/productivity/StudyFocusView';
+import { FinanceView } from './components/productivity/FinanceView';
+import { HealthView } from './components/productivity/HealthView';
+import { useProductivityStore } from './hooks/useProductivityStore';
+import { buildTaskEvents } from './utils/productivityUtils';
 import { User } from 'firebase/auth';
 import { initAuth, logout, getAccessToken, AppUser } from './services/auth';
 import { fetchGoogleCalendarEvents, createGoogleCalendarEvent } from './services/googleCalendarSync';
@@ -103,11 +110,20 @@ export default function App() {
   });
 
   const [categories, setCategories] = useState<CalendarCategory[]>(() => {
+    let saved: CalendarCategory[] | null = null;
     try {
-      const saved = localStorage.getItem('gcal_categories');
-      if (saved) return JSON.parse(saved);
+      const raw = localStorage.getItem('gcal_categories');
+      if (raw) saved = JSON.parse(raw);
     } catch {}
-    return DEFAULT_CALENDARS;
+
+    if (!saved) return DEFAULT_CALENDARS;
+
+    // Additive migration: categories added to DEFAULT_CALENDARS after a user
+    // already persisted their list (e.g. Study / Fitness) must appear without
+    // touching the user's own custom calendars or visibility choices.
+    const knownIds = new Set(saved.map((c) => c.id));
+    const missing = DEFAULT_CALENDARS.filter((c) => !knownIds.has(c.id));
+    return missing.length > 0 ? [...saved, ...missing] : saved;
   });
 
   useEffect(() => {
@@ -122,6 +138,20 @@ export default function App() {
   const visibleCategoryIds = useMemo(() => {
     return new Set(categories.filter((c) => c.visible).map((c) => c.id));
   }, [categories]);
+
+  // 4b. Productivity store — single owner for tasks, goals, focus, finance & health.
+  // Tasks that carry a due date *and* a start time are mirrored onto the calendar
+  // as derived events so they never pollute the persisted `gcal_events` array.
+  const productivity = useProductivityStore();
+  const colorByCategoryId = useMemo(
+    () => new Map(categories.map((c) => [c.id, c.color])),
+    [categories]
+  );
+  const taskEvents = useMemo(
+    () => buildTaskEvents(productivity.tasks, colorByCategoryId),
+    [productivity.tasks, colorByCategoryId]
+  );
+  const allEvents = useMemo(() => [...events, ...taskEvents], [events, taskEvents]);
 
   // 5. Sidebar toggle (closed by default on mobile)
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
@@ -447,6 +477,16 @@ export default function App() {
         handleViewChange('analytics');
       } else if (e.key === 'y' || e.key === 'Y') {
         handleViewChange('year');
+      } else if (e.key === '1') {
+        handleViewChange('dashboard');
+      } else if (e.key === '2') {
+        handleViewChange('tasks');
+      } else if (e.key === '3') {
+        handleViewChange('focus');
+      } else if (e.key === '4') {
+        handleViewChange('finance');
+      } else if (e.key === '5') {
+        handleViewChange('health');
       } else if (e.key === 'c' || e.key === 'C') {
         e.preventDefault();
         openCreateModal('event');
@@ -673,6 +713,8 @@ export default function App() {
           onDeleteCategory={handleDeleteCategory}
           onOpenCreateModal={(type) => openCreateModal(type)}
           lang={lang}
+          onViewChange={handleViewChange}
+          currentView={view}
         />
 
         {/* View Grid Switcher */}
@@ -680,7 +722,7 @@ export default function App() {
           {view === 'month' && (
             <MonthView
               currentDate={currentDate}
-              events={events}
+              events={allEvents}
               visibleCategoryIds={visibleCategoryIds}
               onSelectEvent={(ev) => setSelectedEventForDetail(ev)}
               onCellClick={(dateStr, clientX, clientY) => {
@@ -698,7 +740,7 @@ export default function App() {
             <TimeGridView
               currentDate={currentDate}
               viewType={view}
-              events={events}
+              events={allEvents}
               visibleCategoryIds={visibleCategoryIds}
               onSelectEvent={(ev) => setSelectedEventForDetail(ev)}
               onSlotClick={(dateStr, timeStr, clientX, clientY) => {
@@ -722,7 +764,7 @@ export default function App() {
 
           {view === 'analytics' && (
             <TimeAnalyticsView
-              events={events}
+              events={allEvents}
               categories={categories}
               currentDate={currentDate}
               lang={lang}
@@ -732,7 +774,7 @@ export default function App() {
           {view === 'year' && (
             <YearView
               currentDate={currentDate}
-              events={events}
+              events={allEvents}
               visibleCategoryIds={visibleCategoryIds}
               onSelectDate={(d) => {
                 setCurrentDate(d);
@@ -745,13 +787,98 @@ export default function App() {
           {view === 'schedule' && (
             <ScheduleView
               currentDate={currentDate}
-              events={events}
+              events={allEvents}
               visibleCategoryIds={visibleCategoryIds}
               searchQuery={searchQuery}
               onSelectEvent={(ev) => setSelectedEventForDetail(ev)}
               onToggleCompleteTask={handleToggleCompleteTask}
               onJoinMeet={(ev) => setActiveMeetEvent(ev)}
               lang={lang}
+            />
+          )}
+
+          {view === 'dashboard' && (
+            <ProductivityDashboard
+              events={allEvents}
+              tasks={productivity.tasks}
+              goals={productivity.goals}
+              goalProgress={productivity.goalProgress}
+              sessions={productivity.sessions}
+              transactions={productivity.transactions}
+              budget={productivity.budget}
+              healthLogs={productivity.healthLogs}
+              healthProfile={productivity.healthProfile}
+              lang={lang}
+              onNavigate={handleViewChange}
+              onSetTaskStatus={productivity.setTaskStatus}
+              onOpenEvent={(ev) => setSelectedEventForDetail(ev)}
+            />
+          )}
+
+          {view === 'tasks' && (
+            <TasksGoalsView
+              tasks={productivity.tasks}
+              goals={productivity.goals}
+              goalProgress={productivity.goalProgress}
+              categories={categories}
+              lang={lang}
+              onAddTask={productivity.addTask}
+              onUpdateTask={productivity.updateTask}
+              onDeleteTask={productivity.deleteTask}
+              onSetTaskStatus={productivity.setTaskStatus}
+              onToggleSubtask={productivity.toggleSubtask}
+              onAddSubtask={productivity.addSubtask}
+              onRemoveSubtask={productivity.removeSubtask}
+              onAddGoal={productivity.addGoal}
+              onDeleteGoal={productivity.deleteGoal}
+              onOpenTaskOnCalendar={(dateStr) => {
+                setCurrentDate(parseDateString(dateStr));
+                handleViewChange('day');
+              }}
+            />
+          )}
+
+          {view === 'focus' && (
+            <StudyFocusView
+              tasks={productivity.tasks}
+              goals={productivity.goals}
+              sessions={productivity.sessions}
+              lang={lang}
+              onAddSession={productivity.addSession}
+              onDeleteSession={productivity.deleteSession}
+              onOpenTask={(taskId) => {
+                const task = productivity.tasks.find((t) => t.id === taskId);
+                if (task?.dueDate) {
+                  setCurrentDate(parseDateString(task.dueDate));
+                  handleViewChange('day');
+                } else {
+                  handleViewChange('tasks');
+                }
+              }}
+            />
+          )}
+
+          {view === 'finance' && (
+            <FinanceView
+              transactions={productivity.transactions}
+              budget={productivity.budget}
+              lang={lang}
+              onAddTransaction={productivity.addTransaction}
+              onDeleteTransaction={productivity.deleteTransaction}
+              onUpdateBudget={productivity.updateBudget}
+            />
+          )}
+
+          {view === 'health' && (
+            <HealthView
+              healthLogs={productivity.healthLogs}
+              healthProfile={productivity.healthProfile}
+              workouts={productivity.workouts}
+              lang={lang}
+              onUpsertHealthLog={productivity.upsertHealthLog}
+              onUpdateHealthProfile={productivity.updateHealthProfile}
+              onAddWorkout={productivity.addWorkout}
+              onDeleteWorkout={productivity.deleteWorkout}
             />
           )}
         </main>
@@ -785,7 +912,7 @@ export default function App() {
         onClose={() => setDayPlanner((prev) => ({ ...prev, isOpen: false }))}
         selectedDateStr={dayPlanner.dateStr}
         onSelectDate={(dateStr) => setDayPlanner((prev) => ({ ...prev, dateStr }))}
-        events={events}
+        events={allEvents}
         categories={categories}
         onSelectEvent={(ev) => setSelectedEventForDetail(ev)}
         onAddEventClick={(dateStr, timeStr) => {
@@ -914,6 +1041,7 @@ export default function App() {
         isSyncing={isSyncing}
         lastSyncedTime={lastSyncedTime}
         lang={lang}
+        onNavigate={handleViewChange}
       />
     </div>
   );

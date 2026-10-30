@@ -16,10 +16,11 @@ import {
   Sparkles,
   LogOut,
   User as UserIcon,
+  ArrowRight,
 } from 'lucide-react';
 import { User } from 'firebase/auth';
 import { AppUser } from '../services/auth';
-import { CalendarEvent } from '../types/calendar';
+import { CalendarEvent, CalendarViewType } from '../types/calendar';
 import { ExpenseEntry, StudyItem, DailyWellnessCheck, PomodoroState } from '../types/multiHub';
 import { playNotificationSound } from '../utils/sound';
 
@@ -34,6 +35,8 @@ interface MultiHubDrawerProps {
   isSyncing: boolean;
   lastSyncedTime: string | null;
   lang: 'vi' | 'en';
+  /** Jumps to the full-page module for the current tab. */
+  onNavigate?: (view: CalendarViewType) => void;
 }
 
 export const MultiHubDrawer: React.FC<MultiHubDrawerProps> = ({
@@ -47,6 +50,7 @@ export const MultiHubDrawer: React.FC<MultiHubDrawerProps> = ({
   isSyncing,
   lastSyncedTime,
   lang,
+  onNavigate,
 }) => {
   const [activeTab, setActiveTab] = useState<'sync' | 'time' | 'finance' | 'study' | 'stress'>('sync');
 
@@ -177,6 +181,30 @@ export const MultiHubDrawer: React.FC<MultiHubDrawerProps> = ({
     return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
   };
 
+  /**
+   * Each tab here is a compact summary. The full module lives in a dedicated
+   * view, so the drawer only links to it instead of duplicating the UI.
+   */
+  const renderFullModuleLink = (
+    target: CalendarViewType,
+    labelVi: string,
+    labelEn: string
+  ) => {
+    if (!onNavigate) return null;
+    return (
+      <button
+        onClick={() => {
+          onNavigate(target);
+          onClose();
+        }}
+        className="w-full flex items-center justify-between gap-2 px-4 py-2.5 rounded-xl bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-950/60 transition-colors cursor-pointer"
+      >
+        <span className="text-xs font-semibold">{lang === 'vi' ? labelVi : labelEn}</span>
+        <ArrowRight className="w-3.5 h-3.5" />
+      </button>
+    );
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/45 backdrop-blur-2xs select-none">
       <div className="bg-white dark:bg-[#1a1e24] rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
@@ -297,6 +325,11 @@ export const MultiHubDrawer: React.FC<MultiHubDrawerProps> = ({
           {/* TAB 2: TIME & FOCUS MANAGEMENT */}
           {activeTab === 'time' && (
             <div className="space-y-4">
+              {renderFullModuleLink(
+                'focus',
+                'Mở đồng hồ học tập đầy đủ (Pomodoro · Stopwatch · Countdown)',
+                'Open the full study clock (Pomodoro · Stopwatch · Countdown)'
+              )}
               {/* Pomodoro Timer Widget */}
               <div className="p-5 bg-linear-to-br from-indigo-50 to-blue-50 dark:from-indigo-950/40 dark:to-blue-950/40 rounded-2xl border border-indigo-100 dark:border-indigo-900 text-center space-y-3">
                 <span className="text-xs font-semibold text-indigo-700 dark:text-indigo-300 uppercase tracking-wider">
@@ -371,6 +404,11 @@ export const MultiHubDrawer: React.FC<MultiHubDrawerProps> = ({
           {/* TAB 3: FINANCE & MULTI-CURRENCY */}
           {activeTab === 'finance' && (
             <div className="space-y-4">
+              {renderFullModuleLink(
+                'finance',
+                'Mở sổ tài chính đầy đủ (thu chi, biểu đồ, hạn mức)',
+                'Open the full money manager (transactions, charts, budgets)'
+              )}
               {/* Currency Toggle & Balance Card */}
               <div className="p-4 bg-linear-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/40 dark:to-teal-950/40 rounded-2xl border border-emerald-200 dark:border-emerald-800">
                 <div className="flex items-center justify-between mb-3">
@@ -467,6 +505,11 @@ export const MultiHubDrawer: React.FC<MultiHubDrawerProps> = ({
           {/* TAB 4: STUDY & ACADEMIC TRACKER */}
           {activeTab === 'study' && (
             <div className="space-y-4">
+              {renderFullModuleLink(
+                'tasks',
+                'Mở công việc & mục tiêu đầy đủ (deadline, ưu tiên, tiến độ)',
+                'Open the full tasks & goals board (deadlines, priority, progress)'
+              )}
               <form onSubmit={handleAddStudyItem} className="p-3 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 flex gap-2">
                 <input
                   type="text"
@@ -523,6 +566,11 @@ export const MultiHubDrawer: React.FC<MultiHubDrawerProps> = ({
           {/* TAB 5: STRESS & MENTAL WELLNESS */}
           {activeTab === 'stress' && (
             <div className="space-y-4">
+              {renderFullModuleLink(
+                'health',
+                'Mở bảng sức khỏe đầy đủ (cân nặng, calo, macros, tập luyện, Google Health)',
+                'Open the full health dashboard (weight, calories, macros, workouts, Google Health)'
+              )}
               {/* Daily Stress Check-in */}
               <div className="p-4 bg-linear-to-br from-rose-50 to-orange-50 dark:from-rose-950/40 dark:to-orange-950/40 rounded-2xl border border-rose-200 dark:border-rose-900 space-y-3">
                 <div className="flex items-center justify-between">

@@ -108,6 +108,11 @@ export const Header: React.FC<HeaderProps> = ({
     { id: 'year', labelVi: 'Năm', labelEn: 'Year', shortcut: 'Y' },
     { id: 'schedule', labelVi: 'Lịch biểu', labelEn: 'Schedule', shortcut: 'A' },
     { id: 'analytics', labelVi: 'Phân tích năng suất', labelEn: 'Analytics', shortcut: 'P' },
+    { id: 'dashboard', labelVi: 'Tổng quan', labelEn: 'Dashboard', shortcut: '1' },
+    { id: 'tasks', labelVi: 'Công việc & Mục tiêu', labelEn: 'Tasks & Goals', shortcut: '2' },
+    { id: 'focus', labelVi: 'Đồng hồ học tập', labelEn: 'Study clock', shortcut: '3' },
+    { id: 'finance', labelVi: 'Tài chính', labelEn: 'Finance', shortcut: '4' },
+    { id: 'health', labelVi: 'Sức khỏe', labelEn: 'Health', shortcut: '5' },
   ];
 
   const currentViewObj = viewOptions.find((v) => v.id === view) || viewOptions[0];
@@ -290,23 +295,27 @@ export const Header: React.FC<HeaderProps> = ({
                 className="fixed inset-0 z-30"
                 onClick={() => setShowViewDropdown(false)}
               ></div>
-              <div className="absolute right-0 mt-1 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg py-1.5 z-40">
+              <div className="absolute right-0 mt-1 w-60 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg py-1.5 z-40 max-h-[70vh] overflow-y-auto">
                 {viewOptions.map((opt) => (
-                  <button
-                    key={opt.id}
-                    onClick={() => {
-                      onViewChange(opt.id);
-                      setShowViewDropdown(false);
-                    }}
-                    className={`w-full flex items-center justify-between px-3.5 py-2 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer ${
-                      view === opt.id
-                        ? 'text-blue-600 dark:text-blue-400 font-semibold bg-blue-50/50 dark:bg-blue-900/20'
-                        : 'text-gray-700 dark:text-gray-200'
-                    }`}
-                  >
-                    <span>{lang === 'vi' ? opt.labelVi : opt.labelEn}</span>
-                    <span className="text-xs text-gray-400 font-mono">{opt.shortcut}</span>
-                  </button>
+                  <React.Fragment key={opt.id}>
+                    {opt.id === 'dashboard' && (
+                      <div className="my-1 border-t border-gray-100 dark:border-gray-700" />
+                    )}
+                    <button
+                      onClick={() => {
+                        onViewChange(opt.id);
+                        setShowViewDropdown(false);
+                      }}
+                      className={`w-full flex items-center justify-between px-3.5 py-2 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer ${
+                        view === opt.id
+                          ? 'text-blue-600 dark:text-blue-400 font-semibold bg-blue-50/50 dark:bg-blue-900/20'
+                          : 'text-gray-700 dark:text-gray-200'
+                      }`}
+                    >
+                      <span>{lang === 'vi' ? opt.labelVi : opt.labelEn}</span>
+                      <span className="text-xs text-gray-400 font-mono">{opt.shortcut}</span>
+                    </button>
+                  </React.Fragment>
                 ))}
               </div>
             </>

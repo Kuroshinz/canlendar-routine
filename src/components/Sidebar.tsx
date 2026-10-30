@@ -9,8 +9,13 @@ import {
   CheckSquare,
   Bell,
   Trash2,
+  LayoutDashboard,
+  ListChecks,
+  Timer,
+  Wallet,
+  HeartPulse,
 } from 'lucide-react';
-import { CalendarCategory, EventType } from '../types/calendar';
+import { CalendarCategory, CalendarViewType, EventType } from '../types/calendar';
 import { formatDateString, getMonthDays } from '../utils/calendarUtils';
 
 interface SidebarProps {
@@ -24,6 +29,9 @@ interface SidebarProps {
   onDeleteCategory: (id: string) => void;
   onOpenCreateModal: (type?: EventType) => void;
   lang: 'vi' | 'en';
+  /** Switches the main view; used by the productivity module launcher. */
+  onViewChange?: (view: CalendarViewType) => void;
+  currentView?: CalendarViewType;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -37,6 +45,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onDeleteCategory,
   onOpenCreateModal,
   lang,
+  onViewChange,
+  currentView,
 }) => {
   const [miniYear, setMiniYear] = useState<number>(currentDate.getFullYear());
   const [miniMonth, setMiniMonth] = useState<number>(currentDate.getMonth());
@@ -219,6 +229,44 @@ export const Sidebar: React.FC<SidebarProps> = ({
             })}
           </div>
         </div>
+
+        {/* Productivity modules launcher */}
+        {onViewChange && (
+          <div className="mb-5 px-1">
+            <span className="block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
+              {lang === 'vi' ? 'Không gian làm việc' : 'Workspace'}
+            </span>
+            <div className="space-y-0.5">
+              {[
+                { id: 'dashboard' as CalendarViewType, icon: LayoutDashboard, vi: 'Tổng quan', en: 'Dashboard', color: 'text-blue-500' },
+                { id: 'tasks' as CalendarViewType, icon: ListChecks, vi: 'Công việc & Mục tiêu', en: 'Tasks & Goals', color: 'text-indigo-500' },
+                { id: 'focus' as CalendarViewType, icon: Timer, vi: 'Đồng hồ học tập', en: 'Study clock', color: 'text-violet-500' },
+                { id: 'finance' as CalendarViewType, icon: Wallet, vi: 'Tài chính', en: 'Finance', color: 'text-emerald-500' },
+                { id: 'health' as CalendarViewType, icon: HeartPulse, vi: 'Sức khỏe', en: 'Health', color: 'text-rose-500' },
+              ].map((item) => {
+                const Icon = item.icon;
+                const isActive = currentView === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => {
+                      onViewChange(item.id);
+                      if (window.innerWidth < 1024) onCloseMobile();
+                    }}
+                    className={`w-full flex items-center gap-2.5 px-2 py-1.5 rounded-md text-xs transition-colors cursor-pointer ${
+                      isActive
+                        ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 font-semibold'
+                        : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800'
+                    }`}
+                  >
+                    <Icon className={`w-4 h-4 shrink-0 ${isActive ? '' : item.color}`} />
+                    <span className="truncate">{lang === 'vi' ? item.vi : item.en}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* My Calendars Section */}
         <div className="pt-2 border-t border-gray-100 dark:border-gray-800 flex-1">
