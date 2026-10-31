@@ -494,7 +494,9 @@ export default function App() {
         handleNavigateToday();
       } else if (e.key === 'j' || e.key === 'n') {
         handleNavigateNext();
-      } else if (e.key === 'k' || e.key === 'p') {
+      } else if (e.key === 'k') {
+        // 'P' is reserved for the productivity analytics view (see below and
+        // the shortcuts modal), so only 'K' steps back a period here.
         handleNavigatePrev();
       } else if (e.key === 'm' || e.key === 'M') {
         handleViewChange('month');
@@ -879,6 +881,7 @@ export default function App() {
               lang={lang}
               onAddSession={productivity.addSession}
               onDeleteSession={productivity.deleteSession}
+              onStartTask={(taskId) => productivity.setTaskStatus(taskId, 'in_progress')}
               onOpenTask={(taskId) => {
                 const task = productivity.tasks.find((t) => t.id === taskId);
                 if (task?.dueDate) {
@@ -1018,11 +1021,17 @@ export default function App() {
         onImportEvents={(imported) => {
           setEvents((prev) => [...imported, ...prev]);
         }}
+        onExportProductivityBackup={productivity.snapshot}
+        onImportProductivityBackup={productivity.restore}
         onResetEvents={() => {
           setEvents(INITIAL_EVENTS);
           setCategories(DEFAULT_CALENDARS);
           localStorage.removeItem('gcal_events');
           localStorage.removeItem('gcal_categories');
+          // The productivity modules keep their own storage keys, so a full
+          // reset has to clear them explicitly or the button would look dead
+          // for tasks/goals/focus/money/health.
+          productivity.resetAll();
         }}
         lang={lang}
       />

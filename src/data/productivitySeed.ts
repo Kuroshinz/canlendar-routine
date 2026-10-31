@@ -477,3 +477,4 @@ export const SEED_WELLNESS: WellnessCheck[] = [
   { date: '2026-10-29', stressLevel: 2, energyLevel: 4, sleepHours: 7.4 },
   { date: '2026-10-30', stressLevel: 2, energyLevel: 4, sleepHours: 7.9 },
 ];
+

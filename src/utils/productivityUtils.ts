@@ -405,3 +405,4 @@ export function healthAverages(
     caloriesIn: Math.round(sum((l) => l.caloriesIn) / scoped.length),
   };
 }
+

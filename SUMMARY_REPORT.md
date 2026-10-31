@@ -124,5 +124,18 @@ Cảnh báo còn lại của Vite (không phải lỗi, có từ trước): bund
 1. **Google Calendar thật** vẫn cần OAuth Client ID của chính bạn (đã đăng ký origin). Không có fallback đăng nhập giả — đúng như yêu cầu trước đó.
 2. **Google Health** dùng dữ liệu mô phỏng khi thiếu token/scope; UI luôn ghi rõ nguồn, không giả làm dữ liệu thật.
 3. Dữ liệu năng suất lưu **localStorage** (offline-first, giống cách project đang lưu `gcal_events`). Chưa đồng bộ lên Firestore; nếu cần, có thể nối thêm vào `src/services/firestoreSync.ts` theo cùng pattern `subscribeUserEvents`.
-4. Nút "Đặt lại dữ liệu" trong `ExportImportModal` chỉ reset lịch/category, **không** xoá dữ liệu năng suất. Muốn xoá sạch, xoá các khoá `gcal_prod_*` trong localStorage.
-5. Task mirror lên lịch là **một chiều** ở tầng dữ liệu: task → lịch. Các thao tác trên lịch (kéo-thả, tick, xoá, sửa) đã được chuyển tiếp về task, nhưng **kéo-thả để đổi giờ** (resize) trên lịch chưa ghi ngược `startTime`/`endTime` — chỉ kéo sang ngày khác mới cập nhật `dueDate`.
+4. Nút "Đặt lại dữ liệu" trong `ExportImportModal` khôi phục **cả** lịch/category **và** dữ liệu năng suất (gọi `productivity.resetAll()`, đưa mọi khoá `gcal_prod_*` về seed). Hộp thoại xác nhận nêu rõ việc này trước khi ghi đè.
+5. Task mirror lên lịch là **một chiều** ở tầng dữ liệu: task → lịch. Kéo-thả, **co giãn (resize)**, tick hoàn thành, xoá và sửa một event `task-*` đều ghi ngược về task gốc qua `handleSaveEvent` (đổi `dueDate` và/hoặc `startTime`/`endTime`), không tạo bản sao trong `gcal_events`.
+6. Phím `P` mở Bảng phân tích năng suất; phím điều hướng kỳ trước chỉ còn `K` (trước đây `P` bị nhánh điều hướng chiếm mất nên phím phân tích không bao giờ chạy).
+
+---
+
+## 8. Cập nhật tiếp theo (vòng cải thiện sau bàn giao)
+
+| Hạng mục | Chi tiết |
+| --- | --- |
+| **Đồng hồ học tập không còn mất trạng thái** | `StudyFocusView` trước đây giữ đồng hồ trong `useState` nên chuyển sang view khác (component unmount) hoặc tải lại trang là mất phiên đang chạy. Nay trạng thái nằm trong `gcal_focus_timer` (`usePersistentState`) và mọi giá trị hiển thị được **suy ra từ mốc thời gian thực** `runStartedAt`, nên đồng hồ đúng cả khi tab bị ẩn, khi chuyển view và khi reload. Hoàn thành phiên tự lưu lịch sử, tự chuyển Focus ↔ Nghỉ ngắn như cũ. |
+| **Bắt đầu tập trung → cập nhật công việc** | Bắt đầu một phiên gắn với task đang `todo` sẽ tự chuyển task sang `in_progress` (prop `onStartTask`), không cần tick tay ở trang Công việc. |
+| **Sao lưu / khôi phục dữ liệu năng suất (.json)** | `ExportImportModal` có thêm mục xuất và khôi phục toàn bộ tasks, goals, phiên focus, giao dịch, ngân sách, nhật ký sức khỏe, workout, wellness, hồ sơ sức khỏe. Định dạng `kind: 'productivity-backup'` được kiểm tra bằng `parseProductivityBackup()` trước khi ghi đè — tệp lạ hoặc thiếu collection bị từ chối, không thể xoá dữ liệu. Nút "Nhập" chung cũng tự nhận diện tệp sao lưu năng suất. |
+| **Đặt lại toàn bộ** | Nút "Đặt lại" giờ khôi phục cả `gcal_prod_*` qua `productivity.resetAll()` (đã ghi ở mục 7.4). |
+| **Kiểm thử** | Thêm `src/utils/productivityBackup.test.ts`: round-trip qua JSON, từ chối mảng sự kiện / object lạ / thiếu collection / thiếu `budget` / `healthProfile` null, và giữ nguyên nội dung item sau khi khôi phục. |

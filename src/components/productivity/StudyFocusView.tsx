@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Play,
   Pause,
@@ -25,6 +25,7 @@ import { BarChart } from '../charts/SimpleCharts';
 import { focusMinutesByDay, formatDuration, totalFocusMinutes } from '../../utils/productivityUtils';
 import { playNotificationSound } from '../../utils/sound';
 import { formatDateString } from '../../utils/calendarUtils';
+import { usePersistentState } from '../../hooks/usePersistentState';
 
 interface StudyFocusViewProps {
   tasks: TaskItem[];
@@ -34,6 +35,8 @@ interface StudyFocusViewProps {
   onAddSession: (session: FocusSession) => void;
   onDeleteSession: (id: string) => void;
   onOpenTask: (taskId: string) => void;
+  /** Called when a focus run starts on a task that is still "todo". */
+  onStartTask?: (taskId: string) => void;
 }
 
 const PHASE_SECONDS: Record<PomodoroPhase, number> = {
@@ -48,6 +51,35 @@ const PHASE_META: Record<PomodoroPhase, { labelVi: string; labelEn: string; colo
   longBreak: { labelVi: 'Nghỉ dài', labelEn: 'Long break', color: '#039BE5' },
 };
 
+interface PersistedTimer {
+  mode: FocusMode;
+  phase: PomodoroPhase;
+  countdownMinutes: number;
+  linkedTaskId: string;
+  /** Seconds left, captured at the moment the timer was paused. */
+  remaining: number;
+  /** Seconds accumulated by the stopwatch, captured when it was paused. */
+  elapsed: number;
+  running: boolean;
+  /** Wall-clock origin of the current running segment (null while paused). */
+  runStartedAt: number | null;
+  soundOn: boolean;
+  completedPomodoros: number;
+}
+
+const DEFAULT_TIMER: PersistedTimer = {
+  mode: 'pomodoro',
+  phase: 'focus',
+  countdownMinutes: 30,
+  linkedTaskId: '',
+  remaining: PHASE_SECONDS.focus,
+  elapsed: 0,
+  running: false,
+  runStartedAt: null,
+  soundOn: true,
+  completedPomodoros: 0,
+};
+
 export const StudyFocusView: React.FC<StudyFocusViewProps> = ({
   tasks,
   goals,
@@ -56,20 +88,23 @@ export const StudyFocusView: React.FC<StudyFocusViewProps> = ({
   onAddSession,
   onDeleteSession,
   onOpenTask,
+  onStartTask,
 }) => {
-  const [mode, setMode] = useState<FocusMode>('pomodoro');
-  const [phase, setPhase] = useState<PomodoroPhase>('focus');
-  const [remaining, setRemaining] = useState(PHASE_SECONDS.focus);
-  const [elapsed, setElapsed] = useState(0);
-  const [running, setRunning] = useState(false);
+  // Timer state is persisted: switching to another calendar view unmounts this
+  // component, which used to silently reset a running Pomodoro.
+  const [timer, setTimer] = usePersistentState<PersistedTimer>('gcal_focus_timer', DEFAULT_TIMER);
   const [zen, setZen] = useState(false);
-  const [linkedTaskId, setLinkedTaskId] = useState('');
-  const [countdownMinutes, setCountdownMinutes] = useState(30);
-  const [completedPomodoros, setCompletedPomodoros] = useState(0);
-  const [soundOn, setSoundOn] = useState(true);
+  const [now, setNow] = useState(() => Date.now());
 
-  const startedAtRef = useRef<number | null>(null);
-  const savedRef = useRef(false);
+  const { mode, phase, countdownMinutes, linkedTaskId, running, soundOn, completedPomodoros } = timer;
+  const phaseSeconds = mode === 'pomodoro' ? PHASE_SECONDS[phase] : countdownMinutes * 60;
+  const liveSeconds =
+    running && timer.runStartedAt ? Math.max(0, Math.floor((now - timer.runStartedAt) / 1000)) : 0;
+  const remaining = mode === 'stopwatch' ? 0 : Math.max(0, timer.remaining - liveSeconds);
+  const elapsed = mode === 'stopwatch' ? timer.elapsed + liveSeconds : 0;
+  const displaySeconds = mode === 'stopwatch' ? elapsed : remaining;
+  const progressPercent =
+    mode === 'stopwatch' ? 0 : Math.round((1 - remaining / Math.max(1, phaseSeconds)) * 100);
 
   const openTasks = useMemo(
     () => tasks.filter((t) => t.status !== 'completed'),
@@ -85,7 +120,7 @@ export const StudyFocusView: React.FC<StudyFocusViewProps> = ({
   // Persist a finished session through one path so history stays consistent.
   const saveSession = (durationSeconds: number, completed: boolean) => {
     if (durationSeconds < 30) return;
-    const startedAt = startedAtRef.current ?? Date.now() - durationSeconds * 1000;
+    const endedAt = Date.now();
     onAddSession({
       id: `fs-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       mode,
@@ -93,95 +128,118 @@ export const StudyFocusView: React.FC<StudyFocusViewProps> = ({
       taskId: linkedTaskId || undefined,
       goalId: linkedGoal?.id,
       label: sessionLabel,
-      startedAt,
-      endedAt: startedAt + durationSeconds * 1000,
+      startedAt: endedAt - durationSeconds * 1000,
+      endedAt,
       durationSeconds,
       completed,
     });
-    startedAtRef.current = null;
   };
 
   // --- Ticking engine -------------------------------------------------------
+  // Only a wall-clock pulse is scheduled; every displayed value is derived from
+  // `runStartedAt`, so background tabs, view switches and reloads cannot drift.
   useEffect(() => {
     if (!running) return;
-
-    const interval = setInterval(() => {
-      if (startedAtRef.current === null) startedAtRef.current = Date.now();
-
-      if (mode === 'stopwatch') {
-        setElapsed((prev) => prev + 1);
-        return;
-      }
-
-      setRemaining((prev) => {
-        if (prev > 1) return prev - 1;
-
-        // Timer hit zero.
-        if (soundOn) playNotificationSound();
-        saveSession(mode === 'pomodoro' ? PHASE_SECONDS[phase] : countdownMinutes * 60, true);
-        savedRef.current = true;
-
-        if (mode === 'pomodoro') {
-          setCompletedPomodoros((c) => (phase === 'focus' ? c + 1 : c));
-          const nextPhase: PomodoroPhase = phase === 'focus' ? 'shortBreak' : 'focus';
-          setPhase(nextPhase);
-          return PHASE_SECONDS[nextPhase];
-        }
-
-        setRunning(false);
-        return 0;
-      });
-    }, 1000);
-
+    setNow(Date.now());
+    const interval = setInterval(() => setNow(Date.now()), 500);
     return () => clearInterval(interval);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [running, mode, phase, countdownMinutes, soundOn, linkedTaskId, linkedGoal?.id]);
+  }, [running]);
 
-  // Reset the "already saved" guard whenever the user starts a fresh run.
-  const start = () => {
-    if (!running && startedAtRef.current === null) {
-      startedAtRef.current = Date.now();
-      savedRef.current = false;
+  // Timer reached zero — or was already expired while the page was closed.
+  useEffect(() => {
+    if (!running || mode === 'stopwatch' || remaining > 0) return;
+
+    if (soundOn) playNotificationSound();
+    saveSession(phaseSeconds, true);
+
+    if (mode === 'pomodoro') {
+      const nextPhase: PomodoroPhase = phase === 'focus' ? 'shortBreak' : 'focus';
+      setTimer((prev) => ({
+        ...prev,
+        phase: nextPhase,
+        remaining: PHASE_SECONDS[nextPhase],
+        runStartedAt: Date.now(),
+        completedPomodoros: prev.completedPomodoros + (phase === 'focus' ? 1 : 0),
+      }));
+    } else {
+      // Countdown finished: keep the zeroed display until the user starts again.
+      setTimer((prev) => ({ ...prev, remaining: 0, running: false, runStartedAt: null }));
     }
-    setRunning(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [remaining, running, mode, phase]);
+
+  const start = () => {
+    // Starting work on a task that is still "todo" flips it to in-progress so the
+    // board matches what the clock is actually doing.
+    if (linkedTask && linkedTask.status === 'todo') onStartTask?.(linkedTask.id);
+    setTimer((prev) => ({ ...prev, running: true, runStartedAt: Date.now() }));
   };
 
-  const pause = () => setRunning(false);
+  const pause = () =>
+    setTimer((prev) => ({
+      ...prev,
+      running: false,
+      runStartedAt: null,
+      remaining,
+      elapsed,
+    }));
+
+  const reset = () =>
+    setTimer((prev) => ({
+      ...prev,
+      running: false,
+      runStartedAt: null,
+      remaining:
+        prev.mode === 'pomodoro'
+          ? PHASE_SECONDS[prev.phase]
+          : prev.mode === 'countdown'
+          ? prev.countdownMinutes * 60
+          : prev.remaining,
+      elapsed: 0,
+    }));
 
   const stopAndSave = () => {
-    setRunning(false);
-    const duration =
-      mode === 'stopwatch' ? elapsed : Math.max(0, (mode === 'pomodoro' ? PHASE_SECONDS[phase] : countdownMinutes * 60) - remaining);
-    if (!savedRef.current) saveSession(duration, false);
-    savedRef.current = true;
+    saveSession(mode === 'stopwatch' ? elapsed : Math.max(0, phaseSeconds - remaining), false);
+    reset();
   };
 
-  const reset = () => {
-    setRunning(false);
-    startedAtRef.current = null;
-    savedRef.current = false;
-    if (mode === 'pomodoro') setRemaining(PHASE_SECONDS[phase]);
-    else if (mode === 'countdown') setRemaining(countdownMinutes * 60);
-    else setElapsed(0);
-  };
+  const switchMode = (next: FocusMode) =>
+    setTimer((prev) => ({
+      ...prev,
+      mode: next,
+      running: false,
+      runStartedAt: null,
+      remaining:
+        next === 'pomodoro'
+          ? PHASE_SECONDS[prev.phase]
+          : next === 'countdown'
+          ? prev.countdownMinutes * 60
+          : 0,
+      elapsed: 0,
+    }));
 
-  const switchMode = (next: FocusMode) => {
-    setRunning(false);
-    startedAtRef.current = null;
-    savedRef.current = false;
-    setMode(next);
-    if (next === 'pomodoro') setRemaining(PHASE_SECONDS[phase]);
-    else if (next === 'countdown') setRemaining(countdownMinutes * 60);
-    else setElapsed(0);
-  };
+  const selectPhase = (next: PomodoroPhase) =>
+    setTimer((prev) => ({
+      ...prev,
+      phase: next,
+      running: false,
+      runStartedAt: null,
+      remaining: PHASE_SECONDS[next],
+    }));
 
-  const displaySeconds = mode === 'stopwatch' ? elapsed : remaining;
-  const progressPercent =
-    mode === 'stopwatch'
-      ? 0
-      : Math.round(
-          (1 - remaining / (mode === 'pomodoro' ? PHASE_SECONDS[phase] : countdownMinutes * 60)) * 100
-        );
+  const selectCountdown = (minutes: number) =>
+    setTimer((prev) => ({
+      ...prev,
+      countdownMinutes: minutes,
+      running: false,
+      runStartedAt: null,
+      remaining: minutes * 60,
+    }));
+
+  const setLinkedTaskId = (taskId: string) =>
+    setTimer((prev) => ({ ...prev, linkedTaskId: taskId }));
+
+  const setSoundOn = () => setTimer((prev) => ({ ...prev, soundOn: !prev.soundOn }));
 
   // --- Statistics ----------------------------------------------------------
   const last7 = useMemo(() => focusMinutesByDay(sessions, 7), [sessions]);
@@ -248,13 +306,7 @@ export const StudyFocusView: React.FC<StudyFocusViewProps> = ({
           {(['focus', 'shortBreak', 'longBreak'] as PomodoroPhase[]).map((p) => (
             <button
               key={p}
-              onClick={() => {
-                setPhase(p);
-                setRunning(false);
-                startedAtRef.current = null;
-                savedRef.current = false;
-                setRemaining(PHASE_SECONDS[p]);
-              }}
+              onClick={() => selectPhase(p)}
               className={`text-[10px] px-2.5 py-1 rounded-full font-semibold border transition-all cursor-pointer ${
                 phase === p
                   ? 'text-white border-transparent'
@@ -274,13 +326,7 @@ export const StudyFocusView: React.FC<StudyFocusViewProps> = ({
           {[5, 15, 30, 45, 60].map((min) => (
             <button
               key={min}
-              onClick={() => {
-                setCountdownMinutes(min);
-                setRemaining(min * 60);
-                setRunning(false);
-                startedAtRef.current = null;
-                savedRef.current = false;
-              }}
+              onClick={() => selectCountdown(min)}
               className={`text-[10px] px-2.5 py-1 rounded-full font-semibold border cursor-pointer ${
                 countdownMinutes === min
                   ? 'bg-blue-600 text-white border-transparent'
@@ -403,7 +449,7 @@ export const StudyFocusView: React.FC<StudyFocusViewProps> = ({
         )}
 
         <button
-          onClick={() => setSoundOn((s) => !s)}
+          onClick={setSoundOn}
           title={lang === 'vi' ? 'Âm thanh thông báo' : 'Notification sound'}
           className={`p-3 rounded-xl border cursor-pointer ${
             soundOn

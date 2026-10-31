@@ -205,3 +205,4 @@ export function healthSourceLabel(source: HealthSyncSource, lang: 'vi' | 'en'): 
   if (source === 'google-fit') return lang === 'vi' ? 'Google Fit' : 'Google Fit';
   return lang === 'vi' ? 'Dữ liệu mô phỏng' : 'Simulated data';
 }
+

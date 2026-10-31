@@ -504,3 +504,4 @@ export const ProductivityDashboard: React.FC<ProductivityDashboardProps> = ({
     </div>
   );
 };
+

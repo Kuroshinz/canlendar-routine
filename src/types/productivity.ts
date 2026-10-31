@@ -255,3 +255,4 @@ export const DEFAULT_HEALTH_PROFILE: HealthProfile = {
   dailySteps: 8000,
   dailySleepHours: 8,
 };
+

@@ -32,6 +32,7 @@ import {
   monthPrefixOf,
   summarizeFinance,
 } from '../utils/productivityUtils';
+import type { ProductivitySnapshotData } from '../utils/productivityBackup';
 
 const KEYS = {
   tasks: 'gcal_prod_tasks',
@@ -86,6 +87,13 @@ export interface ProductivityStore {
   deleteWorkout: (id: string) => void;
   wellness: WellnessCheck[];
   upsertWellness: (check: WellnessCheck) => void;
+
+  /** Current data of every module, for a JSON backup. */
+  snapshot: () => ProductivitySnapshotData;
+  /** Replace every module with the contents of a validated backup. */
+  restore: (data: ProductivitySnapshotData) => void;
+  /** Restore every module back to its seed data (used by "Đặt lại"). */
+  resetAll: () => void;
 }
 
 const uid = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
@@ -359,6 +367,68 @@ export function useProductivityStore(): ProductivityStore {
     [setWellness]
   );
 
+  const snapshot = useCallback<() => ProductivitySnapshotData>(
+    () => ({
+      tasks,
+      goals,
+      sessions,
+      transactions,
+      budget,
+      healthLogs,
+      workouts,
+      wellness,
+      healthProfile,
+    }),
+    [tasks, goals, sessions, transactions, budget, healthLogs, workouts, wellness, healthProfile]
+  );
+
+  const restore = useCallback(
+    (data: ProductivitySnapshotData) => {
+      setTasks(data.tasks);
+      setGoals(data.goals);
+      setSessions(data.sessions);
+      setTransactions(data.transactions);
+      setBudget(data.budget);
+      setHealthLogs(data.healthLogs);
+      setWorkouts(data.workouts);
+      setWellness(data.wellness);
+      setHealthProfile(data.healthProfile);
+    },
+    [
+      setTasks,
+      setGoals,
+      setSessions,
+      setTransactions,
+      setBudget,
+      setHealthLogs,
+      setWorkouts,
+      setWellness,
+      setHealthProfile,
+    ]
+  );
+
+  const resetAll = useCallback(() => {
+    setTasks(SEED_TASKS);
+    setGoals(SEED_GOALS);
+    setSessions(SEED_FOCUS_SESSIONS);
+    setTransactions(SEED_TRANSACTIONS);
+    setBudget(DEFAULT_BUDGET);
+    setHealthLogs(SEED_HEALTH_LOGS);
+    setWorkouts(SEED_WORKOUTS);
+    setWellness(SEED_WELLNESS);
+    setHealthProfile(DEFAULT_HEALTH_PROFILE);
+  }, [
+    setTasks,
+    setGoals,
+    setSessions,
+    setTransactions,
+    setBudget,
+    setHealthLogs,
+    setWorkouts,
+    setWellness,
+    setHealthProfile,
+  ]);
+
   return {
     tasks,
     addTask,
@@ -391,6 +461,9 @@ export function useProductivityStore(): ProductivityStore {
     deleteWorkout,
     wellness,
     upsertWellness,
+    snapshot,
+    restore,
+    resetAll,
   };
 }
 

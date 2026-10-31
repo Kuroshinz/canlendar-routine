@@ -241,3 +241,4 @@ assert(averages.caloriesIn === 2200, 'average calories over three days');
 assert(healthAverages([], 7).steps === 0, 'no logs yields zeros');
 
 console.log('All productivityUtils tests passed successfully!');
+

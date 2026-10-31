@@ -224,3 +224,4 @@ export const StackedBar: React.FC<StackedBarProps> = ({ segments, height = 10 })
     </div>
   );
 };
+

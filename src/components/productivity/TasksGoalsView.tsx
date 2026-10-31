@@ -895,3 +895,4 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
     </div>
   );
 };
+
