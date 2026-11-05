@@ -321,6 +321,19 @@ export interface CtgProfile {
   trainerName?: string;
 }
 
+export type PhotoPose = 'front' | 'side' | 'back' | 'other';
+
+export interface BodyCheckPhoto {
+  id: string;
+  date: string; // YYYY-MM-DD
+  photoUrl: string; // Base64 or URL
+  pose: PhotoPose;
+  weightKg?: number;
+  bodyFatPct?: number;
+  note?: string;
+  createdAt: number;
+}
+
 export interface BodyPoint {
   id: string;
   date: string; // YYYY-MM-DD
@@ -331,6 +344,7 @@ export interface BodyPoint {
   armCm?: number;
   thighCm?: number;
   note?: string;
+  photos?: string[];
   createdAt: number;
 }
 
@@ -490,40 +504,5 @@ export interface NutritionSettings {
   tdeeOffset: number;
 }
 
-export interface Branch {
-  id: string;
-  name: string;
-  address: string;
-  phone: string;
-  openHours: string;
-  trainers: number;
-}
-
-export const DEFAULT_BRANCHES: Branch[] = [
-  {
-    id: 'q1',
-    name: 'CTG Quận 1',
-    address: '125 Nguyễn Du, Quận 1, TP.HCM',
-    phone: '028 3822 1188',
-    openHours: '05:00 – 23:00',
-    trainers: 12,
-  },
-  {
-    id: 'q7',
-    name: 'CTG Quận 7',
-    address: '42 Nguyễn Thị Thập, Quận 7, TP.HCM',
-    phone: '028 3775 2266',
-    openHours: '05:00 – 22:30',
-    trainers: 9,
-  },
-  {
-    id: 'thuduc',
-    name: 'CTG Thủ Đức',
-    address: '88 Võ Văn Ngân, TP. Thủ Đức',
-    phone: '028 3722 3344',
-    openHours: '06:00 – 22:00',
-    trainers: 7,
-  },
-];
 
 

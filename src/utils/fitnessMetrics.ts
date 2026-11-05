@@ -1,7 +1,6 @@
 import {
   ACTIVITY_FACTOR,
   BodyPoint,
-  Branch,
   CtgProfile,
   Exercise,
   FoodItem,

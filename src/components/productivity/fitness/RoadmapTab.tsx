@@ -193,7 +193,7 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
           <div>
             <div className="flex items-center gap-2">
               <span className="font-display font-extrabold text-2xl tracking-tight text-white">
-                CTG<span className="text-[#ff6025]">.</span>
+                VortexCal<span className="text-[#ff6025]">.</span>
               </span>
               <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-[#ff6025]/20 text-[#ff6025] border border-[#ff6025]/30">
                 AI Fitness Analyzer
@@ -437,7 +437,7 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
                 Kết Quả Chẩn Đoán & Định Lượng Thể Trạng
               </h3>
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#ff6025]/20 text-[#ff6025] font-bold">
-                CTG Verified
+                VortexCal AI Verified
               </span>
             </div>
 
@@ -544,7 +544,7 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
                 <div className="text-base font-extrabold text-emerald-400 font-mono mt-0.5">
                   {analysis.projectedBodyfatPct}%
                 </div>
-                <div className="text-[10px] text-white/40">Ngưỡng chuẩn CTG</div>
+                <div className="text-[10px] text-white/40">Ngưỡng chuẩn VortexCal</div>
               </div>
 
               <div className="p-3 rounded-xl bg-white/5 border border-white/5 col-span-2 sm:col-span-1">
@@ -598,3 +598,4 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
     </div>
   );
 };
+

@@ -1000,6 +1000,9 @@ export default function App() {
               onAddBodyPoint={productivity.addBodyPoint}
               onUpdateBodyPoint={productivity.updateBodyPoint}
               onDeleteBodyPoint={productivity.deleteBodyPoint}
+              bodyPhotos={productivity.bodyPhotos}
+              onAddBodyPhoto={productivity.addBodyPhoto}
+              onDeleteBodyPhoto={productivity.deleteBodyPhoto}
               plannedSessions={productivity.plannedSessions}
               onAddPlannedSession={productivity.addPlannedSession}
               onUpdatePlannedSession={productivity.updatePlannedSession}

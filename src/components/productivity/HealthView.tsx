@@ -19,6 +19,7 @@ import {
   Compass,
 } from 'lucide-react';
 import {
+  BodyCheckPhoto,
   BodyPoint,
   CtgProfile,
   HealthDayLog,
@@ -84,6 +85,9 @@ export interface HealthViewProps {
   onAddBodyPoint?: (point: Omit<BodyPoint, 'id' | 'createdAt'>) => BodyPoint;
   onUpdateBodyPoint?: (id: string, patch: Partial<BodyPoint>) => void;
   onDeleteBodyPoint?: (id: string) => void;
+  bodyPhotos?: BodyCheckPhoto[];
+  onAddBodyPhoto?: (photo: Omit<BodyCheckPhoto, 'id' | 'createdAt'>) => BodyCheckPhoto;
+  onDeleteBodyPhoto?: (id: string) => void;
   plannedSessions?: PlannedSession[];
   onAddPlannedSession?: (session: PlannedSession) => void;
   onUpdatePlannedSession?: (session: PlannedSession) => void;
@@ -132,6 +136,9 @@ export const HealthView: React.FC<HealthViewProps> = ({
   onAddBodyPoint = (p) => ({ ...p, id: 'tmp', createdAt: Date.now() }),
   onUpdateBodyPoint = () => {},
   onDeleteBodyPoint = () => {},
+  bodyPhotos = [],
+  onAddBodyPhoto = (p) => ({ ...p, id: 'tmp', createdAt: Date.now() }),
+  onDeleteBodyPhoto = () => {},
   plannedSessions = SEED_PLANNED_SESSIONS,
   onAddPlannedSession = () => {},
   onUpdatePlannedSession = () => {},
@@ -368,7 +375,7 @@ export const HealthView: React.FC<HealthViewProps> = ({
           {[
             { id: 'overview', label: lang === 'vi' ? 'Tổng quan & Chỉ số' : 'Overview & Logs', icon: HeartPulse },
             { id: 'roadmap', label: lang === 'vi' ? 'Định hướng lộ trình' : 'Roadmap & AI', icon: Compass },
-            { id: 'inbody', label: lang === 'vi' ? 'Tiến độ & InBody' : 'InBody & Composition', icon: Scale },
+            { id: 'inbody', label: lang === 'vi' ? 'Tiến độ & Check Body' : 'Progress & Body Check', icon: Scale },
             { id: 'training', label: lang === 'vi' ? 'Giáo án & Buổi tập' : 'Workouts & Mesocycle', icon: Dumbbell },
             { id: 'nutrition', label: lang === 'vi' ? 'Dinh dưỡng & Món Việt' : 'Nutrition & Meals', icon: Utensils },
             { id: 'profile', label: lang === 'vi' ? 'Hồ sơ của tôi' : 'My Profile', icon: User },
@@ -407,10 +414,13 @@ export const HealthView: React.FC<HealthViewProps> = ({
         <InBodyTab
           points={bodyPoints}
           profile={ctgProfile}
+          bodyPhotos={bodyPhotos}
           lang={lang}
           onAddPoint={onAddBodyPoint}
           onUpdatePoint={onUpdateBodyPoint}
           onDeletePoint={onDeleteBodyPoint}
+          onAddBodyPhoto={onAddBodyPhoto}
+          onDeleteBodyPhoto={onDeleteBodyPhoto}
         />
       )}
 

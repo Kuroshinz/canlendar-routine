@@ -1,5 +1,6 @@
 import { useCallback, useMemo } from 'react';
 import {
+  BodyCheckPhoto,
   BodyPoint,
   BudgetSettings,
   CtgProfile,
@@ -68,6 +69,7 @@ const KEYS = {
   sportSessions: 'gcal_ctg_sports',
   meals: 'gcal_ctg_meals',
   nutritionSettings: 'gcal_ctg_nutrition_settings',
+  bodyPhotos: 'gcal_prod_body_photos',
 } as const;
 
 export interface ProductivityStore {
@@ -125,6 +127,9 @@ export interface ProductivityStore {
   addBodyPoint: (point: Omit<BodyPoint, 'id' | 'createdAt'>) => BodyPoint;
   updateBodyPoint: (id: string, patch: Partial<BodyPoint>) => void;
   deleteBodyPoint: (id: string) => void;
+  bodyPhotos: BodyCheckPhoto[];
+  addBodyPhoto: (photo: Omit<BodyCheckPhoto, 'id' | 'createdAt'>) => BodyCheckPhoto;
+  deleteBodyPhoto: (id: string) => void;
   plannedSessions: PlannedSession[];
   addPlannedSession: (session: PlannedSession) => void;
   updatePlannedSession: (session: PlannedSession) => void;
@@ -198,6 +203,7 @@ export function useProductivityStore(): ProductivityStore {
     KEYS.nutritionSettings,
     DEFAULT_NUTRITION_SETTINGS
   );
+  const [bodyPhotos, setBodyPhotos] = usePersistentState<BodyCheckPhoto[]>(KEYS.bodyPhotos, []);
 
   // --- Tasks ---------------------------------------------------------------
 
@@ -525,6 +531,26 @@ export function useProductivityStore(): ProductivityStore {
     [setBodyPoints]
   );
 
+  const addBodyPhoto = useCallback(
+    (input: Omit<BodyCheckPhoto, 'id' | 'createdAt'>) => {
+      const photo: BodyCheckPhoto = {
+        ...input,
+        id: uid('photo'),
+        createdAt: Date.now(),
+      };
+      setBodyPhotos((prev) => [photo, ...prev]);
+      return photo;
+    },
+    [setBodyPhotos]
+  );
+
+  const deleteBodyPhoto = useCallback(
+    (id: string) => {
+      setBodyPhotos((prev) => prev.filter((p) => p.id !== id));
+    },
+    [setBodyPhotos]
+  );
+
   const addPlannedSession = useCallback(
     (session: PlannedSession) => {
       setPlannedSessions((prev) => [...prev, session]);
@@ -726,6 +752,7 @@ export function useProductivityStore(): ProductivityStore {
     setSportSessions(SEED_SPORTS);
     setMeals(SEED_MEALS);
     setNutritionSettings(DEFAULT_NUTRITION_SETTINGS);
+    setBodyPhotos([]);
   }, [
     setTasks,
     setGoals,
@@ -744,6 +771,7 @@ export function useProductivityStore(): ProductivityStore {
     setSportSessions,
     setMeals,
     setNutritionSettings,
+    setBodyPhotos,
   ]);
 
   const clearAll = useCallback(
@@ -769,6 +797,7 @@ export function useProductivityStore(): ProductivityStore {
       setSportSessions([]);
       setMeals([]);
       setNutritionSettings(DEFAULT_NUTRITION_SETTINGS);
+      setBodyPhotos([]);
     },
     [
       setTasks,
@@ -788,6 +817,7 @@ export function useProductivityStore(): ProductivityStore {
       setSportSessions,
       setMeals,
       setNutritionSettings,
+      setBodyPhotos,
     ]
   );
 
@@ -834,6 +864,9 @@ export function useProductivityStore(): ProductivityStore {
     addBodyPoint,
     updateBodyPoint,
     deleteBodyPoint,
+    bodyPhotos,
+    addBodyPhoto,
+    deleteBodyPhoto,
     plannedSessions,
     addPlannedSession,
     updatePlannedSession,
