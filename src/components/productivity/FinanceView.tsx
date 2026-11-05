@@ -14,6 +14,7 @@ import {
   X,
   ArrowDownCircle,
   ArrowUpCircle,
+  Download,
 } from 'lucide-react';
 import {
   BudgetSettings,
@@ -130,6 +131,29 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
       onUpdateBudget({ monthlyLimit: next });
     }
     setShowBudgetEditor(false);
+  };
+
+  const handleExportCSV = () => {
+    const headers = ['Date', 'Title', 'Type', 'Category', 'Amount', 'Currency', 'Note'];
+    const rows = visibleTransactions.map((t) => [
+      t.date,
+      `"${t.title.replace(/"/g, '""')}"`,
+      t.type,
+      t.category,
+      t.amount,
+      budget.currency,
+      `"${(t.note || '').replace(/"/g, '""')}"`,
+    ]);
+    const csvContent = '\uFEFF' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `financial-report-${monthPrefix}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   const budgetBannerClass =
@@ -460,6 +484,17 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
                 className="w-full text-xs pl-8 pr-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
               />
             </div>
+
+            <button
+              type="button"
+              onClick={handleExportCSV}
+              disabled={visibleTransactions.length === 0}
+              title={lang === 'vi' ? 'Xuất danh sách giao dịch sang file CSV' : 'Export transactions to CSV'}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-40 text-gray-700 dark:text-gray-200 text-xs font-medium cursor-pointer shrink-0 transition-colors shadow-2xs"
+            >
+              <Download className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+              <span>{lang === 'vi' ? 'Xuất CSV' : 'Export'}</span>
+            </button>
           </div>
 
           {visibleTransactions.length === 0 ? (

@@ -39,7 +39,7 @@ import { TasksGoalsView } from './components/productivity/TasksGoalsView';
 import { StudyFocusView } from './components/productivity/StudyFocusView';
 import { FinanceView } from './components/productivity/FinanceView';
 import { HealthView } from './components/productivity/HealthView';
-import { useProductivityStore } from './hooks/useProductivityStore';
+import { useProductivityStore, todayString } from './hooks/useProductivityStore';
 import { buildTaskEvents } from './utils/productivityUtils';
 import { User } from 'firebase/auth';
 import { initAuth, logout, getAccessToken, AppUser } from './services/auth';
@@ -847,6 +847,15 @@ export default function App() {
               onNavigate={handleViewChange}
               onSetTaskStatus={productivity.setTaskStatus}
               onOpenEvent={(ev) => setSelectedEventForDetail(ev)}
+              onAddTask={(title) =>
+                productivity.addTask({
+                  title,
+                  status: 'todo',
+                  priority: 'medium',
+                  categoryId: 'tasks',
+                  dueDate: todayString(),
+                })
+              }
             />
           )}
 
@@ -869,6 +878,18 @@ export default function App() {
               onOpenTaskOnCalendar={(dateStr) => {
                 setCurrentDate(parseDateString(dateStr));
                 handleViewChange('day');
+              }}
+              onStartFocus={(taskId) => {
+                try {
+                  const raw = localStorage.getItem('gcal_focus_timer');
+                  if (raw) {
+                    const parsed = JSON.parse(raw);
+                    parsed.linkedTaskId = taskId;
+                    parsed.mode = 'pomodoro';
+                    localStorage.setItem('gcal_focus_timer', JSON.stringify(parsed));
+                  }
+                } catch {}
+                handleViewChange('focus');
               }}
             />
           )}

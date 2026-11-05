@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   LayoutDashboard,
   CalendarClock,
@@ -13,6 +13,7 @@ import {
   Flame,
   Footprints,
   TrendingDown,
+  Plus,
 } from 'lucide-react';
 import { CalendarEvent, CalendarViewType } from '../../types/calendar';
 import {
@@ -53,6 +54,7 @@ interface ProductivityDashboardProps {
   onNavigate: (view: CalendarViewType) => void;
   onSetTaskStatus: (id: string, status: TaskItem['status']) => void;
   onOpenEvent: (event: CalendarEvent) => void;
+  onAddTask?: (title: string) => void;
 }
 
 export const ProductivityDashboard: React.FC<ProductivityDashboardProps> = ({
@@ -69,7 +71,9 @@ export const ProductivityDashboard: React.FC<ProductivityDashboardProps> = ({
   onNavigate,
   onSetTaskStatus,
   onOpenEvent,
+  onAddTask,
 }) => {
+  const [quickTaskTitle, setQuickTaskTitle] = useState('');
   const today = formatDateString(new Date());
   const monthPrefix = monthPrefixOf(new Date());
 
@@ -317,6 +321,38 @@ export const ProductivityDashboard: React.FC<ProductivityDashboardProps> = ({
               </button>
             </div>
 
+            {onAddTask && (
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (!quickTaskTitle.trim()) return;
+                  onAddTask(quickTaskTitle.trim());
+                  setQuickTaskTitle('');
+                }}
+                className="flex items-center gap-2 mb-3"
+              >
+                <input
+                  type="text"
+                  value={quickTaskTitle}
+                  onChange={(e) => setQuickTaskTitle(e.target.value)}
+                  placeholder={
+                    lang === 'vi'
+                      ? 'Thêm nhanh việc cần làm hôm nay (Enter)...'
+                      : 'Quick add task for today (Enter)...'
+                  }
+                  className="flex-1 text-xs px-3 py-1.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-100 focus:outline-blue-500"
+                />
+                <button
+                  type="submit"
+                  disabled={!quickTaskTitle.trim()}
+                  className="p-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white rounded-xl text-xs cursor-pointer shadow-2xs"
+                  title={lang === 'vi' ? 'Thêm' : 'Add'}
+                >
+                  <Plus className="w-4 h-4" />
+                </button>
+              </form>
+            )}
+
             {todaysTasks.length === 0 ? (
               <p className="text-xs text-gray-400 py-6 text-center">
                 {lang === 'vi' ? 'Hôm nay không có công việc nào.' : 'Nothing due today.'}
@@ -455,6 +491,7 @@ export const ProductivityDashboard: React.FC<ProductivityDashboardProps> = ({
                   icon: Footprints,
                   label: lang === 'vi' ? 'Bước' : 'Steps',
                   value: (todayHealth?.steps || 0).toLocaleString(),
+                  raw: todayHealth?.steps || 0,
                   target: healthProfile.dailySteps,
                   color: '#039BE5',
                 },
@@ -462,6 +499,7 @@ export const ProductivityDashboard: React.FC<ProductivityDashboardProps> = ({
                   icon: Flame,
                   label: 'kcal',
                   value: String(todayHealth?.caloriesIn || 0),
+                  raw: todayHealth?.caloriesIn || 0,
                   target: 2200,
                   color: '#F4511E',
                 },
@@ -469,6 +507,7 @@ export const ProductivityDashboard: React.FC<ProductivityDashboardProps> = ({
                   icon: HeartPulse,
                   label: lang === 'vi' ? 'Đốt' : 'Burned',
                   value: String(todayHealth?.caloriesBurned || 0),
+                  raw: todayHealth?.caloriesBurned || 0,
                   target: 2400,
                   color: '#33B679',
                 },
@@ -476,12 +515,14 @@ export const ProductivityDashboard: React.FC<ProductivityDashboardProps> = ({
                   icon: Clock,
                   label: lang === 'vi' ? 'Ngủ' : 'Sleep',
                   value: `${todayHealth?.sleepHours || 0}h`,
+                  raw: todayHealth?.sleepHours || 0,
                   target: healthProfile.dailySleepHours,
                   color: '#7986CB',
                 },
               ].map((row) => {
                 const Icon = row.icon;
-                const percent = row.target > 0 ? Math.min(100, Math.round((Number(String(row.value).replace(/,/g, '')) / row.target) * 100)) : 0;
+                const percent =
+                  row.target > 0 ? Math.min(100, Math.round((row.raw / row.target) * 100)) : 0;
                 return (
                   <div key={row.label} className="p-2 rounded-xl bg-gray-50 dark:bg-gray-800/50">
                     <div className="flex items-center gap-1.5">

@@ -13,6 +13,7 @@ import {
   ListChecks,
   X,
   Pencil,
+  Timer,
 } from 'lucide-react';
 import {
   GoalItem,
@@ -47,6 +48,7 @@ interface TasksGoalsViewProps {
   onAddGoal: (goal: Omit<GoalItem, 'id' | 'createdAt'>) => GoalItem;
   onDeleteGoal: (id: string) => void;
   onOpenTaskOnCalendar: (dateStr: string) => void;
+  onStartFocus?: (taskId: string) => void;
 }
 
 const STATUS_TABS: { id: TaskStatus | 'all'; labelVi: string; labelEn: string }[] = [
@@ -72,6 +74,7 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
   onAddGoal,
   onDeleteGoal,
   onOpenTaskOnCalendar,
+  onStartFocus,
 }) => {
   const [statusFilter, setStatusFilter] = useState<TaskStatus | 'all'>('all');
   const [priorityFilter, setPriorityFilter] = useState<TaskPriority | 'all'>('all');
@@ -448,6 +451,20 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
                               className="text-[10px] px-1.5 py-0.5 rounded text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 font-medium cursor-pointer"
                             >
                               {lang === 'vi' ? 'Xem trên Lịch' : 'View on Calendar'}
+                            </button>
+                          )}
+                          {task.status !== 'completed' && onStartFocus && (
+                            <button
+                              onClick={() => onStartFocus(task.id)}
+                              className="text-[10px] px-2 py-0.5 rounded text-violet-600 dark:text-violet-400 bg-violet-50 dark:bg-violet-950/40 hover:bg-violet-100 dark:hover:bg-violet-900/50 font-medium cursor-pointer flex items-center gap-1 transition-colors"
+                              title={
+                                lang === 'vi'
+                                  ? 'Bắt đầu phiên tập trung Pomodoro cho công việc này'
+                                  : 'Start Pomodoro focus session for this task'
+                              }
+                            >
+                              <Timer className="w-2.5 h-2.5" />
+                              <span>{lang === 'vi' ? 'Tập trung' : 'Focus'}</span>
                             </button>
                           )}
                         </div>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   CheckSquare,
   FileText,
@@ -99,6 +99,67 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
   const [newTaskInput, setNewTaskInput] = useState('');
 
   const displayTasks = sharedTasks ?? localTasks;
+
+  // Dynamic contacts list: team defaults + attendees found in calendar events
+  const displayContacts = useMemo(() => {
+    const defaultContacts = [
+      { name: 'Nhân Nguyễn', email: 'nghuyenthiennhannghuyen@gmail.com', role: lang === 'vi' ? 'Chủ sở hữu' : 'Owner' },
+      { name: 'Hương Mai', email: 'designer@company.com', role: 'Lead UI/UX' },
+      { name: 'Tuấn Anh', email: 'dev.lead@company.com', role: 'Tech Lead' },
+      { name: 'David Trần', email: 'client.director@partner.com', role: lang === 'vi' ? 'Khách hàng đối tác' : 'Partner Director' },
+    ];
+    if (!events || events.length === 0) return defaultContacts;
+
+    const guestMap = new Map<string, { name: string; email: string; role: string }>();
+    for (const c of defaultContacts) {
+      guestMap.set(c.email.toLowerCase(), c);
+    }
+
+    for (const ev of events) {
+      if (ev.guests && Array.isArray(ev.guests)) {
+        for (const g of ev.guests) {
+          const email = (g.email || '').toLowerCase().trim();
+          if (email && !guestMap.has(email)) {
+            guestMap.set(email, {
+              name: g.name || email.split('@')[0],
+              email,
+              role: lang === 'vi' ? 'Khách mời sự kiện' : 'Event attendee',
+            });
+          }
+        }
+      }
+    }
+    return Array.from(guestMap.values());
+  }, [events, lang]);
+
+  // Dynamic locations list: default landmarks + locations found in calendar events
+  const displayLocations = useMemo(() => {
+    const defaultLocations = [
+      { name: "Pizza 4P's Saigon Centre", addr: '65 Lê Lợi, Bến Nghé, Quận 1, TP.HCM' },
+      { name: 'California Fitness & Yoga Club', addr: 'Tầng 3, Crescent Mall, Quận 7' },
+      { name: 'Trung tâm Hội nghị Quốc gia', addr: 'Đại lộ Thăng Long, Mễ Trì, Hà Nội' },
+      { name: 'Phòng họp Paris (Tầng 5)', addr: 'Trụ sở chính công ty' },
+    ];
+    if (!events || events.length === 0) return defaultLocations;
+
+    const locMap = new Map<string, { name: string; addr: string }>();
+    for (const l of defaultLocations) {
+      locMap.set(l.addr.toLowerCase(), l);
+    }
+
+    for (const ev of events) {
+      if (ev.location && ev.location.trim()) {
+        const addr = ev.location.trim();
+        if (!locMap.has(addr.toLowerCase())) {
+          locMap.set(addr.toLowerCase(), {
+            name: ev.title,
+            addr,
+          });
+        }
+      }
+    }
+    return Array.from(locMap.values());
+  }, [events]);
 
   const handleToggleTask = (id: string) => {
     if (onSharedToggleTask) {
@@ -372,15 +433,10 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
             {/* Contacts Panel */}
             {activePanel === 'contacts' && (
               <div className="space-y-2">
-                {[
-                  { name: 'Nhân Nguyễn', email: 'nghuyenthiennhannghuyen@gmail.com', role: 'Chủ sở hữu' },
-                  { name: 'Hương Mai', email: 'designer@company.com', role: 'Lead UI/UX' },
-                  { name: 'Tuấn Anh', email: 'dev.lead@company.com', role: 'Tech Lead' },
-                  { name: 'David Trần', email: 'client.director@partner.com', role: 'Khách hàng đối tác' },
-                ].map((c, i) => (
+                {displayContacts.map((c, i) => (
                   <div key={i} className="flex items-center gap-3 p-2.5 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/40">
                     <div className="w-8 h-8 rounded-full bg-linear-to-tr from-blue-500 to-indigo-600 text-white font-bold text-xs flex items-center justify-center shrink-0">
-                      {c.name[0]}
+                      {c.name[0]?.toUpperCase() || 'U'}
                     </div>
                     <div className="min-w-0">
                       <p className="text-xs font-semibold text-gray-800 dark:text-gray-100 truncate">{c.name}</p>
@@ -398,18 +454,13 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
                 <p className="text-gray-500 dark:text-gray-400">
                   {lang === 'vi' ? 'Vị trí sự kiện đã lưu trên lịch:' : 'Saved event locations on calendar:'}
                 </p>
-                {[
-                  { name: 'Pizza 4P\'s Saigon Centre', addr: '65 Lê Lợi, Bến Nghé, Quận 1, TP.HCM' },
-                  { name: 'California Fitness & Yoga Club', addr: 'Tầng 3, Crescent Mall, Quận 7' },
-                  { name: 'Trung tâm Hội nghị Quốc gia', addr: 'Đại lộ Thăng Long, Mễ Trì, Hà Nội' },
-                  { name: 'Phòng họp Paris (Tầng 5)', addr: 'Trụ sở chính công ty' },
-                ].map((loc, i) => (
+                {displayLocations.map((loc, i) => (
                   <div key={i} className="p-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50">
                     <div className="flex items-center gap-1.5 font-semibold text-gray-800 dark:text-gray-100 mb-1">
                       <MapPin className="w-3.5 h-3.5 text-red-500 shrink-0" />
-                      <span>{loc.name}</span>
+                      <span className="truncate">{loc.name}</span>
                     </div>
-                    <p className="text-gray-500 dark:text-gray-400 text-[11px]">{loc.addr}</p>
+                    <p className="text-gray-500 dark:text-gray-400 text-[11px] truncate">{loc.addr}</p>
                   </div>
                 ))}
               </div>
