@@ -237,6 +237,19 @@ Triển khai trọn vẹn và tối ưu hóa hệ thống thể hình theo tham 
 | **Xóa Từng Món Khỏi Bữa Ăn & Tùy Chỉnh Calo / Macro** | Trong chi tiết bữa ăn, hiển thị từng món đã nạp kèm nút xóa riêng lẻ từng món; thêm Modal **"Tùy chỉnh mục tiêu Calo & Đa lượng"** cho phép người dùng tự đặt lại target Kcal, Protein, Carbs, Fat theo ý muốn. |
 | **Sửa Trực Tiếp Mốc Đo InBody** | Bổ sung nút **"Sửa"** trên từng dòng lịch sử đo InBody, mở modal chỉnh sửa nhanh các số liệu cân nặng, body fat %, số đo vòng eo, ngực, tay, đùi và ghi chú. |
 
+---
+
+## 16. Tích Hợp Toàn Diện Định Hướng Lộ Trình & Nhận Diện CTG Web (`https://ctg-web.hoanglongdt.workers.dev/`)
+
+Bổ sung tính năng cốt lõi theo đúng nguyên bản từ website CTG và đồng bộ thiết kế:
+
+| Hạng mục | Chi tiết triển khai |
+| --- | --- |
+| **Phân Hệ Định Hướng Lộ Trình (AI Fitness Roadmap Analyzer)** | Xây dựng tab mới **`RoadmapTab.tsx`** ("Định hướng lộ trình") tái hiện 100% tính năng định hướng thể hình từ `ctg-web`: <br>• Form nhập tương tác: Giới tính sinh học (Nam/Nữ), Chiều cao (cm), Cân nặng (kg), Tỷ lệ mỡ Bodyfat (%) và Vòng eo.<br>• Phân tích thuật toán y khoa thể hình chuẩn CTG: Tự động tính Khối nạc (`LBM kg`), Khối mỡ (`BFM kg`), Chỉ số cơ nạc (`FFMI`) cùng bảng phân loại thể hình (Ít cơ, Lý tưởng, Sát giới hạn, Chất ngoại sinh) và phân loại mỡ cơ thể.<br>• Dự báo định hướng: Cắt mỡ (Cut), Tăng cơ (Lean Bulk) hoặc Tái cấu trúc cơ thể (Recomp), tính chính xác cân nặng đích đến (`targetWeightKg`), % mỡ mục tiêu, lượng cơ cần bù đắp hoặc lượng mỡ cần giảm.<br>• **Nút 1-chạm "Áp Dụng Lộ Trình Này Vào Hệ Thống"**: Tự động cập nhật vào Profile cá nhân và điều chỉnh mục tiêu Calo/Macro trên toàn bộ app. |
+| **Bảng Tra Cứu Chuẩn Thể Hình CTG** | Tích hợp trực tiếp bảng tham chiếu ngưỡng Bodyfat (%) và mốc FFMI cho cả nam và nữ ngay trong giao diện để người dùng dễ dàng đối chiếu thể trạng. |
+| **Nhận Diện Thương Hiệu CTG.** | Đồng bộ hóa toàn bộ nhận diện chuẩn của CTG Web: Wordmark **`CTG.`** (với dấu chấm cam thương hiệu), slogan *"Ăn món Việt, vẫn xuống mỡ"*, và bảng màu chủ đạo Cam CTG (`#ff6025` / `#ff4400`), nền tối sâu `#121212`, thẻ card `#1c1d21` và viền kim loại mờ. |
+
+
 
 
 
