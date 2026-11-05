@@ -146,6 +146,8 @@ export interface ProductivityStore {
   restore: (data: ProductivitySnapshotData) => void;
   /** Restore every module back to its seed data (used by "Đặt lại"). */
   resetAll: () => void;
+  /** Clear all user data to start 100% fresh for a new user account. */
+  clearAll: (name?: string, email?: string) => void;
 }
 
 const uid = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
@@ -718,6 +720,51 @@ export function useProductivityStore(): ProductivityStore {
     setNutritionSettings,
   ]);
 
+  const clearAll = useCallback(
+    (name?: string, email?: string) => {
+      setTasks([]);
+      setGoals([]);
+      setSessions([]);
+      setTransactions([]);
+      setBudget(DEFAULT_BUDGET);
+      setHealthLogs([]);
+      setWorkouts([]);
+      setWellness([]);
+      setHealthProfile(DEFAULT_HEALTH_PROFILE);
+      setHabits([]);
+      setCtgProfile({
+        ...SEED_CTG_PROFILE,
+        name: name?.trim() || 'Người dùng mới',
+        email: email?.trim() || undefined,
+      });
+      setBodyPoints([]);
+      setPlannedSessions([]);
+      setWorkoutSessions([]);
+      setSportSessions([]);
+      setMeals([]);
+      setNutritionSettings(DEFAULT_NUTRITION_SETTINGS);
+    },
+    [
+      setTasks,
+      setGoals,
+      setSessions,
+      setTransactions,
+      setBudget,
+      setHealthLogs,
+      setWorkouts,
+      setWellness,
+      setHealthProfile,
+      setHabits,
+      setCtgProfile,
+      setBodyPoints,
+      setPlannedSessions,
+      setWorkoutSessions,
+      setSportSessions,
+      setMeals,
+      setNutritionSettings,
+    ]
+  );
+
   return {
     tasks,
     addTask,
@@ -778,6 +825,7 @@ export function useProductivityStore(): ProductivityStore {
     snapshot,
     restore,
     resetAll,
+    clearAll,
   };
 }
 

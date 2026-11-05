@@ -643,10 +643,44 @@ export default function App() {
     try {
       await logout();
       setUser(null);
+      localStorage.removeItem('gcal_active_user');
       setSyncState('offline');
     } catch (err) {
       console.error('Sign Out failed:', err);
     }
+  };
+
+  const handleCreateNewAccount = (name: string, email: string, clearData: boolean) => {
+    const trimmedName = name.trim() || (lang === 'vi' ? 'Người dùng mới' : 'New User');
+    const trimmedEmail = email.trim() || null;
+    const newUser: AppUser = {
+      uid: 'user-' + Date.now(),
+      displayName: trimmedName,
+      email: trimmedEmail,
+      photoURL: null,
+    };
+    setUser(newUser);
+    localStorage.setItem('gcal_active_user', JSON.stringify(newUser));
+
+    if (clearData) {
+      setEvents([]);
+      localStorage.setItem('gcal_events', JSON.stringify([]));
+      productivity.clearAll(trimmedName, trimmedEmail || undefined);
+    } else {
+      productivity.updateCtgProfile({
+        name: trimmedName,
+        email: trimmedEmail || undefined,
+      });
+    }
+
+    setSyncState('synced');
+    setLastSyncedTime(new Date().toLocaleTimeString(lang === 'vi' ? 'vi-VN' : 'en-US'));
+    setActiveAlert({
+      title: lang === 'vi' ? `Chào mừng ${trimmedName}!` : `Welcome ${trimmedName}!`,
+      time: clearData
+        ? (lang === 'vi' ? 'Dữ liệu đã được làm mới hoàn toàn.' : 'Data reset to fresh state.')
+        : (lang === 'vi' ? 'Tài khoản mới đã kích hoạt.' : 'New account activated.'),
+    });
   };
 
   const handleSyncGoogleCalendar = async (explicitToken?: string) => {
@@ -1157,6 +1191,7 @@ export default function App() {
         lastSyncedTime={lastSyncedTime}
         lang={lang}
         onSyncGoogleCalendar={handleSyncGoogleCalendar}
+        onCreateNewAccount={handleCreateNewAccount}
       />
 
       {/* Google Meet In-App Room Simulator */}
