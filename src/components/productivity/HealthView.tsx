@@ -16,6 +16,7 @@ import {
   Activity,
   Utensils,
   User,
+  Compass,
 } from 'lucide-react';
 import {
   BodyPoint,
@@ -62,6 +63,7 @@ import { InBodyTab } from './fitness/InBodyTab';
 import { TrainingTab } from './fitness/TrainingTab';
 import { NutritionTab } from './fitness/NutritionTab';
 import { ProfileTab } from './fitness/ProfileTab';
+import { RoadmapTab } from './fitness/RoadmapTab';
 
 export interface HealthViewProps {
   healthLogs: HealthDayLog[];
@@ -102,7 +104,7 @@ export interface HealthViewProps {
   onScheduleSessionToCalendar?: (title: string, date: string, color: string) => void;
 }
 
-type SubTab = 'overview' | 'inbody' | 'training' | 'nutrition' | 'profile';
+type SubTab = 'overview' | 'roadmap' | 'inbody' | 'training' | 'nutrition' | 'profile';
 
 const WORKOUT_TYPES: { id: WorkoutType; labelVi: string; labelEn: string; color: string }[] = [
   { id: 'strength', labelVi: 'Sức mạnh', labelEn: 'Strength', color: '#3F51B5' },
@@ -315,20 +317,22 @@ export const HealthView: React.FC<HealthViewProps> = ({
   );
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-y-auto bg-gray-50/50 dark:bg-gray-900 p-4 md:p-6 lg:p-8 select-none">
-      {/* Header */}
+    <div className="flex-1 flex flex-col h-full overflow-y-auto bg-gray-50/50 dark:bg-[#121212] p-4 md:p-6 lg:p-8 select-none">
+      {/* CTG Brand Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <div className="flex items-center gap-2">
-            <HeartPulse className="w-6 h-6 text-rose-600 dark:text-rose-400" />
-            <h1 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-gray-100">
-              {lang === 'vi' ? 'Sức Khỏe & Thể Hình' : 'Health & Fitness'}
-            </h1>
+          <div className="flex items-center gap-2.5">
+            <span className="font-display font-extrabold text-2xl md:text-3xl tracking-tight text-gray-900 dark:text-white">
+              CTG<span className="text-[#ff6025]">.</span>
+            </span>
+            <span className="text-[10px] font-extrabold tracking-wider uppercase bg-[#ff6025]/15 text-[#ff6025] border border-[#ff6025]/30 px-2 py-0.5 rounded-md">
+              FITNESS & CALENDAR
+            </span>
           </div>
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
             {lang === 'vi'
-              ? 'Theo dõi cân nặng, calo, macros, nước, giấc ngủ, số bước và lịch sử tập luyện.'
-              : 'Track weight, calories, macros, water, sleep, steps and workout history.'}
+              ? 'Ăn món Việt, vẫn xuống mỡ — Lộ trình tập luyện & dinh dưỡng cá nhân hóa quanh cơm tấm, bún phở.'
+              : 'Vietnamese diet fitness — Personalized training & nutrition roadmap with Google Calendar integration.'}
           </p>
         </div>
 
@@ -342,7 +346,7 @@ export const HealthView: React.FC<HealthViewProps> = ({
           <button
             onClick={handleSync}
             disabled={syncState.running}
-            className="flex items-center gap-1.5 px-3.5 py-2 bg-rose-600 hover:bg-rose-700 disabled:opacity-60 text-white rounded-xl text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-[#ff6025] hover:bg-[#ff4400] disabled:opacity-60 text-white rounded-xl text-xs font-semibold shadow-xs transition-colors cursor-pointer"
           >
             <RefreshCw className={`w-4 h-4 ${syncState.running ? 'animate-spin' : ''}`} />
             <span>
@@ -359,13 +363,14 @@ export const HealthView: React.FC<HealthViewProps> = ({
       </div>
 
       {/* Multitasking Sub-Tabs Sticky Bar */}
-      <div className="sticky top-0 z-20 bg-gray-50/95 dark:bg-gray-900/95 backdrop-blur-md pt-2 pb-3 mb-6 border-b border-gray-200 dark:border-gray-800">
+      <div className="sticky top-0 z-20 bg-gray-50/95 dark:bg-[#121212]/95 backdrop-blur-md pt-2 pb-3 mb-6 border-b border-gray-200 dark:border-white/10">
         <div className="flex items-center gap-2 overflow-x-auto py-1 px-0.5">
           {[
             { id: 'overview', label: lang === 'vi' ? 'Tổng quan & Chỉ số' : 'Overview & Logs', icon: HeartPulse },
-            { id: 'inbody', label: lang === 'vi' ? 'InBody & Đo lường' : 'InBody & Composition', icon: Scale },
+            { id: 'roadmap', label: lang === 'vi' ? 'Định hướng lộ trình' : 'Roadmap & AI', icon: Compass },
+            { id: 'inbody', label: lang === 'vi' ? 'Tiến độ & InBody' : 'InBody & Composition', icon: Scale },
             { id: 'training', label: lang === 'vi' ? 'Giáo án & Buổi tập' : 'Workouts & Mesocycle', icon: Dumbbell },
-            { id: 'nutrition', label: lang === 'vi' ? 'Dinh dưỡng & Bữa ăn' : 'Nutrition & Meals', icon: Utensils },
+            { id: 'nutrition', label: lang === 'vi' ? 'Dinh dưỡng & Món Việt' : 'Nutrition & Meals', icon: Utensils },
             { id: 'profile', label: lang === 'vi' ? 'Hồ sơ của tôi' : 'My Profile', icon: User },
           ].map((tab) => {
             const Icon = tab.icon;
@@ -377,8 +382,8 @@ export const HealthView: React.FC<HealthViewProps> = ({
                 onClick={() => setActiveSubTab(tab.id as SubTab)}
                 className={`inline-flex items-center gap-2 h-10 px-4 rounded-xl text-xs font-bold leading-none transition-all cursor-pointer shrink-0 shadow-2xs ${
                   isActive
-                    ? 'bg-rose-600 text-white shadow-xs ring-1 ring-rose-500'
-                    : 'bg-white dark:bg-[#1a1e24] text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 border border-gray-200 dark:border-gray-700/80'
+                    ? 'bg-[#ff6025] text-white shadow-xs ring-1 ring-[#ff6025]'
+                    : 'bg-white dark:bg-[#1c1d21] text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/5 border border-gray-200 dark:border-white/10'
                 }`}
               >
                 <Icon className="w-4 h-4 shrink-0" />
@@ -388,6 +393,15 @@ export const HealthView: React.FC<HealthViewProps> = ({
           })}
         </div>
       </div>
+
+      {activeSubTab === 'roadmap' && (
+        <RoadmapTab
+          profile={ctgProfile}
+          lang={lang}
+          onUpdateProfile={onUpdateCtgProfile}
+          onNavigateTab={(tab) => setActiveSubTab(tab as SubTab)}
+        />
+      )}
 
       {activeSubTab === 'inbody' && (
         <InBodyTab

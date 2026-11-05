@@ -405,7 +405,7 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
                 onClick={() => onUpdateNutritionSettings({ tdeeOffset: offset })}
                 className={`py-1.5 px-1 rounded-xl text-xs font-semibold transition-colors cursor-pointer text-center ${
                   nutritionSettings.tdeeOffset === offset
-                    ? 'bg-emerald-600 text-white font-bold'
+                    ? 'bg-[#ff6025] text-white font-bold'
                     : 'bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300'
                 }`}
               >
@@ -462,7 +462,7 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
               onClick={() => setSelectedSlot(slot)}
               className={`px-3 py-1.5 rounded-xl text-xs font-semibold cursor-pointer transition-colors ${
                 selectedSlot === slot
-                  ? 'bg-emerald-600 text-white shadow-xs'
+                  ? 'bg-[#ff6025] text-white shadow-xs'
                   : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200'
               }`}
             >
@@ -485,7 +485,7 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
               <button
                 type="submit"
                 disabled={parsedPreview.length === 0}
-                className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-bold cursor-pointer shrink-0 transition-colors shadow-xs"
+                className="px-4 py-2.5 rounded-xl bg-[#ff6025] hover:bg-[#ff4400] disabled:opacity-50 text-white text-xs font-bold cursor-pointer shrink-0 transition-colors shadow-xs"
               >
                 + Ghi nhận ({MEAL_LABEL[selectedSlot]})
               </button>
@@ -608,7 +608,7 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
               <button
                 type="submit"
                 disabled={!manualName.trim() || Number(manualKcal) <= 0}
-                className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-bold cursor-pointer transition-colors shadow-xs"
+                className="px-4 py-2 rounded-xl bg-[#ff6025] hover:bg-[#ff4400] disabled:opacity-50 text-white text-xs font-bold cursor-pointer transition-colors shadow-xs"
               >
                 + Thêm Món Vào ({MEAL_LABEL[selectedSlot]})
               </button>
@@ -834,7 +834,7 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
                   onUpdateNutritionSettings({ overrides: updatedOverrides });
                   setShowOverrideModal(false);
                 }}
-                className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold cursor-pointer shadow-xs"
+                className="px-4 py-2 rounded-xl bg-[#ff6025] hover:bg-[#ff4400] text-white text-xs font-bold cursor-pointer shadow-xs"
               >
                 Lưu Tùy Chỉnh
               </button>
