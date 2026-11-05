@@ -920,7 +920,25 @@ export default function App() {
         </main>
 
         {/* Right Google Workspace Utility Dock (Keep, Tasks, Contacts, Maps) */}
-        <RightSidebar lang={lang} />
+        <RightSidebar
+          lang={lang}
+          events={allEvents}
+          tasks={productivity.tasks}
+          onAddTask={(title: string) =>
+            productivity.addTask({
+              title,
+              status: 'todo',
+              priority: 'medium',
+              categoryId: categories[0]?.id || 'personal',
+              dueDate: formatDateString(new Date()),
+            })
+          }
+          onToggleTask={(taskId: string) => {
+            const task = productivity.tasks.find((t) => t.id === taskId);
+            productivity.setTaskStatus(taskId, task?.status === 'completed' ? 'todo' : 'completed');
+          }}
+          onDeleteTask={(taskId: string) => productivity.deleteTask(taskId)}
+        />
       </div>
 
       {/* Mini Inline Event Creation Popover */}
@@ -1075,7 +1093,7 @@ export default function App() {
       <MultiHubDrawer
         isOpen={isMultiHubOpen}
         onClose={() => setIsMultiHubOpen(false)}
-        events={events}
+        events={allEvents}
         user={user}
         onGoogleSignIn={handleGoogleSignIn}
         onGoogleSignOut={handleGoogleSignOut}
@@ -1084,6 +1102,8 @@ export default function App() {
         lastSyncedTime={lastSyncedTime}
         lang={lang}
         onNavigate={handleViewChange}
+        store={productivity}
+        categories={categories}
       />
     </div>
   );

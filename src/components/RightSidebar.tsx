@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   CheckSquare,
   FileText,
@@ -11,6 +11,8 @@ import {
   CheckCircle2,
   X,
 } from 'lucide-react';
+import { TaskItem, TaskPriority, TASK_PRIORITY_META } from '../types/productivity';
+import { CalendarEvent } from '../types/calendar';
 
 interface NoteItem {
   id: string;
@@ -19,64 +21,126 @@ interface NoteItem {
   color: string;
 }
 
-interface QuickTaskItem {
-  id: string;
-  text: string;
-  completed: boolean;
-  dueDate?: string;
-}
-
 interface RightSidebarProps {
   lang: 'vi' | 'en';
+  tasks?: TaskItem[];
+  events?: CalendarEvent[];
+  onAddTask?: (title: string) => void;
+  onToggleTask?: (taskId: string) => void;
+  onDeleteTask?: (taskId: string) => void;
 }
 
-export const RightSidebar: React.FC<RightSidebarProps> = ({ lang }) => {
+const DEFAULT_NOTES: NoteItem[] = [
+  {
+    id: 'n-1',
+    title: 'Ý tưởng Sprint 42',
+    content: 'Tối ưu hoá hiệu năng lưới lịch khi có >100 sự kiện và bổ sung phím tắt nhanh.',
+    color: '#FEF3C7',
+  },
+  {
+    id: 'n-2',
+    title: 'Địa chỉ nhà hàng họp nhóm',
+    content: "Pizza 4P's Saigon Centre - Đặt bàn lúc 12:00, liên hệ Hương Mai.",
+    color: '#E0F2FE',
+  },
+];
+
+export const RightSidebar: React.FC<RightSidebarProps> = ({
+  lang,
+  tasks: sharedTasks,
+  events,
+  onAddTask: onSharedAddTask,
+  onToggleTask: onSharedToggleTask,
+  onDeleteTask: onSharedDeleteTask,
+}) => {
   const [activePanel, setActivePanel] = useState<'keep' | 'tasks' | 'contacts' | 'maps' | null>(null);
 
-  // Keep Notes state
-  const [notes, setNotes] = useState<NoteItem[]>([
-    {
-      id: 'n-1',
-      title: 'Ý tưởng Sprint 42',
-      content: 'Tối ưu hoá hiệu năng lưới lịch khi có >100 sự kiện và bổ sung phím tắt nhanh.',
-      color: '#FEF3C7', // soft yellow
-    },
-    {
-      id: 'n-2',
-      title: 'Địa chỉ nhà hàng họp nhóm',
-      content: 'Pizza 4P\'s Saigon Centre - Đặt bàn lúc 12:00, liên hệ Hương Mai.',
-      color: '#E0F2FE', // soft blue
-    },
-  ]);
+  // Keep Notes state (persisted to localStorage)
+  const [notes, setNotes] = useState<NoteItem[]>(() => {
+    try {
+      const saved = localStorage.getItem('gcal_keep_notes');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return DEFAULT_NOTES;
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('gcal_keep_notes', JSON.stringify(notes));
+    } catch {}
+  }, [notes]);
+
   const [newNoteTitle, setNewNoteTitle] = useState('');
   const [newNoteContent, setNewNoteContent] = useState('');
 
-  // Tasks state
-  const [tasks, setTasks] = useState<QuickTaskItem[]>([
-    { id: 't-1', text: 'Gửi biên bản cuộc họp sáng nay', completed: true, dueDate: 'Hôm nay' },
-    { id: 't-2', text: 'Cập nhật tài liệu kỹ thuật API', completed: false, dueDate: '30 thg 10' },
-    { id: 't-3', text: 'Chuẩn bị slide thuyết trình demo', completed: false, dueDate: '31 thg 10' },
+  // Fallback local tasks when shared tasks are not provided
+  const [localTasks, setLocalTasks] = useState<TaskItem[]>([
+    {
+      id: 't-1',
+      title: 'Gửi biên bản cuộc họp sáng nay',
+      status: 'completed',
+      priority: 'medium',
+      categoryId: 'work',
+      dueDate: 'Hôm nay',
+      subtasks: [],
+      createdAt: Date.now(),
+    },
+    {
+      id: 't-2',
+      title: 'Cập nhật tài liệu kỹ thuật API',
+      status: 'todo',
+      priority: 'high',
+      categoryId: 'work',
+      dueDate: '30 thg 10',
+      subtasks: [],
+      createdAt: Date.now(),
+    },
   ]);
   const [newTaskInput, setNewTaskInput] = useState('');
 
+  const displayTasks = sharedTasks ?? localTasks;
+
   const handleToggleTask = (id: string) => {
-    setTasks((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t))
-    );
+    if (onSharedToggleTask) {
+      onSharedToggleTask(id);
+    } else {
+      setLocalTasks((prev) =>
+        prev.map((t) =>
+          t.id === id ? { ...t, status: t.status === 'completed' ? 'todo' : 'completed' } : t
+        )
+      );
+    }
+  };
+
+  const handleDeleteTask = (id: string) => {
+    if (onSharedDeleteTask) {
+      onSharedDeleteTask(id);
+    } else {
+      setLocalTasks((prev) => prev.filter((t) => t.id !== id));
+    }
   };
 
   const handleAddTask = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newTaskInput.trim()) return;
-    setTasks((prev) => [
-      ...prev,
-      {
-        id: `t-${Date.now()}`,
-        text: newTaskInput.trim(),
-        completed: false,
-        dueDate: lang === 'vi' ? 'Hôm nay' : 'Today',
-      },
-    ]);
+    const title = newTaskInput.trim();
+    if (!title) return;
+    if (onSharedAddTask) {
+      onSharedAddTask(title);
+    } else {
+      setLocalTasks((prev) => [
+        {
+          id: `t-${Date.now()}`,
+          title,
+          status: 'todo',
+          priority: 'medium',
+          categoryId: 'work',
+          dueDate: lang === 'vi' ? 'Hôm nay' : 'Today',
+          subtasks: [],
+          createdAt: Date.now(),
+        },
+        ...prev,
+      ]);
+    }
     setNewTaskInput('');
   };
 
@@ -234,37 +298,73 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({ lang }) => {
                 </form>
 
                 <div className="space-y-1.5">
-                  {tasks.map((t) => (
-                    <div
-                      key={t.id}
-                      onClick={() => handleToggleTask(t.id)}
-                      className="flex items-start gap-2.5 p-2.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer border border-transparent hover:border-gray-200 dark:hover:border-gray-700"
-                    >
-                      <div className="pt-0.5">
-                        <CheckCircle2
-                          className={`w-4 h-4 transition-colors ${
-                            t.completed
-                              ? 'text-blue-600 fill-blue-100 dark:fill-blue-950'
-                              : 'text-gray-400 hover:text-blue-500'
-                          }`}
-                        />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p
-                          className={`text-xs text-gray-800 dark:text-gray-200 ${
-                            t.completed ? 'line-through text-gray-400 dark:text-gray-500' : ''
-                          }`}
+                  {displayTasks.map((t) => {
+                    const isCompleted = t.status === 'completed';
+                    const priorityMeta = TASK_PRIORITY_META[t.priority];
+                    return (
+                      <div
+                        key={t.id}
+                        className="group flex items-start gap-2.5 p-2.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors border border-transparent hover:border-gray-200 dark:hover:border-gray-700"
+                      >
+                        <button
+                          type="button"
+                          onClick={() => handleToggleTask(t.id)}
+                          className="pt-0.5 cursor-pointer text-left"
+                          title={isCompleted ? (lang === 'vi' ? 'Đánh dấu chưa xong' : 'Mark as todo') : (lang === 'vi' ? 'Đánh dấu hoàn thành' : 'Mark as completed')}
                         >
-                          {t.text}
-                        </p>
-                        {t.dueDate && (
-                          <span className="text-[10px] text-blue-600 dark:text-blue-400 font-medium">
-                            {t.dueDate}
-                          </span>
-                        )}
+                          <CheckCircle2
+                            className={`w-4 h-4 transition-colors ${
+                              isCompleted
+                                ? 'text-blue-600 fill-blue-100 dark:fill-blue-950'
+                                : 'text-gray-400 hover:text-blue-500'
+                            }`}
+                          />
+                        </button>
+                        <div
+                          className="flex-1 min-w-0 cursor-pointer"
+                          onClick={() => handleToggleTask(t.id)}
+                        >
+                          <p
+                            className={`text-xs text-gray-800 dark:text-gray-200 ${
+                              isCompleted ? 'line-through text-gray-400 dark:text-gray-500' : ''
+                            }`}
+                          >
+                            {t.title}
+                          </p>
+                          <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                            {t.dueDate && (
+                              <span className="text-[10px] text-blue-600 dark:text-blue-400 font-medium">
+                                {t.dueDate}
+                              </span>
+                            )}
+                            {priorityMeta && (
+                              <span
+                                className={`text-[9px] px-1.5 py-0.5 rounded-md font-semibold border ${priorityMeta.badgeClass}`}
+                              >
+                                {lang === 'vi' ? priorityMeta.labelVi : priorityMeta.label}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteTask(t.id);
+                          }}
+                          className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-red-500 transition-opacity cursor-pointer shrink-0"
+                          title={lang === 'vi' ? 'Xoá tác vụ' : 'Delete task'}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
+                  {displayTasks.length === 0 && (
+                    <p className="text-center text-xs text-gray-400 py-4">
+                      {lang === 'vi' ? 'Chưa có tác vụ nào' : 'No tasks yet'}
+                    </p>
+                  )}
                 </div>
               </div>
             )}

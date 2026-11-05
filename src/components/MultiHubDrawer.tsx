@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   X,
   Clock,
@@ -20,9 +20,13 @@ import {
 } from 'lucide-react';
 import { User } from 'firebase/auth';
 import { AppUser } from '../services/auth';
-import { CalendarEvent, CalendarViewType } from '../types/calendar';
-import { ExpenseEntry, StudyItem, DailyWellnessCheck, PomodoroState } from '../types/multiHub';
+import { CalendarCategory, CalendarEvent, CalendarViewType } from '../types/calendar';
+import { PomodoroState } from '../types/multiHub';
 import { playNotificationSound } from '../utils/sound';
+import { ProductivityStore, todayString } from '../hooks/useProductivityStore';
+import { formatMoney } from '../utils/productivityUtils';
+import { formatDateString } from '../utils/calendarUtils';
+import { timeStringToMinutes } from '../utils/dndUtils';
 
 interface MultiHubDrawerProps {
   isOpen: boolean;
@@ -37,6 +41,10 @@ interface MultiHubDrawerProps {
   lang: 'vi' | 'en';
   /** Jumps to the full-page module for the current tab. */
   onNavigate?: (view: CalendarViewType) => void;
+  /** Real data owner, so a transaction or task added here is the same record the full views show. */
+  store: ProductivityStore;
+  /** Category metadata used to label the weekly time breakdown. */
+  categories: CalendarCategory[];
 }
 
 export const MultiHubDrawer: React.FC<MultiHubDrawerProps> = ({
@@ -51,6 +59,8 @@ export const MultiHubDrawer: React.FC<MultiHubDrawerProps> = ({
   lastSyncedTime,
   lang,
   onNavigate,
+  store,
+  categories,
 }) => {
   const [activeTab, setActiveTab] = useState<'sync' | 'time' | 'finance' | 'study' | 'stress'>('sync');
 
@@ -70,6 +80,20 @@ export const MultiHubDrawer: React.FC<MultiHubDrawerProps> = ({
       }, 1000);
     } else if (pomo.isRunning && pomo.timeLeftSeconds === 0) {
       playNotificationSound();
+      if (pomo.mode === 'work') {
+        // A finished focus block is a real session, so the Focus view history
+        // and the daily totals stay in sync with this drawer.
+        store.addSession({
+          id: `focus-${Date.now()}`,
+          mode: 'pomodoro',
+          phase: 'focus',
+          label: lang === 'vi' ? 'Phiên tập trung (Multi-Hub)' : 'Focus session (Multi-Hub)',
+          startedAt: Date.now() - 25 * 60 * 1000,
+          endedAt: Date.now(),
+          durationSeconds: 25 * 60,
+          completed: true,
+        });
+      }
       setPomo((prev) => ({
         ...prev,
         isRunning: false,
@@ -83,77 +107,146 @@ export const MultiHubDrawer: React.FC<MultiHubDrawerProps> = ({
     };
   }, [pomo.isRunning, pomo.timeLeftSeconds, pomo.mode]);
 
-  // --- 2. Finance State ---
+  // --- 2. Finance: the same transactions as the Money Manager view ---
   const [currency, setCurrency] = useState<'VND' | 'USD'>('VND');
-  const [expenses, setExpenses] = useState<ExpenseEntry[]>([
-    { id: 'ex-1', title: 'Ăn trưa họp team', amount: 350000, currency: 'VND', type: 'expense', category: 'food', date: '2026-10-29' },
-    { id: 'ex-2', title: 'Mua sách công nghệ AI', amount: 280000, currency: 'VND', type: 'expense', category: 'study', date: '2026-10-28' },
-    { id: 'ex-3', title: 'Tạm ứng phụ cấp dự án', amount: 5000000, currency: 'VND', type: 'income', category: 'work', date: '2026-10-27' },
-  ]);
   const [newExpTitle, setNewExpTitle] = useState('');
   const [newExpAmount, setNewExpAmount] = useState('');
   const [newExpType, setNewExpType] = useState<'expense' | 'income'>('expense');
 
-  const totalExpenseVND = expenses.filter((e) => e.type === 'expense').reduce((sum, e) => sum + e.amount, 0);
-  const totalIncomeVND = expenses.filter((e) => e.type === 'income').reduce((sum, e) => sum + e.amount, 0);
-  const balanceVND = totalIncomeVND - totalExpenseVND;
+  const monthSummary = store.monthSummary();
+  const recentTransactions = useMemo(
+    () => [...store.transactions].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 6),
+    [store.transactions]
+  );
 
   const handleAddExpense = (e: React.FormEvent) => {
     e.preventDefault();
     const amt = parseFloat(newExpAmount);
     if (!newExpTitle.trim() || isNaN(amt) || amt <= 0) return;
-    setExpenses([
-      {
-        id: `ex-${Date.now()}`,
-        title: newExpTitle.trim(),
-        amount: amt,
-        currency,
-        type: newExpType,
-        category: 'work',
-        date: new Date().toISOString().split('T')[0],
-      },
-      ...expenses,
-    ]);
+    store.addTransaction({
+      title: newExpTitle.trim(),
+      amount: amt,
+      type: newExpType,
+      category: newExpType === 'income' ? 'salary' : 'other',
+      date: todayString(),
+    });
     setNewExpTitle('');
     setNewExpAmount('');
   };
 
-  // --- 3. Study Tracker State ---
-  const [studyItems, setStudyItems] = useState<StudyItem[]>([
-    { id: 'st-1', courseName: 'Trí tuệ Nhân tạo nâng cao', taskTitle: 'Hoàn thành bài tập lớn Fine-tuning', dueDate: '2026-11-05', status: 'in_progress', targetHours: 12, completedHours: 8, priority: 'high' },
-    { id: 'st-2', courseName: 'Cấu trúc Dữ liệu & Giải thuật', taskTitle: 'Luyện 5 bài toán đồ thị trên LeetCode', dueDate: '2026-10-31', status: 'todo', targetHours: 6, completedHours: 2, priority: 'medium' },
-    { id: 'st-3', courseName: 'Thiết kế Trải nghiệm UI/UX', taskTitle: 'Nộp báo cáo phỏng vấn người dùng', dueDate: '2026-10-29', status: 'submitted', targetHours: 8, completedHours: 8, priority: 'high' },
-  ]);
+  // --- 3. Study: tasks with a deadline from the shared store ---
   const [newCourseName, setNewCourseName] = useState('');
   const [newCourseTask, setNewCourseTask] = useState('');
 
+  const goalTitleById = useMemo(
+    () => new Map(store.goals.map((g) => [g.id, g.title])),
+    [store.goals]
+  );
+
+  const studyItems = useMemo(
+    () =>
+      [...store.tasks]
+        .filter((t) => Boolean(t.dueDate))
+        .sort((a, b) => (a.dueDate || '').localeCompare(b.dueDate || ''))
+        .slice(0, 8)
+        .map((t) => ({
+          id: t.id,
+          courseName:
+            (t.goalId ? goalTitleById.get(t.goalId) : undefined) ||
+            (lang === 'vi' ? 'Chưa gắn mục tiêu' : 'No goal'),
+          taskTitle: t.title,
+          dueDate: t.dueDate as string,
+          status: t.status,
+        })),
+    [store.tasks, goalTitleById, lang]
+  );
+
   const handleAddStudyItem = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newCourseName.trim() || !newCourseTask.trim()) return;
-    setStudyItems([
-      {
-        id: `st-${Date.now()}`,
-        courseName: newCourseName.trim(),
-        taskTitle: newCourseTask.trim(),
-        dueDate: '2026-11-10',
-        status: 'todo',
-        targetHours: 6,
-        completedHours: 0,
-        priority: 'medium',
-      },
-      ...studyItems,
-    ]);
+    const course = newCourseName.trim();
+    const title = newCourseTask.trim();
+    if (!course || !title) return;
+    const goal = store.goals.find((g) => g.title.toLowerCase() === course.toLowerCase());
+    store.addTask({
+      title,
+      status: 'todo',
+      priority: 'medium',
+      categoryId: goal?.categoryId || 'study',
+      goalId: goal?.id,
+      dueDate: todayString(),
+      notes: goal ? undefined : course,
+    });
     setNewCourseName('');
     setNewCourseTask('');
   };
 
-  // --- 4. Stress & Wellness State ---
-  const [stressCheck, setStressCheck] = useState<DailyWellnessCheck>({
-    date: '2026-10-29',
-    stressLevel: 2, // 1 to 5
-    energyLevel: 4,
-    sleepHours: 7.5,
-  });
+  // --- 4. Stress: today's check-in is the one the Health view reads ---
+  const today = todayString();
+  const todayWellness = store.wellness.find((w) => w.date === today);
+  const stressLevel = todayWellness?.stressLevel ?? 3;
+
+  const setStressLevel = (level: number) => {
+    store.upsertWellness({
+      date: today,
+      stressLevel: level,
+      energyLevel: todayWellness?.energyLevel ?? 3,
+      sleepHours: todayWellness?.sleepHours ?? 7,
+      note: todayWellness?.note,
+    });
+  };
+
+  // Real weekly load instead of the previous hard-coded percentages.
+  const weeklyAllocation = useMemo(() => {
+    const now = new Date();
+    const monday = new Date(now);
+    monday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    const start = formatDateString(monday);
+    const end = formatDateString(sunday);
+
+    const minutesByCategory = new Map<string, { minutes: number; color: string }>();
+    let totalMinutes = 0;
+
+    for (const ev of events) {
+      if (ev.startDate < start || ev.startDate > end) continue;
+      const mins = ev.allDay
+        ? 8 * 60
+        : Math.max(15, timeStringToMinutes(ev.endTime) - timeStringToMinutes(ev.startTime));
+      totalMinutes += mins;
+      const current = minutesByCategory.get(ev.calendarId) || { minutes: 0, color: ev.color };
+      minutesByCategory.set(ev.calendarId, {
+        minutes: current.minutes + mins,
+        color: current.color,
+      });
+    }
+
+    const categoryNameById = new Map(
+      categories.map((c) => [c.id, lang === 'vi' ? c.nameVi : c.name])
+    );
+
+    const items = [...minutesByCategory.entries()]
+      .map(([id, value]) => ({
+        id,
+        label: categoryNameById.get(id) || id,
+        color: value.color,
+        minutes: value.minutes,
+        percent: totalMinutes > 0 ? Math.round((value.minutes / totalMinutes) * 100) : 0,
+      }))
+      .sort((a, b) => b.minutes - a.minutes)
+      .slice(0, 4);
+
+    return { totalMinutes, items };
+  }, [events, categories, lang]);
+
+  // Focus sessions recorded today, so the counter reflects real history.
+  const sessionsToday = useMemo(
+    () =>
+      store.sessions.filter(
+        (s) => s.completed && formatDateString(new Date(s.endedAt)) === todayString()
+      ).length,
+    [store.sessions]
+  );
 
   const [isBreathing, setIsBreathing] = useState(false);
   const [breathPhase, setBreathPhase] = useState<'Hít vào...' | 'Giữ hơi...' | 'Thở ra...'>('Hít vào...');
@@ -413,7 +506,7 @@ export const MultiHubDrawer: React.FC<MultiHubDrawerProps> = ({
               <div className="p-4 bg-linear-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/40 dark:to-teal-950/40 rounded-2xl border border-emerald-200 dark:border-emerald-800">
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-xs font-bold uppercase text-emerald-800 dark:text-emerald-300">
-                    {lang === 'vi' ? 'Ngân sách tháng 10' : 'October Balance'}
+                    {lang === 'vi' ? 'Ngân sách tháng' : 'Monthly Balance'}
                   </span>
                   <div className="flex items-center gap-1 bg-white dark:bg-gray-800 p-0.5 rounded-lg border border-gray-200 dark:border-gray-700 text-xs">
                     <button
@@ -435,19 +528,19 @@ export const MultiHubDrawer: React.FC<MultiHubDrawerProps> = ({
                   <div className="p-2 bg-white/70 dark:bg-gray-800/70 rounded-xl">
                     <span className="text-[10px] text-gray-500 uppercase">{lang === 'vi' ? 'Thu nhập' : 'Income'}</span>
                     <p className="text-sm font-bold text-emerald-600 font-mono">
-                      {currency === 'VND' ? `${(totalIncomeVND / 1000).toLocaleString('vi-VN')}k ₫` : `$${Math.round(totalIncomeVND / 25000)}`}
+                      {formatMoney(monthSummary.income, currency)}
                     </p>
                   </div>
                   <div className="p-2 bg-white/70 dark:bg-gray-800/70 rounded-xl">
                     <span className="text-[10px] text-gray-500 uppercase">{lang === 'vi' ? 'Chi tiêu' : 'Expense'}</span>
                     <p className="text-sm font-bold text-rose-600 font-mono">
-                      {currency === 'VND' ? `${(totalExpenseVND / 1000).toLocaleString('vi-VN')}k ₫` : `$${Math.round(totalExpenseVND / 25000)}`}
+                      {formatMoney(monthSummary.expense, currency)}
                     </p>
                   </div>
                   <div className="p-2 bg-white/70 dark:bg-gray-800/70 rounded-xl">
                     <span className="text-[10px] text-gray-500 uppercase">{lang === 'vi' ? 'Còn lại' : 'Remaining'}</span>
                     <p className="text-sm font-bold text-blue-600 font-mono">
-                      {currency === 'VND' ? `${(balanceVND / 1000).toLocaleString('vi-VN')}k ₫` : `$${Math.round(balanceVND / 25000)}`}
+                      {formatMoney(monthSummary.balance, currency)}
                     </p>
                   </div>
                 </div>
@@ -487,14 +580,14 @@ export const MultiHubDrawer: React.FC<MultiHubDrawerProps> = ({
 
               {/* Recent Transaction items */}
               <div className="space-y-2">
-                {expenses.map((ex) => (
+                {recentTransactions.map((ex) => (
                   <div key={ex.id} className="p-2.5 rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-800 flex items-center justify-between">
                     <div>
                       <p className="text-xs font-semibold text-gray-800 dark:text-gray-100">{ex.title}</p>
                       <p className="text-[10px] text-gray-400">{ex.date}</p>
                     </div>
                     <span className={`text-xs font-mono font-bold ${ex.type === 'income' ? 'text-emerald-600' : 'text-rose-600'}`}>
-                      {ex.type === 'income' ? '+' : '-'}{ex.amount.toLocaleString()} {currency === 'VND' ? '₫' : '$'}
+                      {ex.type === 'income' ? '+' : '-'}{formatMoney(ex.amount, currency)}
                     </span>
                   </div>
                 ))}
@@ -541,11 +634,11 @@ export const MultiHubDrawer: React.FC<MultiHubDrawerProps> = ({
                         {st.courseName}
                       </span>
                       <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
-                        st.status === 'submitted'
+                        st.status === 'completed'
                           ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'
                           : 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300'
                       }`}>
-                        {st.status === 'submitted' ? (lang === 'vi' ? 'Đã hoàn thành' : 'Done') : (lang === 'vi' ? 'Đang thực hiện' : 'In progress')}
+                        {st.status === 'completed' ? (lang === 'vi' ? 'Đã hoàn thành' : 'Done') : (lang === 'vi' ? 'Đang thực hiện' : 'In progress')}
                       </span>
                     </div>
 
@@ -555,7 +648,6 @@ export const MultiHubDrawer: React.FC<MultiHubDrawerProps> = ({
 
                     <div className="flex items-center justify-between text-[11px] text-gray-400">
                       <span>{lang === 'vi' ? `Hạn chót: ${st.dueDate}` : `Due: ${st.dueDate}`}</span>
-                      <span>{st.completedHours}/{st.targetHours} {lang === 'vi' ? 'giờ đã học' : 'hours'}</span>
                     </div>
                   </div>
                 ))}
@@ -578,7 +670,7 @@ export const MultiHubDrawer: React.FC<MultiHubDrawerProps> = ({
                     {lang === 'vi' ? 'Đánh giá mức độ áp lực hôm nay' : 'Daily Stress Level'}
                   </span>
                   <span className="text-sm font-bold font-mono">
-                    {stressCheck.stressLevel === 1 ? '🌿 Thư thái (1/5)' : stressCheck.stressLevel === 2 ? '😊 Nhẹ nhàng (2/5)' : stressCheck.stressLevel === 3 ? '😐 Bình thường (3/5)' : stressCheck.stressLevel === 4 ? '⚡ Áp lực (4/5)' : '🔥 Quá tải (5/5)'}
+                    {stressLevel === 1 ? '🌿 Thư thái (1/5)' : stressLevel === 2 ? '😊 Nhẹ nhàng (2/5)' : stressLevel === 3 ? '😐 Bình thường (3/5)' : stressLevel === 4 ? '⚡ Áp lực (4/5)' : '🔥 Quá tải (5/5)'}
                   </span>
                 </div>
 
@@ -587,9 +679,9 @@ export const MultiHubDrawer: React.FC<MultiHubDrawerProps> = ({
                   {[1, 2, 3, 4, 5].map((lvl) => (
                     <button
                       key={lvl}
-                      onClick={() => setStressCheck((prev) => ({ ...prev, stressLevel: lvl }))}
+                      onClick={() => setStressLevel(lvl)}
                       className={`py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                        stressCheck.stressLevel === lvl
+                        stressLevel === lvl
                           ? 'bg-rose-600 text-white shadow-md scale-105'
                           : 'bg-white/80 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-white'
                       }`}
