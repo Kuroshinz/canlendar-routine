@@ -222,5 +222,21 @@ Triển khai trọn vẹn và tối ưu hóa hệ thống thể hình theo tham 
 | **Vòng Tròn Macro Đa Lượng (Iconic SVG Donut Chart) & Nạp Nước Nhanh** | Thay thế thanh đo đơn điệu bằng **Biểu đồ vòng tròn Macro Donut** chuẩn CTG hiển thị tâm Calo nạp/mục tiêu và 3 phân đoạn Đạm/Tinh bột/Chất béo; bổ sung **Widget Theo Dõi Nước Nhanh** (+250ml cốc, +500ml chai, +1L bình) kết nối trực tiếp với nhật ký sức khỏe ngày. |
 | **Trợ Lý Thể Hình Thông Minh (AI Smart Fitness Coach)** | Tích hợp thẻ cố vấn thể hình cá nhân hóa trong `ProfileTab.tsx` tự động phân tích chiến lược Calo (Cut/Maintain/Bulk), khuyến nghị đạm, nước và tối ưu phục hồi hệ thần kinh trung ương (CNS). |
 
+---
+
+## 15. Hoàn Thiện Tính Năng Tương Tác 100% Thực Tế (Không Tạo Vỏ Rỗng)
+
+Đã giải quyết triệt để yêu cầu biến các giao diện thành công cụ sử dụng thật, có thể nhập, lưu, sửa, xóa và truy xuất đầy đủ:
+
+| Hạng mục | Chi tiết triển khai |
+| --- | --- |
+| **Lịch Sử Buổi Tập Kháng Lực (Workout History)** | Thêm thẻ danh sách toàn bộ các buổi tập đã hoàn thành trong `TrainingTab.tsx`. Hiển thị ngày tập, tiêu đề, thời lượng (phút), tổng volume tải trọng (kg), số hiệp, calo tiêu thụ, ghi chú, và **Accordion mở rộng chi tiết** xem thông số từng hiệp nâng theo từng bài tập, kèm nút xóa buổi tập. |
+| **Phòng Tập Tùy Biến Động (Dynamic Active Workout Player)** | Trong phiên tập trực tiếp, người dùng có thể bấm **"+ Thêm hiệp cho bài này"** để tăng số hiệp trên bài tập bất kỳ, xóa bớt hiệp, hoặc chọn dropdown **"Thêm bài tập khác vào buổi tập này"** từ danh mục hơn 30 bài tập gym để tập bổ sung ngay tại phòng tập. |
+| **Tạo Giáo Án Kháng Lực Cá Nhân (Custom Mesocycle Plan Modal)** | Thêm nút **"+ Tạo Giáo Án Mới"** cho phép người dùng tự tạo giáo án với tiêu đề, thứ trong tuần, danh sách bài tập tùy ý kèm số hiệp, reps, RPE, thời gian nghỉ và lưu trực tiếp vào danh sách giáo án. Hỗ trợ nút xóa giáo án an toàn. |
+| **Nhập Món Ăn Thủ Công (Manual Custom Food Logging)** | Bổ sung tab **"Nhập thủ công"** trong phân hệ dinh dưỡng, cho phép nhập chính xác Tên món ăn bất kỳ, Khối lượng, Đơn vị, Kcal, Protein (g), Carbs (g), Fat (g). Mở rộng từ điển nhận diện tự động cho hơn 25 món ăn Việt Nam phổ biến. |
+| **Xóa Từng Món Khỏi Bữa Ăn & Tùy Chỉnh Calo / Macro** | Trong chi tiết bữa ăn, hiển thị từng món đã nạp kèm nút xóa riêng lẻ từng món; thêm Modal **"Tùy chỉnh mục tiêu Calo & Đa lượng"** cho phép người dùng tự đặt lại target Kcal, Protein, Carbs, Fat theo ý muốn. |
+| **Sửa Trực Tiếp Mốc Đo InBody** | Bổ sung nút **"Sửa"** trên từng dòng lịch sử đo InBody, mở modal chỉnh sửa nhanh các số liệu cân nặng, body fat %, số đo vòng eo, ngực, tay, đùi và ghi chú. |
+
+
 
 
