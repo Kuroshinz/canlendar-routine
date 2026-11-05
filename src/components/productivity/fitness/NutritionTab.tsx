@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import {
   Utensils,
   Plus,
+  Minus,
   Trash2,
   Sparkles,
   PieChart,
@@ -10,10 +11,12 @@ import {
   Calendar,
   CheckCircle2,
   Sliders,
+  Droplets,
 } from 'lucide-react';
 import {
   CtgProfile,
   GOAL_LABEL,
+  HealthDayLog,
   MEAL_LABEL,
   MealLog,
   MealSlot,
@@ -28,7 +31,7 @@ import {
   tdee,
   todayString,
 } from '../../../utils/fitnessMetrics';
-import { ProgressBar, StackedBar } from '../../charts/SimpleCharts';
+import { Donut, ProgressBar, StackedBar } from '../../charts/SimpleCharts';
 
 interface NutritionTabProps {
   meals: MealLog[];
@@ -39,6 +42,8 @@ interface NutritionTabProps {
   onAddMealLog: (meal: Omit<MealLog, 'id' | 'createdAt'>) => MealLog;
   onDeleteMealLog: (id: string) => void;
   onUpdateNutritionSettings: (patch: Partial<NutritionSettings>) => void;
+  healthLogs?: HealthDayLog[];
+  onUpsertHealthLog?: (log: HealthDayLog) => void;
 }
 
 const MEAL_SLOTS: MealSlot[] = ['breakfast', 'lunch', 'dinner', 'snack'];
@@ -52,6 +57,8 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
   onAddMealLog,
   onDeleteMealLog,
   onUpdateNutritionSettings,
+  healthLogs,
+  onUpsertHealthLog,
 }) => {
   const [selectedDate, setSelectedDate] = useState(() => todayString());
   const [selectedSlot, setSelectedSlot] = useState<MealSlot>('lunch');
@@ -65,6 +72,33 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
 
   // Day totals
   const currentTotals = useMemo(() => dayTotals(meals, selectedDate), [meals, selectedDate]);
+
+  // Water tracking for the day
+  const currentDayLog = useMemo(
+    () => healthLogs?.find((l) => l.date === selectedDate),
+    [healthLogs, selectedDate]
+  );
+  const currentWaterMl = currentDayLog?.waterMl || 0;
+  const targetWaterMl = 2500;
+
+  const handleAddWater = (delta: number) => {
+    if (!onUpsertHealthLog) return;
+    const newAmount = Math.max(0, currentWaterMl + delta);
+    onUpsertHealthLog({
+      date: selectedDate,
+      source: 'manual',
+      ...(currentDayLog || {}),
+      waterMl: newAmount,
+    });
+  };
+
+  const donutSegments = useMemo(() => {
+    return [
+      { label: 'Protein', value: Math.max(0, Math.round(currentTotals.protein * 4)), color: '#E11D48' },
+      { label: 'Carbs', value: Math.max(0, Math.round(currentTotals.carbs * 4)), color: '#F59E0B' },
+      { label: 'Fat', value: Math.max(0, Math.round(currentTotals.fat * 9)), color: '#8E24AA' },
+    ];
+  }, [currentTotals]);
 
   // Quick parser preview
   const parsedPreview = useMemo(() => {
@@ -132,65 +166,196 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
         </div>
       </div>
 
-      {/* Headline Macro Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <div className="bg-white dark:bg-[#1a1e24] p-4 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs">
-          <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Tổng Calo Nạp</div>
-          <div className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-1">
-            {currentTotals.kcal}{' '}
-            <span className="text-xs font-normal text-gray-400">/ {targets.kcal} kcal</span>
+      {/* Headline Macro Cards with Iconic Donut Chart */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Macro Donut Ring Chart */}
+        <div className="bg-white dark:bg-[#1a1e24] p-4 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs flex items-center justify-between gap-4">
+          <div className="flex-1">
+            <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
+              Năng Lượng Ngày ({selectedDate})
+            </div>
+            <div className="text-xl font-bold text-gray-900 dark:text-gray-100 mt-1">
+              {currentTotals.kcal} <span className="text-xs font-normal text-gray-400">/ {targets.kcal} kcal</span>
+            </div>
+            <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">
+              {currentTotals.kcal <= targets.kcal
+                ? `Còn lại ${targets.kcal - currentTotals.kcal} kcal cho mục tiêu`
+                : `Vượt mức +${currentTotals.kcal - targets.kcal} kcal`}
+            </p>
+            <div className="flex items-center gap-3 mt-3 text-[11px]">
+              <span className="flex items-center gap-1 font-medium text-rose-500">
+                <span className="w-2 h-2 rounded-full bg-rose-500 inline-block" /> Đạm
+              </span>
+              <span className="flex items-center gap-1 font-medium text-amber-500">
+                <span className="w-2 h-2 rounded-full bg-amber-500 inline-block" /> Tinh bột
+              </span>
+              <span className="flex items-center gap-1 font-medium text-purple-500">
+                <span className="w-2 h-2 rounded-full bg-purple-500 inline-block" /> Béo
+              </span>
+            </div>
           </div>
-          <div className="mt-2">
-            <ProgressBar
-              percent={targets.kcal > 0 ? Math.round((currentTotals.kcal / targets.kcal) * 100) : 0}
-              color={currentTotals.kcal > targets.kcal ? '#E11D48' : '#059669'}
-              height={5}
-            />
+
+          <Donut
+            segments={donutSegments}
+            size={120}
+            centerValue={`${currentTotals.kcal}`}
+            centerLabel={`/ ${targets.kcal} kcal`}
+          />
+        </div>
+
+        {/* 3 Macro Target Progress Cards */}
+        <div className="bg-white dark:bg-[#1a1e24] p-4 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs space-y-3 lg:col-span-2 flex flex-col justify-between">
+          <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-2">
+            <h3 className="text-xs font-bold text-gray-900 dark:text-gray-100">
+              Tiến Độ Đa Lượng (Macros Breakdown)
+            </h3>
+            <span className="text-[10px] text-gray-400">
+              Protein {profile.goal === 'cut' ? '2.1g/kg' : '1.8g/kg'} · Fat 25% kcal
+            </span>
+          </div>
+
+          <div className="space-y-2.5">
+            {/* Protein */}
+            <div>
+              <div className="flex justify-between text-xs mb-1">
+                <span className="font-semibold text-rose-600 dark:text-rose-400">
+                  Protein (Chất đạm): {Math.round(currentTotals.protein)}g / {targets.protein}g
+                </span>
+                <span className="text-[11px] text-gray-400 font-mono">
+                  {targets.protein > 0 ? Math.round((currentTotals.protein / targets.protein) * 100) : 0}%
+                </span>
+              </div>
+              <ProgressBar
+                percent={targets.protein > 0 ? Math.round((currentTotals.protein / targets.protein) * 100) : 0}
+                color="#E11D48"
+                height={6}
+              />
+            </div>
+
+            {/* Carbs */}
+            <div>
+              <div className="flex justify-between text-xs mb-1">
+                <span className="font-semibold text-amber-600 dark:text-amber-400">
+                  Carbs (Tinh bột): {Math.round(currentTotals.carbs)}g / {targets.carbs}g
+                </span>
+                <span className="text-[11px] text-gray-400 font-mono">
+                  {targets.carbs > 0 ? Math.round((currentTotals.carbs / targets.carbs) * 100) : 0}%
+                </span>
+              </div>
+              <ProgressBar
+                percent={targets.carbs > 0 ? Math.round((currentTotals.carbs / targets.carbs) * 100) : 0}
+                color="#F59E0B"
+                height={6}
+              />
+            </div>
+
+            {/* Fat */}
+            <div>
+              <div className="flex justify-between text-xs mb-1">
+                <span className="font-semibold text-purple-600 dark:text-purple-400">
+                  Fat (Chất béo): {Math.round(currentTotals.fat)}g / {targets.fat}g
+                </span>
+                <span className="text-[11px] text-gray-400 font-mono">
+                  {targets.fat > 0 ? Math.round((currentTotals.fat / targets.fat) * 100) : 0}%
+                </span>
+              </div>
+              <ProgressBar
+                percent={targets.fat > 0 ? Math.round((currentTotals.fat / targets.fat) * 100) : 0}
+                color="#8E24AA"
+                height={6}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Quick Water Tracker & TDEE Offset Adjuster */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Quick Water Tracker */}
+        <div className="bg-white dark:bg-[#1a1e24] p-4 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-xs font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+              <Droplets className="w-4 h-4 text-cyan-500" />
+              Nạp Nước Trong Ngày ({selectedDate})
+            </h3>
+            <span className="text-xs font-bold text-cyan-600 dark:text-cyan-400 font-mono">
+              {currentWaterMl} / {targetWaterMl} ml
+            </span>
+          </div>
+
+          <ProgressBar
+            percent={Math.min(100, Math.round((currentWaterMl / targetWaterMl) * 100))}
+            color="#06B6D4"
+            height={7}
+            className="mb-3"
+          />
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => handleAddWater(250)}
+              className="flex-1 py-2 px-2.5 rounded-xl bg-cyan-50 hover:bg-cyan-100 dark:bg-cyan-950/40 dark:hover:bg-cyan-900/40 text-cyan-700 dark:text-cyan-300 text-xs font-semibold transition-colors cursor-pointer text-center"
+            >
+              +250ml Cốc
+            </button>
+            <button
+              type="button"
+              onClick={() => handleAddWater(500)}
+              className="flex-1 py-2 px-2.5 rounded-xl bg-cyan-50 hover:bg-cyan-100 dark:bg-cyan-950/40 dark:hover:bg-cyan-900/40 text-cyan-700 dark:text-cyan-300 text-xs font-semibold transition-colors cursor-pointer text-center"
+            >
+              +500ml Chai
+            </button>
+            <button
+              type="button"
+              onClick={() => handleAddWater(1000)}
+              className="flex-1 py-2 px-2.5 rounded-xl bg-cyan-50 hover:bg-cyan-100 dark:bg-cyan-950/40 dark:hover:bg-cyan-900/40 text-cyan-700 dark:text-cyan-300 text-xs font-semibold transition-colors cursor-pointer text-center"
+            >
+              +1L Bình
+            </button>
+            {currentWaterMl > 0 && (
+              <button
+                type="button"
+                onClick={() => handleAddWater(-250)}
+                className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 text-gray-600 dark:text-gray-300 text-xs transition-colors cursor-pointer"
+                title="Giảm 250ml"
+              >
+                <Minus className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
         </div>
 
-        <div className="bg-white dark:bg-[#1a1e24] p-4 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs">
-          <div className="text-[10px] font-semibold text-rose-500 uppercase tracking-wider">Protein (Chất đạm)</div>
-          <div className="text-2xl font-bold text-rose-600 dark:text-rose-400 mt-1">
-            {Math.round(currentTotals.protein)}{' '}
-            <span className="text-xs font-normal text-gray-400">/ {targets.protein} g</span>
+        {/* Quick TDEE Offset */}
+        <div className="bg-white dark:bg-[#1a1e24] p-4 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-xs font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+              <Sliders className="w-4 h-4 text-emerald-500" />
+              Hiệu Chỉnh Mục Tiêu Thâm Hụt / Dư Thừa (TDEE Offset)
+            </h3>
+            <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 font-mono">
+              {nutritionSettings.tdeeOffset >= 0 ? `+${nutritionSettings.tdeeOffset}` : nutritionSettings.tdeeOffset} kcal
+            </span>
           </div>
-          <div className="mt-2">
-            <ProgressBar
-              percent={targets.protein > 0 ? Math.round((currentTotals.protein / targets.protein) * 100) : 0}
-              color="#E11D48"
-              height={5}
-            />
-          </div>
-        </div>
 
-        <div className="bg-white dark:bg-[#1a1e24] p-4 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs">
-          <div className="text-[10px] font-semibold text-amber-500 uppercase tracking-wider">Carbs (Tinh bột)</div>
-          <div className="text-2xl font-bold text-amber-600 dark:text-amber-400 mt-1">
-            {Math.round(currentTotals.carbs)}{' '}
-            <span className="text-xs font-normal text-gray-400">/ {targets.carbs} g</span>
-          </div>
-          <div className="mt-2">
-            <ProgressBar
-              percent={targets.carbs > 0 ? Math.round((currentTotals.carbs / targets.carbs) * 100) : 0}
-              color="#F59E0B"
-              height={5}
-            />
-          </div>
-        </div>
+          <p className="text-[11px] text-gray-400 mb-3">
+            Tăng giảm mức calo nạp hàng ngày so với mức tính toán lý thuyết để phù hợp với tốc độ siết hoặc xả thực tế.
+          </p>
 
-        <div className="bg-white dark:bg-[#1a1e24] p-4 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs">
-          <div className="text-[10px] font-semibold text-purple-500 uppercase tracking-wider">Fat (Chất béo)</div>
-          <div className="text-2xl font-bold text-purple-600 dark:text-purple-400 mt-1">
-            {Math.round(currentTotals.fat)}{' '}
-            <span className="text-xs font-normal text-gray-400">/ {targets.fat} g</span>
-          </div>
-          <div className="mt-2">
-            <ProgressBar
-              percent={targets.fat > 0 ? Math.round((currentTotals.fat / targets.fat) * 100) : 0}
-              color="#8E24AA"
-              height={5}
-            />
+          <div className="grid grid-cols-5 gap-1.5">
+            {[-200, -100, 0, 100, 200].map((offset) => (
+              <button
+                key={offset}
+                type="button"
+                onClick={() => onUpdateNutritionSettings({ tdeeOffset: offset })}
+                className={`py-1.5 px-1 rounded-xl text-xs font-semibold transition-colors cursor-pointer text-center ${
+                  nutritionSettings.tdeeOffset === offset
+                    ? 'bg-emerald-600 text-white font-bold'
+                    : 'bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300'
+                }`}
+              >
+                {offset > 0 ? `+${offset}` : offset}
+              </button>
+            ))}
           </div>
         </div>
       </div>

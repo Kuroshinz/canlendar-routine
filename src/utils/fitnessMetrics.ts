@@ -142,6 +142,23 @@ export function bmiLabel(value: number): string {
   return 'Béo phì';
 }
 
+export function ffmiCategory(value: number, sex: Sex = 'male'): { label: string; tone: string; desc: string } {
+  if (value <= 0) return { label: 'Chưa đủ dữ liệu', tone: 'text-gray-400', desc: 'Cần thêm chỉ số cân nặng và % mỡ.' };
+  if (sex === 'male') {
+    if (value < 18) return { label: 'Dưới trung bình', tone: 'text-amber-500', desc: 'Cần tăng cường dinh dưỡng và tập khối lượng để dày cơ.' };
+    if (value < 20) return { label: 'Trung bình', tone: 'text-blue-500', desc: 'Mức cơ nạc của người bình thường, nền tảng tốt để phát triển.' };
+    if (value < 22) return { label: 'Tốt / Đô vừa', tone: 'text-emerald-500', desc: 'Hình thể cân đối, cơ bắp săn chắc rõ nét.' };
+    if (value < 25) return { label: 'Rất tốt / Vận động viên', tone: 'text-indigo-500', desc: 'Khối lượng cơ nạc ấn tượng đạt chuẩn fitness thi đấu.' };
+    return { label: 'Thượng thừa / Giới hạn tự nhiên', tone: 'text-purple-500', desc: 'Đỉnh cao tiềm năng di truyền cơ nạc tự nhiên.' };
+  } else {
+    if (value < 14) return { label: 'Dưới trung bình', tone: 'text-amber-500', desc: 'Cần tăng cường dinh dưỡng và khối lượng cơ.' };
+    if (value < 16) return { label: 'Trung bình', tone: 'text-blue-500', desc: 'Mức cơ nạc cơ bản khỏe mạnh.' };
+    if (value < 18) return { label: 'Tốt / Săn chắc', tone: 'text-emerald-500', desc: 'Cơ bắp thon gọn, săn chắc lý tưởng.' };
+    if (value < 21) return { label: 'Rất tốt / Vận động viên', tone: 'text-indigo-500', desc: 'Khối lượng cơ nạc chuẩn vận động viên chuyên nghiệp.' };
+    return { label: 'Thượng thừa', tone: 'text-purple-500', desc: 'Mức cơ nạc vượt trội.' };
+  }
+}
+
 export interface BodyPointDerived extends BodyPoint {
   fatKg: number;
   leanKg: number;

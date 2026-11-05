@@ -20,6 +20,7 @@ import {
   etaWeeks,
   fatMassKg,
   ffmi,
+  ffmiCategory,
   fmt1,
   fmtSigned,
   leanMassKg,
@@ -27,7 +28,7 @@ import {
   tdee,
   withUnit,
 } from '../../../utils/fitnessMetrics';
-import { LineChart } from '../../charts/SimpleCharts';
+import { ChartSeries, MultiSeriesLineChart } from '../../charts/SimpleCharts';
 
 interface InBodyTabProps {
   points: BodyPoint[];
@@ -45,7 +46,38 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
   onDeletePoint,
 }) => {
   const sorted = useMemo(() => sortPoints(points), [points]);
+  const first = useMemo(() => (sorted.length > 0 ? sorted[0] : null), [sorted]);
   const latest = useMemo(() => (sorted.length > 0 ? sorted[sorted.length - 1] : null), [sorted]);
+
+  const [range, setRange] = useState<'7d' | '30d' | '90d' | 'all'>('30d');
+
+  const filteredPoints = useMemo(() => {
+    if (range === 'all' || sorted.length === 0) return sorted;
+    const now = new Date();
+    const days = range === '7d' ? 7 : range === '30d' ? 30 : 90;
+    const cutoff = new Date(now.getTime() - days * 86_400_000).toISOString().slice(0, 10);
+    const subset = sorted.filter((p) => p.date >= cutoff);
+    return subset.length >= 2 ? subset : sorted;
+  }, [sorted, range]);
+
+  const chartSeries: ChartSeries[] = useMemo(() => {
+    return [
+      {
+        key: 'weight',
+        label: 'Cân nặng',
+        color: '#ff6025',
+        unit: 'kg',
+        values: filteredPoints.map((p) => ({ x: p.date.slice(5), y: p.weightKg })),
+      },
+      {
+        key: 'bodyFat',
+        label: '% Mỡ',
+        color: '#2f86e8',
+        unit: '%',
+        values: filteredPoints.map((p) => ({ x: p.date.slice(5), y: p.bodyFatPct })),
+      },
+    ];
+  }, [filteredPoints]);
 
   const currentWeight = latest ? latest.weightKg : profile.targetWeightKg;
   const currentBf = latest ? latest.bodyFatPct : profile.targetBodyFatPct;
@@ -293,6 +325,66 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
         </div>
       </div>
 
+      {/* Interactive InBody Trend Chart (Weight & Body Fat Dual-Series) */}
+      <div className="bg-white dark:bg-[#1a1e24] rounded-2xl border border-gray-200 dark:border-gray-800 p-4 shadow-xs space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <h3 className="text-xs font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+              <TrendingDown className="w-4 h-4 text-orange-500" />
+              Biểu Đồ Xu Hướng Thành Phần Cơ Thể (InBody Dual-Series)
+            </h3>
+            <p className="text-[11px] text-gray-400 mt-0.5">
+              Chạm hoặc click vào các mốc trên biểu đồ để xem chi tiết cân nặng và tỷ lệ mỡ
+            </p>
+          </div>
+          <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 p-0.5 rounded-xl self-start sm:self-auto">
+            {(['7d', '30d', '90d', 'all'] as const).map((r) => (
+              <button
+                key={r}
+                type="button"
+                onClick={() => setRange(r)}
+                className={`px-2.5 py-1 text-[10px] font-semibold rounded-lg transition-colors cursor-pointer ${
+                  range === r
+                    ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-2xs font-bold'
+                    : 'text-gray-500 hover:text-gray-900 dark:hover:text-gray-200'
+                }`}
+              >
+                {r === '7d' ? '7 Ngày' : r === '30d' ? '30 Ngày' : r === '90d' ? '90 Ngày' : 'Tất Cả'}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <MultiSeriesLineChart
+          series={chartSeries}
+          height={180}
+          emptyLabel="Chưa có đủ dữ liệu InBody để vẽ biểu đồ."
+        />
+      </div>
+
+      {/* FFMI Athletic Evaluation Card */}
+      {(() => {
+        const ffmiEval = ffmiCategory(userFfmi, profile.sex);
+        return (
+          <div className="bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-transparent dark:from-indigo-950/20 dark:via-purple-950/20 rounded-2xl border border-indigo-200 dark:border-indigo-900/50 p-4 shadow-xs">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-indigo-500" />
+                <h4 className="text-xs font-bold text-gray-900 dark:text-gray-100">
+                  Đánh Giá Chỉ Số Cơ Nạc FFMI: <span className={ffmiEval.tone}>{ffmiEval.label}</span>
+                </h4>
+              </div>
+              <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 font-mono">
+                FFMI {fmt1(userFfmi)}
+              </span>
+            </div>
+            <p className="text-xs text-gray-600 dark:text-gray-300 mt-1.5">
+              {ffmiEval.desc}
+            </p>
+          </div>
+        );
+      })()}
+
       {/* Delta Rate & Tape Measurements */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Progress Rate Card */}
@@ -353,7 +445,7 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-xs font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
               <Ruler className="w-4 h-4 text-blue-500" />
-              Số Đo Thước Dây Gần Nhất
+              Số Đo Thước Dây & Độ Thay Đổi
             </h3>
             {latest && (
               <span className="text-[10px] text-gray-400 font-mono">
@@ -362,20 +454,30 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
             )}
           </div>
 
-          <div className="grid grid-cols-4 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             {[
-              { label: 'Vòng eo', val: latest?.waistCm, unit: 'cm', color: 'text-rose-600' },
-              { label: 'Vòng ngực', val: latest?.chestCm, unit: 'cm', color: 'text-blue-600' },
-              { label: 'Bắp tay', val: latest?.armCm, unit: 'cm', color: 'text-amber-600' },
-              { label: 'Vòng đùi', val: latest?.thighCm, unit: 'cm', color: 'text-emerald-600' },
-            ].map((t) => (
-              <div key={t.label} className="p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 text-center border border-gray-100 dark:border-gray-800">
-                <div className="text-[10px] text-gray-400 uppercase font-semibold">{t.label}</div>
-                <div className={`text-base font-bold mt-1 ${t.color}`}>
-                  {t.val ? `${t.val} ${t.unit}` : '—'}
+              { label: 'Vòng eo', val: latest?.waistCm, init: first?.waistCm, unit: 'cm', color: 'text-rose-600' },
+              { label: 'Vòng ngực', val: latest?.chestCm, init: first?.chestCm, unit: 'cm', color: 'text-blue-600' },
+              { label: 'Bắp tay', val: latest?.armCm, init: first?.armCm, unit: 'cm', color: 'text-amber-600' },
+              { label: 'Vòng đùi', val: latest?.thighCm, init: first?.thighCm, unit: 'cm', color: 'text-emerald-600' },
+            ].map((t) => {
+              const diff = t.val !== undefined && t.init !== undefined ? Math.round((t.val - t.init) * 10) / 10 : null;
+              return (
+                <div key={t.label} className="p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 text-center border border-gray-100 dark:border-gray-800">
+                  <div className="text-[10px] text-gray-400 uppercase font-semibold">{t.label}</div>
+                  <div className={`text-base font-bold mt-1 ${t.color}`}>
+                    {t.val ? `${t.val} ${t.unit}` : '—'}
+                  </div>
+                  {diff !== null && Math.abs(diff) >= 0.1 ? (
+                    <div className={`text-[10px] font-semibold mt-0.5 ${diff < 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-orange-600 dark:text-orange-400'}`}>
+                      {diff > 0 ? `+${diff}` : diff} {t.unit}
+                    </div>
+                  ) : (
+                    <div className="text-[10px] text-gray-400 mt-0.5">Ban đầu: {t.init ?? '—'}</div>
+                  )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>

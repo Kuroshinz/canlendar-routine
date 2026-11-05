@@ -412,6 +412,8 @@ export const HealthView: React.FC<HealthViewProps> = ({
           onAddMealLog={onAddMealLog}
           onDeleteMealLog={onDeleteMealLog}
           onUpdateNutritionSettings={onUpdateNutritionSettings}
+          healthLogs={healthLogs}
+          onUpsertHealthLog={onUpsertHealthLog}
         />
       )}
 

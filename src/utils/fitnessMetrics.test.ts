@@ -7,6 +7,7 @@ import {
   etaWeeks,
   fatMassKg,
   ffmi,
+  ffmiCategory,
   gymCalories,
   leanMassKg,
   macroTargets,
@@ -53,6 +54,8 @@ assert(leanKg === 56, `Expected lean 56kg, got ${leanKg}`);
 
 const testFfmi = ffmi(70, 20, 172);
 assert(testFfmi > 18 && testFfmi < 20, `Expected realistic FFMI, got ${testFfmi}`);
+const ffmiCat = ffmiCategory(testFfmi, 'male');
+assert(ffmiCat.label.length > 0, 'FFMI category should have label');
 
 // 2. BMR & TDEE (Mifflin–St Jeor)
 // 10 * 68 + 6.25 * 172 - 5 * 24 + 5 = 680 + 1075 - 120 + 5 = 1640

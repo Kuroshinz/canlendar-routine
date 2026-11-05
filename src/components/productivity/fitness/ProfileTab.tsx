@@ -10,6 +10,7 @@ import {
   Flame,
   Activity,
   HeartPulse,
+  Dumbbell,
 } from 'lucide-react';
 import {
   ACTIVITY_LABEL,
@@ -298,6 +299,57 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
             </div>
           </div>
         )}
+      </div>
+
+      {/* Smart Fitness Coach / Huấn Luyện Viên Thông Minh */}
+      <div className="bg-gradient-to-br from-indigo-500/10 via-purple-500/10 to-pink-500/10 dark:from-indigo-950/30 dark:via-purple-950/20 dark:to-pink-950/10 p-5 rounded-2xl border border-indigo-200 dark:border-indigo-900/50 shadow-xs space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-indigo-500" />
+            <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100">
+              Chiến Lược Huấn Luyện & Dinh Dưỡng Cho Bạn ({GOAL_LABEL[profile.goal]})
+            </h3>
+          </div>
+          <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-600 text-white">
+            Huấn Luyện Viên Cá Nhân
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="p-3.5 rounded-xl bg-white/80 dark:bg-gray-800/80 border border-indigo-100 dark:border-indigo-900/60 shadow-2xs">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-indigo-600 dark:text-indigo-400">
+              <Flame className="w-4 h-4" />
+              <span>Chiến Lược Calo</span>
+            </div>
+            <p className="text-xs text-gray-600 dark:text-gray-300 mt-1.5 leading-relaxed">
+              {profile.goal === 'cut'
+                ? 'Duy trì mức thâm hụt 15% kcal so với TDEE để đốt mỡ ổn định, bảo toàn tối đa lượng cơ nạc LBM.'
+                : profile.goal === 'bulk'
+                ? 'Nạp thặng dư nhẹ +10% kcal so với TDEE (khoảng +200-300 kcal/ngày) để tăng cơ nạc sạch và hạn chế tích mỡ.'
+                : 'Duy trì mức calo chuẩn TDEE để tái cấu trúc cơ thể (Body Recomposition), vừa giảm mỡ vừa săn chắc cơ.'}
+            </p>
+          </div>
+
+          <div className="p-3.5 rounded-xl bg-white/80 dark:bg-gray-800/80 border border-purple-100 dark:border-purple-900/60 shadow-2xs">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-purple-600 dark:text-purple-400">
+              <Dumbbell className="w-4 h-4" />
+              <span>Kháng Lực & Phục Hồi</span>
+            </div>
+            <p className="text-xs text-gray-600 dark:text-gray-300 mt-1.5 leading-relaxed">
+              Áp dụng phân chia Upper/Lower 4 buổi/tuần. Luôn ghi lại số kg và reps mỗi hiệp để kích hoạt nguyên lý Progressive Overload (tăng tải trọng lũy tiến).
+            </p>
+          </div>
+
+          <div className="p-3.5 rounded-xl bg-white/80 dark:bg-gray-800/80 border border-pink-100 dark:border-pink-900/60 shadow-2xs">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-pink-600 dark:text-pink-400">
+              <HeartPulse className="w-4 h-4" />
+              <span>Nước & Giấc Ngủ</span>
+            </div>
+            <p className="text-xs text-gray-600 dark:text-gray-300 mt-1.5 leading-relaxed">
+              Nạp tối thiểu 2.500ml nước mỗi ngày và ngủ đủ 7-8 tiếng để tối ưu hóa hormone tăng trưởng GH, giúp phục hồi cơ bắp và hệ thần kinh trung ương.
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );

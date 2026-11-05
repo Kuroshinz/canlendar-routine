@@ -225,3 +225,198 @@ export const StackedBar: React.FC<StackedBarProps> = ({ segments, height = 10 })
   );
 };
 
+export interface DonutSegment {
+  value: number;
+  color: string;
+  label: string;
+}
+
+export const Donut: React.FC<{
+  segments: DonutSegment[];
+  size?: number;
+  centerLabel: string;
+  centerValue: string;
+}> = ({ segments, size = 132, centerLabel, centerValue }) => {
+  const total = segments.reduce((sum, s) => sum + Math.max(0, s.value), 0);
+  const radius = size / 2 - 12;
+  const circumference = 2 * Math.PI * radius;
+  let offset = 0;
+
+  return (
+    <div className="relative shrink-0 flex items-center justify-center" style={{ width: size, height: size }}>
+      <svg width={size} height={size} role="img" aria-label={centerLabel} className="transform -rotate-90">
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={11}
+          className="text-gray-200 dark:text-gray-800"
+        />
+        {total > 0 &&
+          segments.map((s) => {
+            const length = (Math.max(0, s.value) / total) * circumference;
+            const dash = `${length} ${circumference - length}`;
+            const el = (
+              <circle
+                key={s.label}
+                cx={size / 2}
+                cy={size / 2}
+                r={radius}
+                fill="none"
+                stroke={s.color}
+                strokeWidth={11}
+                strokeDasharray={dash}
+                strokeDashoffset={-offset}
+                strokeLinecap="butt"
+              />
+            );
+            offset += length;
+            return el;
+          })}
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none px-2">
+        <span className="text-sm font-bold text-gray-900 dark:text-gray-100 leading-tight truncate max-w-full">
+          {centerValue}
+        </span>
+        <span className="text-[10px] text-gray-400 dark:text-gray-500 font-medium truncate max-w-full">
+          {centerLabel}
+        </span>
+      </div>
+    </div>
+  );
+};
+
+export interface ChartSeries {
+  key: string;
+  label: string;
+  color: string;
+  unit?: string;
+  values: { x: string; y: number }[];
+}
+
+export const MultiSeriesLineChart: React.FC<{
+  series: ChartSeries[];
+  height?: number;
+  emptyLabel: string;
+  formatY?: (v: number) => string;
+}> = ({ series, height = 180, emptyLabel, formatY }) => {
+  const [activeIdx, setActiveIdx] = React.useState<number | null>(null);
+
+  const nonEmpty = series.filter((s) => s.values.length > 0);
+  if (nonEmpty.length === 0) {
+    return (
+      <div className="h-40 flex items-center justify-center text-xs text-gray-400">{emptyLabel}</div>
+    );
+  }
+
+  const xs = nonEmpty[0].values.map((v) => v.x);
+  const allY = nonEmpty.flatMap((s) => s.values.map((v) => v.y));
+  const max = Math.max(...allY);
+  const min = Math.min(...allY);
+  const span = max - min || 1;
+  const padY = 12;
+  const width = 320;
+  const plotH = height - padY * 2;
+
+  const xAt = (i: number) => (xs.length === 1 ? width / 2 : (i / (xs.length - 1)) * width);
+  const yAt = (v: number) => padY + (1 - (v - min) / span) * plotH;
+  const fmt = formatY || ((v: number) => String(Math.round(v * 10) / 10));
+
+  return (
+    <div className="w-full">
+      <svg
+        viewBox={`0 0 ${width} ${height}`}
+        preserveAspectRatio="none"
+        className="w-full"
+        style={{ height }}
+        role="img"
+      >
+        {[0, 0.5, 1].map((t) => (
+          <line
+            key={t}
+            x1={0}
+            x2={width}
+            y1={padY + plotH * t}
+            y2={padY + plotH * t}
+            stroke="currentColor"
+            strokeWidth={0.5}
+            strokeDasharray="3 4"
+            className="text-gray-200 dark:text-gray-800"
+            vectorEffect="non-scaling-stroke"
+          />
+        ))}
+
+        {nonEmpty.map((s) => {
+          const d = s.values.map((v, i) => `${i === 0 ? 'M' : 'L'} ${xAt(i)} ${yAt(v.y)}`).join(' ');
+          return (
+            <g key={s.key}>
+              <path
+                d={d}
+                fill="none"
+                stroke={s.color}
+                strokeWidth={2}
+                strokeLinejoin="round"
+                strokeLinecap="round"
+                vectorEffect="non-scaling-stroke"
+              />
+              {s.values.map((v, i) => (
+                <circle
+                  key={`${s.key}-${v.x}`}
+                  cx={xAt(i)}
+                  cy={yAt(v.y)}
+                  r={activeIdx === i ? 4 : 2.5}
+                  fill={s.color}
+                  stroke="#ffffff"
+                  strokeWidth={1}
+                  vectorEffect="non-scaling-stroke"
+                />
+              ))}
+            </g>
+          );
+        })}
+
+        {/* Tap/click interaction zones */}
+        {xs.map((x, i) => (
+          <rect
+            key={x}
+            x={xAt(i) - width / (xs.length * 2)}
+            y={0}
+            width={width / xs.length}
+            height={height}
+            fill="transparent"
+            className="cursor-pointer"
+            onClick={() => setActiveIdx(activeIdx === i ? null : i)}
+          />
+        ))}
+      </svg>
+
+      {activeIdx !== null && (
+        <div className="mt-2 p-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/80 text-xs">
+          <div className="font-bold text-gray-900 dark:text-gray-100">{xs[activeIdx]}</div>
+          <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1">
+            {nonEmpty.map((s) => (
+              <span key={s.key} className="text-gray-600 dark:text-gray-300 flex items-center gap-1 font-mono">
+                <span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: s.color }} />
+                {s.label}: {fmt(s.values[activeIdx]?.y ?? 0)}
+                {s.unit ? ` ${s.unit}` : ''}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
+        {nonEmpty.map((s) => (
+          <span key={s.key} className="inline-flex items-center gap-1 text-[11px] text-gray-500 dark:text-gray-400">
+            <span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: s.color }} />
+            {s.label}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+
