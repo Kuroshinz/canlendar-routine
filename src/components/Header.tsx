@@ -139,10 +139,10 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
           <div className="hidden md:flex flex-col">
             <span className="font-semibold text-base leading-tight tracking-tight text-gray-800 dark:text-gray-100 font-sans">
-              Google <span className="font-bold text-blue-600 dark:text-blue-400">Calendar</span>
+              Vortex<span className="font-bold text-blue-600 dark:text-blue-400">Cal</span>
             </span>
             <span className="text-[10px] text-gray-400 font-medium tracking-wide">
-              {lang === 'vi' ? 'Pro • Lịch Thông Minh' : 'Pro • Smart Calendar'}
+              {lang === 'vi' ? 'Lịch Thông Minh & Thói Quen' : 'Smart Calendar & Routine'}
             </span>
           </div>
         </div>

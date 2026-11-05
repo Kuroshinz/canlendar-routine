@@ -24,8 +24,8 @@ interface RoadmapTabProps {
   onNavigateTab?: (tab: 'inbody' | 'training' | 'nutrition' | 'profile') => void;
 }
 
-// CTG Standards & Classification criteria from ctg-web / lo-trinh-page.js
-const CTG_STANDARDS = {
+// VortexCal Standards & Classification criteria from AI analyzer algorithm
+const VORTEXCAL_STANDARDS = {
   nam: {
     targetFfmi: 19,
     idealBodyfatPct: 15,
@@ -91,9 +91,9 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
   const bfNum = Number(bodyfatPct) || 18;
   const waistNum = Number(waistCm) || 0;
 
-  // Analysis result using CTG algorithm
+  // Analysis result using VortexCal algorithm
   const analysis = useMemo(() => {
-    const std = CTG_STANDARDS[sexKey];
+    const std = VORTEXCAL_STANDARDS[sexKey];
     const hMeter = hNum / 100;
     const lbm = wNum * (1 - bfNum / 100);
     const bfm = wNum * (bfNum / 100);
@@ -186,7 +186,7 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
 
   return (
     <div className="space-y-6 animate-fadeIn pb-12">
-      {/* CTG Header Banner */}
+      {/* VortexCal Header Banner */}
       <div className="bg-[#121212] rounded-3xl border border-white/10 p-5 sm:p-6 shadow-xl relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-[#ff6025]/10 rounded-full blur-3xl pointer-events-none" />
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -411,7 +411,7 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
             <div className="p-2.5 rounded-xl bg-[#0e0f11] border border-white/5 text-xs">
               <div className="font-semibold text-white/90 text-[11px] mb-1.5 flex justify-between">
                 <span>Chỉ Số Cơ Nạc FFMI</span>
-                <span className="text-[10px] text-white/40">Đỉnh tự nhiên: {CTG_STANDARDS[sexKey].naturalFfmiLimit}</span>
+                <span className="text-[10px] text-white/40">Đỉnh tự nhiên: {VORTEXCAL_STANDARDS[sexKey].naturalFfmiLimit}</span>
               </div>
               <div className="space-y-1 text-[10px]">
                 {FFMI_BANDS[sexKey].map((b) => (

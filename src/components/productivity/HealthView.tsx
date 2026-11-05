@@ -325,15 +325,15 @@ export const HealthView: React.FC<HealthViewProps> = ({
 
   return (
     <div className="flex-1 flex flex-col h-full overflow-y-auto bg-gray-50/50 dark:bg-[#121212] p-4 md:p-6 lg:p-8 select-none">
-      {/* CTG Brand Header */}
+      {/* VortexCal Brand Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
           <div className="flex items-center gap-2.5">
             <span className="font-display font-extrabold text-2xl md:text-3xl tracking-tight text-gray-900 dark:text-white">
-              CTG<span className="text-[#ff6025]">.</span>
+              VortexCal<span className="text-[#ff6025]">.</span>
             </span>
             <span className="text-[10px] font-extrabold tracking-wider uppercase bg-[#ff6025]/15 text-[#ff6025] border border-[#ff6025]/30 px-2 py-0.5 rounded-md">
-              FITNESS & CALENDAR
+              VORTEXCAL FITNESS
             </span>
           </div>
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
