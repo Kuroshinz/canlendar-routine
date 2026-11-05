@@ -1,12 +1,19 @@
 import {
+  BodyPoint,
+  CtgProfile,
   FocusSession,
   GoalItem,
   HabitItem,
   HealthDayLog,
+  MealLog,
+  NutritionSettings,
+  PlannedSession,
+  SportSession,
   TaskItem,
   Transaction,
   WellnessCheck,
   WorkoutLog,
+  WorkoutSession,
 } from '../types/productivity';
 
 /**
@@ -541,4 +548,247 @@ export const SEED_HABITS: HabitItem[] = [
     createdAt: Date.now() - 86400000 * 12,
   },
 ];
+
+// ---------------------------------------------------------------------------
+// CTG Fitness & Body Composition Seed
+// ---------------------------------------------------------------------------
+
+const D = (offset: number): string => {
+  const d = new Date();
+  d.setDate(d.getDate() - offset);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
+    d.getDate()
+  ).padStart(2, '0')}`;
+};
+
+export const SEED_CTG_PROFILE: CtgProfile = {
+  name: 'Nguyễn Thiện Nhân',
+  sex: 'male',
+  age: 24,
+  heightCm: 172,
+  goal: 'cut',
+  activity: 'moderate',
+  targetWeightKg: 65,
+  targetBodyFatPct: 12,
+  stepGoal: 8000,
+  branchId: 'q1',
+  trainerName: 'HLV Trần Minh',
+};
+
+export const DEFAULT_NUTRITION_SETTINGS: NutritionSettings = {
+  overrides: {},
+  tdeeOffset: 0,
+};
+
+export const SEED_BODY_POINTS: BodyPoint[] = [
+  { id: 'p1', date: D(63), weightKg: 72.4, bodyFatPct: 22.6, waistCm: 88, chestCm: 100, armCm: 33.5, thighCm: 57, createdAt: Date.now() - 63 * 864e5 },
+  { id: 'p2', date: D(56), weightKg: 71.9, bodyFatPct: 22.1, waistCm: 87.4, createdAt: Date.now() - 56 * 864e5 },
+  { id: 'p3', date: D(49), weightKg: 71.2, bodyFatPct: 21.4, waistCm: 86.8, chestCm: 99.5, createdAt: Date.now() - 49 * 864e5 },
+  { id: 'p4', date: D(42), weightKg: 70.8, bodyFatPct: 20.9, waistCm: 86.2, createdAt: Date.now() - 42 * 864e5 },
+  { id: 'p5', date: D(35), weightKg: 70.1, bodyFatPct: 20.2, waistCm: 85.5, armCm: 33.8, createdAt: Date.now() - 35 * 864e5 },
+  { id: 'p6', date: D(28), weightKg: 69.6, bodyFatPct: 19.6, waistCm: 85, createdAt: Date.now() - 28 * 864e5 },
+  { id: 'p7', date: D(21), weightKg: 69.1, bodyFatPct: 18.9, waistCm: 84.4, chestCm: 99, thighCm: 56.5, createdAt: Date.now() - 21 * 864e5 },
+  { id: 'p8', date: D(14), weightKg: 68.6, bodyFatPct: 18.2, waistCm: 83.8, createdAt: Date.now() - 14 * 864e5 },
+  { id: 'p9', date: D(7), weightKg: 68.2, bodyFatPct: 17.6, waistCm: 83.4, armCm: 34, createdAt: Date.now() - 7 * 864e5 },
+  { id: 'p10', date: D(0), weightKg: 67.8, bodyFatPct: 17.1, waistCm: 83, chestCm: 99.5, armCm: 34.2, thighCm: 56.5, note: 'Sáng, chưa ăn', createdAt: Date.now() },
+];
+
+export const SEED_PLANNED_SESSIONS: PlannedSession[] = [
+  {
+    id: 'w0-upper-a',
+    weekIndex: 0,
+    dayIndex: 0,
+    title: 'Upper A — Ngực & Lưng',
+    prescriptions: [
+      { exerciseId: 'bench-press', sets: 4, reps: '6-8', rpe: 8, restSeconds: 150 },
+      { exerciseId: 'barbell-row', sets: 4, reps: '8-10', rpe: 8, restSeconds: 120 },
+      { exerciseId: 'incline-db-press', sets: 3, reps: '10-12', rpe: 7.5, restSeconds: 90, supersetId: 'ss1' },
+      { exerciseId: 'lat-pulldown', sets: 3, reps: '10-12', rpe: 7.5, restSeconds: 90, supersetId: 'ss1' },
+      { exerciseId: 'lateral-raise', sets: 3, reps: '12-15', rpe: 8, restSeconds: 60 },
+    ],
+  },
+  {
+    id: 'w0-lower-a',
+    weekIndex: 0,
+    dayIndex: 1,
+    title: 'Lower A — Chân & Bụng',
+    prescriptions: [
+      { exerciseId: 'back-squat', sets: 4, reps: '5-6', rpe: 8.5, restSeconds: 180 },
+      { exerciseId: 'romanian-deadlift', sets: 3, reps: '8-10', rpe: 8, restSeconds: 150 },
+      { exerciseId: 'leg-press', sets: 3, reps: '12-15', rpe: 8, restSeconds: 90 },
+      { exerciseId: 'calf-raise', sets: 4, reps: '15-20', rpe: 8, restSeconds: 60 },
+      { exerciseId: 'cable-crunch', sets: 3, reps: '12-15', rpe: 7.5, restSeconds: 60 },
+    ],
+  },
+  {
+    id: 'w0-upper-b',
+    weekIndex: 0,
+    dayIndex: 3,
+    title: 'Upper B — Vai & Tay',
+    prescriptions: [
+      { exerciseId: 'ohp', sets: 4, reps: '6-8', rpe: 8, restSeconds: 150 },
+      { exerciseId: 'pull-up', sets: 4, reps: '6-10', rpe: 9, restSeconds: 120 },
+      { exerciseId: 'seated-cable-row', sets: 3, reps: '10-12', rpe: 7.5, restSeconds: 90 },
+      { exerciseId: 'face-pull', sets: 3, reps: '15-20', rpe: 7, restSeconds: 60 },
+      { exerciseId: 'barbell-curl', sets: 3, reps: '10-12', rpe: 8, restSeconds: 60, supersetId: 'ss2' },
+      { exerciseId: 'triceps-pushdown', sets: 3, reps: '10-12', rpe: 8, restSeconds: 60, supersetId: 'ss2' },
+    ],
+  },
+  {
+    id: 'w0-lower-b',
+    weekIndex: 0,
+    dayIndex: 4,
+    title: 'Lower B — Chuỗi sau',
+    prescriptions: [
+      { exerciseId: 'romanian-deadlift', sets: 4, reps: '6-8', rpe: 8.5, restSeconds: 180 },
+      { exerciseId: 'leg-curl', sets: 3, reps: '12-15', rpe: 8, restSeconds: 90 },
+      { exerciseId: 'leg-press', sets: 3, reps: '15-20', rpe: 8, restSeconds: 90 },
+      { exerciseId: 'hanging-leg-raise', sets: 3, reps: '10-12', rpe: 8, restSeconds: 60 },
+      { exerciseId: 'plank', sets: 3, reps: '45-60s', rpe: 7, restSeconds: 45 },
+    ],
+  },
+];
+
+function seedSets(baseId: string, exerciseId: string, sets: number, weight: number, reps: number) {
+  return Array.from({ length: sets }, (_, i) => ({
+    id: `${baseId}-${exerciseId}-${i}`,
+    exerciseId,
+    setIndex: i,
+    weightKg: weight,
+    reps,
+    rpe: 8,
+  }));
+}
+
+export const SEED_WORKOUT_SESSIONS: WorkoutSession[] = [
+  {
+    id: 'w-1',
+    date: D(14),
+    sessionId: 'w0-upper-a',
+    title: 'Upper A — Ngực & Lưng',
+    startedAt: Date.now() - 14 * 864e5,
+    finishedAt: Date.now() - 14 * 864e5 + 62 * 60_000,
+    sets: [
+      ...seedSets('w1', 'bench-press', 4, 70, 8),
+      ...seedSets('w1', 'barbell-row', 4, 60, 9),
+      ...seedSets('w1', 'incline-db-press', 3, 24, 11),
+      ...seedSets('w1', 'lat-pulldown', 3, 55, 11),
+    ],
+  },
+  {
+    id: 'w-2',
+    date: D(12),
+    sessionId: 'w0-lower-a',
+    title: 'Lower A — Chân & Bụng',
+    startedAt: Date.now() - 12 * 864e5,
+    finishedAt: Date.now() - 12 * 864e5 + 70 * 60_000,
+    sets: [
+      ...seedSets('w2', 'back-squat', 4, 90, 6),
+      ...seedSets('w2', 'romanian-deadlift', 3, 80, 9),
+      ...seedSets('w2', 'leg-press', 3, 140, 13),
+    ],
+  },
+  {
+    id: 'w-3',
+    date: D(7),
+    sessionId: 'w0-upper-b',
+    title: 'Upper B — Vai & Tay',
+    startedAt: Date.now() - 7 * 864e5,
+    finishedAt: Date.now() - 7 * 864e5 + 58 * 60_000,
+    sets: [
+      ...seedSets('w3', 'ohp', 4, 42.5, 7),
+      ...seedSets('w3', 'pull-up', 4, 0, 8),
+      ...seedSets('w3', 'barbell-curl', 3, 27.5, 11),
+    ],
+  },
+  {
+    id: 'w-4',
+    date: D(3),
+    sessionId: 'w0-upper-a',
+    title: 'Upper A — Ngực & Lưng',
+    startedAt: Date.now() - 3 * 864e5,
+    finishedAt: Date.now() - 3 * 864e5 + 65 * 60_000,
+    sets: [
+      ...seedSets('w4', 'bench-press', 4, 72.5, 8),
+      ...seedSets('w4', 'barbell-row', 4, 62.5, 9),
+      ...seedSets('w4', 'incline-db-press', 3, 26, 10),
+      ...seedSets('w4', 'lat-pulldown', 3, 57.5, 10),
+    ],
+  },
+  {
+    id: 'w-5',
+    date: D(1),
+    sessionId: 'w0-lower-a',
+    title: 'Lower A — Chân & Bụng',
+    startedAt: Date.now() - 1 * 864e5,
+    finishedAt: Date.now() - 1 * 864e5 + 72 * 60_000,
+    sets: [
+      ...seedSets('w5', 'back-squat', 4, 92.5, 6),
+      ...seedSets('w5', 'romanian-deadlift', 3, 82.5, 9),
+      ...seedSets('w5', 'leg-press', 3, 145, 12),
+      ...seedSets('w5', 'calf-raise', 4, 60, 18),
+    ],
+  },
+];
+
+export const SEED_SPORTS: SportSession[] = [
+  { id: 's-1', date: D(9), type: 'running', durationMin: 32, note: '5km công viên', createdAt: Date.now() - 9 * 864e5 },
+  { id: 's-2', date: D(5), type: 'badminton', durationMin: 60, createdAt: Date.now() - 5 * 864e5 },
+  { id: 's-3', date: D(2), type: 'cycling', durationMin: 45, note: 'Đạp xe về quận 7', createdAt: Date.now() - 2 * 864e5 },
+];
+
+export const SEED_MEALS: MealLog[] = [
+  {
+    id: 'm-1',
+    date: D(0),
+    slot: 'breakfast',
+    description: '3 trứng + 60g yến mạch + 1 chuối',
+    items: [
+      { name: 'trứng', amount: 150, unit: 'g', kcal: 233, protein: 19.5, carbs: 1.7, fat: 16.5 },
+      { name: 'yến mạch', amount: 60, unit: 'g', kcal: 233, protein: 10.1, carbs: 39.6, fat: 4.1 },
+      { name: 'chuối', amount: 120, unit: 'g', kcal: 107, protein: 1.3, carbs: 27.6, fat: 0.4 },
+    ],
+    createdAt: Date.now() - 6 * 3600_000,
+  },
+  {
+    id: 'm-2',
+    date: D(0),
+    slot: 'lunch',
+    description: '200g ức gà + 250g cơm trắng + rau',
+    items: [
+      { name: 'ức gà', amount: 200, unit: 'g', kcal: 330, protein: 62, carbs: 0, fat: 7.2 },
+      { name: 'cơm trắng', amount: 250, unit: 'g', kcal: 325, protein: 6.8, carbs: 70, fat: 0.8 },
+      { name: 'rau', amount: 150, unit: 'g', kcal: 38, protein: 2.3, carbs: 6, fat: 0.5 },
+    ],
+    createdAt: Date.now() - 2 * 3600_000,
+  },
+  {
+    id: 'm-3',
+    date: D(1),
+    slot: 'breakfast',
+    description: 'phở bò 500g',
+    items: [{ name: 'phở', amount: 500, unit: 'g', kcal: 450, protein: 25, carbs: 70, fat: 8 }],
+    createdAt: Date.now() - 26 * 3600_000,
+  },
+  {
+    id: 'm-4',
+    date: D(1),
+    slot: 'dinner',
+    description: '150g cá hồi + 200g khoai lang',
+    items: [
+      { name: 'cá hồi', amount: 150, unit: 'g', kcal: 312, protein: 30, carbs: 0, fat: 19.5 },
+      { name: 'khoai lang', amount: 200, unit: 'g', kcal: 172, protein: 3.2, carbs: 40, fat: 0.2 },
+    ],
+    createdAt: Date.now() - 20 * 3600_000,
+  },
+  {
+    id: 'm-5',
+    date: D(2),
+    slot: 'lunch',
+    description: 'bánh mì thịt 250g',
+    items: [{ name: 'bánh mì', amount: 250, unit: 'g', kcal: 663, protein: 22.5, carbs: 122, fat: 8 }],
+    createdAt: Date.now() - 46 * 3600_000,
+  },
+];
+
 

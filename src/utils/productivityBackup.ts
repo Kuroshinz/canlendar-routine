@@ -1,14 +1,21 @@
 import {
+  BodyPoint,
   BudgetSettings,
+  CtgProfile,
   FocusSession,
   GoalItem,
   HabitItem,
   HealthDayLog,
   HealthProfile,
+  MealLog,
+  NutritionSettings,
+  PlannedSession,
+  SportSession,
   TaskItem,
   Transaction,
   WellnessCheck,
   WorkoutLog,
+  WorkoutSession,
 } from '../types/productivity';
 
 /** Everything the productivity store owns, without the backup envelope. */
@@ -23,6 +30,13 @@ export interface ProductivitySnapshotData {
   wellness: WellnessCheck[];
   healthProfile: HealthProfile;
   habits?: HabitItem[];
+  ctgProfile?: CtgProfile;
+  bodyPoints?: BodyPoint[];
+  plannedSessions?: PlannedSession[];
+  workoutSessions?: WorkoutSession[];
+  sportSessions?: SportSession[];
+  meals?: MealLog[];
+  nutritionSettings?: NutritionSettings;
 }
 
 export interface ProductivityBackup extends ProductivitySnapshotData {

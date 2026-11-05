@@ -1,6 +1,8 @@
 import { useCallback, useMemo } from 'react';
 import {
+  BodyPoint,
   BudgetSettings,
+  CtgProfile,
   DEFAULT_BUDGET,
   DEFAULT_HEALTH_PROFILE,
   FinanceCategoryId,
@@ -11,20 +13,32 @@ import {
   HabitItem,
   HealthDayLog,
   HealthProfile,
+  MealLog,
+  NutritionSettings,
+  PlannedSession,
+  SportSession,
   TaskItem,
   TaskStatus,
   Transaction,
   WellnessCheck,
   WorkoutLog,
+  WorkoutSession,
 } from '../types/productivity';
 import {
+  DEFAULT_NUTRITION_SETTINGS,
+  SEED_BODY_POINTS,
+  SEED_CTG_PROFILE,
   SEED_FOCUS_SESSIONS,
   SEED_GOALS,
   SEED_HABITS,
   SEED_HEALTH_LOGS,
+  SEED_MEALS,
+  SEED_PLANNED_SESSIONS,
+  SEED_SPORTS,
   SEED_TASKS,
   SEED_TRANSACTIONS,
   SEED_WELLNESS,
+  SEED_WORKOUT_SESSIONS,
   SEED_WORKOUTS,
 } from '../data/productivitySeed';
 import { usePersistentState } from './usePersistentState';
@@ -47,6 +61,13 @@ const KEYS = {
   wellness: 'gcal_prod_wellness',
   profile: 'gcal_prod_health_profile',
   habits: 'gcal_prod_habits',
+  ctgProfile: 'gcal_ctg_profile',
+  bodyPoints: 'gcal_ctg_body_points',
+  plannedSessions: 'gcal_ctg_planned_sessions',
+  workoutSessions: 'gcal_ctg_workout_sessions',
+  sportSessions: 'gcal_ctg_sports',
+  meals: 'gcal_ctg_meals',
+  nutritionSettings: 'gcal_ctg_nutrition_settings',
 } as const;
 
 export interface ProductivityStore {
@@ -97,6 +118,28 @@ export interface ProductivityStore {
   wellness: WellnessCheck[];
   upsertWellness: (check: WellnessCheck) => void;
 
+  // CTG Fitness & Multitasking
+  ctgProfile: CtgProfile;
+  updateCtgProfile: (patch: Partial<CtgProfile>) => void;
+  bodyPoints: BodyPoint[];
+  addBodyPoint: (point: Omit<BodyPoint, 'id' | 'createdAt'>) => BodyPoint;
+  deleteBodyPoint: (id: string) => void;
+  plannedSessions: PlannedSession[];
+  addPlannedSession: (session: PlannedSession) => void;
+  updatePlannedSession: (session: PlannedSession) => void;
+  deletePlannedSession: (id: string) => void;
+  workoutSessions: WorkoutSession[];
+  logWorkoutSession: (session: Omit<WorkoutSession, 'id'>) => WorkoutSession;
+  deleteWorkoutSession: (id: string) => void;
+  sportSessions: SportSession[];
+  addSportSession: (sport: Omit<SportSession, 'id' | 'createdAt'>) => SportSession;
+  deleteSportSession: (id: string) => void;
+  meals: MealLog[];
+  addMealLog: (meal: Omit<MealLog, 'id' | 'createdAt'>) => MealLog;
+  deleteMealLog: (id: string) => void;
+  nutritionSettings: NutritionSettings;
+  updateNutritionSettings: (patch: Partial<NutritionSettings>) => void;
+
   /** Current data of every module, for a JSON backup. */
   snapshot: () => ProductivitySnapshotData;
   /** Replace every module with the contents of a validated backup. */
@@ -129,6 +172,27 @@ export function useProductivityStore(): ProductivityStore {
     DEFAULT_HEALTH_PROFILE
   );
   const [habits, setHabits] = usePersistentState<HabitItem[]>(KEYS.habits, SEED_HABITS);
+
+  // CTG Fitness States
+  const [ctgProfile, setCtgProfile] = usePersistentState<CtgProfile>(KEYS.ctgProfile, SEED_CTG_PROFILE);
+  const [bodyPoints, setBodyPoints] = usePersistentState<BodyPoint[]>(KEYS.bodyPoints, SEED_BODY_POINTS);
+  const [plannedSessions, setPlannedSessions] = usePersistentState<PlannedSession[]>(
+    KEYS.plannedSessions,
+    SEED_PLANNED_SESSIONS
+  );
+  const [workoutSessions, setWorkoutSessions] = usePersistentState<WorkoutSession[]>(
+    KEYS.workoutSessions,
+    SEED_WORKOUT_SESSIONS
+  );
+  const [sportSessions, setSportSessions] = usePersistentState<SportSession[]>(
+    KEYS.sportSessions,
+    SEED_SPORTS
+  );
+  const [meals, setMeals] = usePersistentState<MealLog[]>(KEYS.meals, SEED_MEALS);
+  const [nutritionSettings, setNutritionSettings] = usePersistentState<NutritionSettings>(
+    KEYS.nutritionSettings,
+    DEFAULT_NUTRITION_SETTINGS
+  );
 
   // --- Tasks ---------------------------------------------------------------
 
@@ -418,6 +482,122 @@ export function useProductivityStore(): ProductivityStore {
     [setWellness]
   );
 
+  // --- CTG Fitness Handlers ------------------------------------------------
+
+  const updateCtgProfile = useCallback(
+    (patch: Partial<CtgProfile>) => {
+      setCtgProfile((prev) => ({ ...prev, ...patch }));
+    },
+    [setCtgProfile]
+  );
+
+  const addBodyPoint = useCallback(
+    (input: Omit<BodyPoint, 'id' | 'createdAt'>) => {
+      const point: BodyPoint = {
+        ...input,
+        id: uid('point'),
+        createdAt: Date.now(),
+      };
+      setBodyPoints((prev) => [...prev, point].sort((a, b) => a.date.localeCompare(b.date)));
+      return point;
+    },
+    [setBodyPoints]
+  );
+
+  const deleteBodyPoint = useCallback(
+    (id: string) => {
+      setBodyPoints((prev) => prev.filter((p) => p.id !== id));
+    },
+    [setBodyPoints]
+  );
+
+  const addPlannedSession = useCallback(
+    (session: PlannedSession) => {
+      setPlannedSessions((prev) => [...prev, session]);
+    },
+    [setPlannedSessions]
+  );
+
+  const updatePlannedSession = useCallback(
+    (session: PlannedSession) => {
+      setPlannedSessions((prev) => prev.map((s) => (s.id === session.id ? session : s)));
+    },
+    [setPlannedSessions]
+  );
+
+  const deletePlannedSession = useCallback(
+    (id: string) => {
+      setPlannedSessions((prev) => prev.filter((s) => s.id !== id));
+    },
+    [setPlannedSessions]
+  );
+
+  const logWorkoutSession = useCallback(
+    (input: Omit<WorkoutSession, 'id'>) => {
+      const session: WorkoutSession = {
+        ...input,
+        id: uid('ws'),
+      };
+      setWorkoutSessions((prev) => [session, ...prev]);
+      return session;
+    },
+    [setWorkoutSessions]
+  );
+
+  const deleteWorkoutSession = useCallback(
+    (id: string) => {
+      setWorkoutSessions((prev) => prev.filter((s) => s.id !== id));
+    },
+    [setWorkoutSessions]
+  );
+
+  const addSportSession = useCallback(
+    (input: Omit<SportSession, 'id' | 'createdAt'>) => {
+      const sport: SportSession = {
+        ...input,
+        id: uid('sport'),
+        createdAt: Date.now(),
+      };
+      setSportSessions((prev) => [sport, ...prev]);
+      return sport;
+    },
+    [setSportSessions]
+  );
+
+  const deleteSportSession = useCallback(
+    (id: string) => {
+      setSportSessions((prev) => prev.filter((s) => s.id !== id));
+    },
+    [setSportSessions]
+  );
+
+  const addMealLog = useCallback(
+    (input: Omit<MealLog, 'id' | 'createdAt'>) => {
+      const meal: MealLog = {
+        ...input,
+        id: uid('meal'),
+        createdAt: Date.now(),
+      };
+      setMeals((prev) => [meal, ...prev]);
+      return meal;
+    },
+    [setMeals]
+  );
+
+  const deleteMealLog = useCallback(
+    (id: string) => {
+      setMeals((prev) => prev.filter((m) => m.id !== id));
+    },
+    [setMeals]
+  );
+
+  const updateNutritionSettings = useCallback(
+    (patch: Partial<NutritionSettings>) => {
+      setNutritionSettings((prev) => ({ ...prev, ...patch }));
+    },
+    [setNutritionSettings]
+  );
+
   const snapshot = useCallback<() => ProductivitySnapshotData>(
     () => ({
       tasks,
@@ -430,8 +610,33 @@ export function useProductivityStore(): ProductivityStore {
       wellness,
       healthProfile,
       habits,
+      ctgProfile,
+      bodyPoints,
+      plannedSessions,
+      workoutSessions,
+      sportSessions,
+      meals,
+      nutritionSettings,
     }),
-    [tasks, goals, sessions, transactions, budget, healthLogs, workouts, wellness, healthProfile, habits]
+    [
+      tasks,
+      goals,
+      sessions,
+      transactions,
+      budget,
+      healthLogs,
+      workouts,
+      wellness,
+      healthProfile,
+      habits,
+      ctgProfile,
+      bodyPoints,
+      plannedSessions,
+      workoutSessions,
+      sportSessions,
+      meals,
+      nutritionSettings,
+    ]
   );
 
   const restore = useCallback(
@@ -446,6 +651,13 @@ export function useProductivityStore(): ProductivityStore {
       setWellness(data.wellness);
       setHealthProfile(data.healthProfile);
       if (data.habits) setHabits(data.habits);
+      if (data.ctgProfile) setCtgProfile(data.ctgProfile);
+      if (data.bodyPoints) setBodyPoints(data.bodyPoints);
+      if (data.plannedSessions) setPlannedSessions(data.plannedSessions);
+      if (data.workoutSessions) setWorkoutSessions(data.workoutSessions);
+      if (data.sportSessions) setSportSessions(data.sportSessions);
+      if (data.meals) setMeals(data.meals);
+      if (data.nutritionSettings) setNutritionSettings(data.nutritionSettings);
     },
     [
       setTasks,
@@ -458,6 +670,13 @@ export function useProductivityStore(): ProductivityStore {
       setWellness,
       setHealthProfile,
       setHabits,
+      setCtgProfile,
+      setBodyPoints,
+      setPlannedSessions,
+      setWorkoutSessions,
+      setSportSessions,
+      setMeals,
+      setNutritionSettings,
     ]
   );
 
@@ -472,6 +691,13 @@ export function useProductivityStore(): ProductivityStore {
     setWellness(SEED_WELLNESS);
     setHealthProfile(DEFAULT_HEALTH_PROFILE);
     setHabits(SEED_HABITS);
+    setCtgProfile(SEED_CTG_PROFILE);
+    setBodyPoints(SEED_BODY_POINTS);
+    setPlannedSessions(SEED_PLANNED_SESSIONS);
+    setWorkoutSessions(SEED_WORKOUT_SESSIONS);
+    setSportSessions(SEED_SPORTS);
+    setMeals(SEED_MEALS);
+    setNutritionSettings(DEFAULT_NUTRITION_SETTINGS);
   }, [
     setTasks,
     setGoals,
@@ -483,6 +709,13 @@ export function useProductivityStore(): ProductivityStore {
     setWellness,
     setHealthProfile,
     setHabits,
+    setCtgProfile,
+    setBodyPoints,
+    setPlannedSessions,
+    setWorkoutSessions,
+    setSportSessions,
+    setMeals,
+    setNutritionSettings,
   ]);
 
   return {
@@ -521,6 +754,27 @@ export function useProductivityStore(): ProductivityStore {
     deleteWorkout,
     wellness,
     upsertWellness,
+    // CTG Fitness
+    ctgProfile,
+    updateCtgProfile,
+    bodyPoints,
+    addBodyPoint,
+    deleteBodyPoint,
+    plannedSessions,
+    addPlannedSession,
+    updatePlannedSession,
+    deletePlannedSession,
+    workoutSessions,
+    logWorkoutSession,
+    deleteWorkoutSession,
+    sportSessions,
+    addSportSession,
+    deleteSportSession,
+    meals,
+    addMealLog,
+    deleteMealLog,
+    nutritionSettings,
+    updateNutritionSettings,
     snapshot,
     restore,
     resetAll,

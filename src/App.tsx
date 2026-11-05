@@ -41,6 +41,7 @@ import { FinanceView } from './components/productivity/FinanceView';
 import { HealthView } from './components/productivity/HealthView';
 import { useProductivityStore, todayString } from './hooks/useProductivityStore';
 import { buildTaskEvents } from './utils/productivityUtils';
+import { buildWorkoutEvents, startOfWeek } from './utils/fitnessMetrics';
 import { User } from 'firebase/auth';
 import { initAuth, logout, getAccessToken, AppUser } from './services/auth';
 import { fetchGoogleCalendarEvents, createGoogleCalendarEvent } from './services/googleCalendarSync';
@@ -151,7 +152,19 @@ export default function App() {
     () => buildTaskEvents(productivity.tasks, colorByCategoryId),
     [productivity.tasks, colorByCategoryId]
   );
-  const allEvents = useMemo(() => [...events, ...taskEvents], [events, taskEvents]);
+  const workoutEvents = useMemo(
+    () =>
+      buildWorkoutEvents(
+        productivity.workoutSessions,
+        productivity.plannedSessions,
+        startOfWeek(todayString())
+      ),
+    [productivity.workoutSessions, productivity.plannedSessions]
+  );
+  const allEvents = useMemo(
+    () => [...events, ...taskEvents, ...workoutEvents],
+    [events, taskEvents, workoutEvents]
+  );
 
   // 5. Sidebar toggle (closed by default on mobile)
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
@@ -945,6 +958,40 @@ export default function App() {
               onUpdateHealthProfile={productivity.updateHealthProfile}
               onAddWorkout={productivity.addWorkout}
               onDeleteWorkout={productivity.deleteWorkout}
+              ctgProfile={productivity.ctgProfile}
+              onUpdateCtgProfile={productivity.updateCtgProfile}
+              bodyPoints={productivity.bodyPoints}
+              onAddBodyPoint={productivity.addBodyPoint}
+              onDeleteBodyPoint={productivity.deleteBodyPoint}
+              plannedSessions={productivity.plannedSessions}
+              workoutSessions={productivity.workoutSessions}
+              onLogWorkoutSession={productivity.logWorkoutSession}
+              onDeleteWorkoutSession={productivity.deleteWorkoutSession}
+              sportSessions={productivity.sportSessions}
+              onAddSportSession={productivity.addSportSession}
+              onDeleteSportSession={productivity.deleteSportSession}
+              meals={productivity.meals}
+              onAddMealLog={productivity.addMealLog}
+              onDeleteMealLog={productivity.deleteMealLog}
+              nutritionSettings={productivity.nutritionSettings}
+              onUpdateNutritionSettings={productivity.updateNutritionSettings}
+              onScheduleSessionToCalendar={(title, date, color) => {
+                const newEv: CalendarEvent = {
+                  id: `scheduled-wo-${Date.now()}`,
+                  title: `💪 ${title}`,
+                  startDate: date,
+                  startTime: '17:30',
+                  endDate: date,
+                  endTime: '18:45',
+                  allDay: false,
+                  calendarId: 'health',
+                  color,
+                  type: 'event',
+                  isCompleted: false,
+                  createdAt: Date.now(),
+                };
+                setEvents((prev) => [...prev, newEv]);
+              }}
             />
           )}
         </main>

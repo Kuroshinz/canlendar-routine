@@ -14,14 +14,32 @@ import {
   Info,
   X,
   Activity,
+  Utensils,
+  Building2,
 } from 'lucide-react';
 import {
+  BodyPoint,
+  CtgProfile,
   HealthDayLog,
   HealthProfile,
   HealthSource,
+  MealLog,
+  NutritionSettings,
+  PlannedSession,
+  SportSession,
   WorkoutLog,
+  WorkoutSession,
   WorkoutType,
 } from '../../types/productivity';
+import {
+  DEFAULT_NUTRITION_SETTINGS,
+  SEED_BODY_POINTS,
+  SEED_CTG_PROFILE,
+  SEED_MEALS,
+  SEED_PLANNED_SESSIONS,
+  SEED_SPORTS,
+  SEED_WORKOUT_SESSIONS,
+} from '../../data/productivitySeed';
 import { LineChart, ProgressBar, StackedBar } from '../charts/SimpleCharts';
 import {
   bmi,
@@ -40,8 +58,12 @@ import {
   isGoogleHealthConfigured,
   syncGoogleHealth,
 } from '../../services/googleHealthSync';
+import { InBodyTab } from './fitness/InBodyTab';
+import { TrainingTab } from './fitness/TrainingTab';
+import { NutritionTab } from './fitness/NutritionTab';
+import { BranchesTab } from './fitness/BranchesTab';
 
-interface HealthViewProps {
+export interface HealthViewProps {
   healthLogs: HealthDayLog[];
   healthProfile: HealthProfile;
   workouts: WorkoutLog[];
@@ -50,7 +72,28 @@ interface HealthViewProps {
   onUpdateHealthProfile: (patch: Partial<HealthProfile>) => void;
   onAddWorkout: (w: Omit<WorkoutLog, 'id' | 'createdAt'>) => void;
   onDeleteWorkout: (id: string) => void;
+  // CTG Fitness additions
+  ctgProfile?: CtgProfile;
+  onUpdateCtgProfile?: (patch: Partial<CtgProfile>) => void;
+  bodyPoints?: BodyPoint[];
+  onAddBodyPoint?: (point: Omit<BodyPoint, 'id' | 'createdAt'>) => BodyPoint;
+  onDeleteBodyPoint?: (id: string) => void;
+  plannedSessions?: PlannedSession[];
+  workoutSessions?: WorkoutSession[];
+  onLogWorkoutSession?: (w: Omit<WorkoutSession, 'id'>) => WorkoutSession;
+  onDeleteWorkoutSession?: (id: string) => void;
+  sportSessions?: SportSession[];
+  onAddSportSession?: (s: Omit<SportSession, 'id' | 'createdAt'>) => SportSession;
+  onDeleteSportSession?: (id: string) => void;
+  meals?: MealLog[];
+  onAddMealLog?: (m: Omit<MealLog, 'id' | 'createdAt'>) => MealLog;
+  onDeleteMealLog?: (id: string) => void;
+  nutritionSettings?: NutritionSettings;
+  onUpdateNutritionSettings?: (patch: Partial<NutritionSettings>) => void;
+  onScheduleSessionToCalendar?: (title: string, date: string, color: string) => void;
 }
+
+type SubTab = 'overview' | 'inbody' | 'training' | 'nutrition' | 'branches';
 
 const WORKOUT_TYPES: { id: WorkoutType; labelVi: string; labelEn: string; color: string }[] = [
   { id: 'strength', labelVi: 'Sức mạnh', labelEn: 'Strength', color: '#3F51B5' },
@@ -70,7 +113,26 @@ export const HealthView: React.FC<HealthViewProps> = ({
   onUpdateHealthProfile,
   onAddWorkout,
   onDeleteWorkout,
+  ctgProfile = SEED_CTG_PROFILE,
+  onUpdateCtgProfile = () => {},
+  bodyPoints = SEED_BODY_POINTS,
+  onAddBodyPoint = (p) => ({ ...p, id: 'tmp', createdAt: Date.now() }),
+  onDeleteBodyPoint = () => {},
+  plannedSessions = SEED_PLANNED_SESSIONS,
+  workoutSessions = SEED_WORKOUT_SESSIONS,
+  onLogWorkoutSession = (w) => ({ ...w, id: 'tmp' }),
+  onDeleteWorkoutSession = () => {},
+  sportSessions = SEED_SPORTS,
+  onAddSportSession = (s) => ({ ...s, id: 'tmp', createdAt: Date.now() }),
+  onDeleteSportSession = () => {},
+  meals = SEED_MEALS,
+  onAddMealLog = (m) => ({ ...m, id: 'tmp', createdAt: Date.now() }),
+  onDeleteMealLog = () => {},
+  nutritionSettings = DEFAULT_NUTRITION_SETTINGS,
+  onUpdateNutritionSettings = () => {},
+  onScheduleSessionToCalendar,
 }) => {
+  const [activeSubTab, setActiveSubTab] = useState<SubTab>('overview');
   const today = formatDateString(new Date());
   const todayLog = useMemo(
     () => healthLogs.find((l) => l.date === today) || emptyLog(today),
@@ -279,7 +341,83 @@ export const HealthView: React.FC<HealthViewProps> = ({
         </div>
       </div>
 
-      {/* Sync result banner */}
+      {/* Multitasking Sub-Tabs */}
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 mb-6 border-b border-gray-200 dark:border-gray-800">
+        {[
+          { id: 'overview', label: lang === 'vi' ? 'Tổng quan & Chỉ số' : 'Overview & Logs', icon: HeartPulse },
+          { id: 'inbody', label: lang === 'vi' ? 'InBody & Đo lường' : 'InBody & Composition', icon: Scale },
+          { id: 'training', label: lang === 'vi' ? 'Giáo án & Buổi tập' : 'Workouts & Mesocycle', icon: Dumbbell },
+          { id: 'nutrition', label: lang === 'vi' ? 'Dinh dưỡng & Bữa ăn' : 'Nutrition & Meals', icon: Utensils },
+          { id: 'branches', label: lang === 'vi' ? 'Chi nhánh CTG' : 'CTG Branches & Coach', icon: Building2 },
+        ].map((tab) => {
+          const Icon = tab.icon;
+          const isActive = activeSubTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveSubTab(tab.id as SubTab)}
+              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
+                isActive
+                  ? 'bg-rose-600 text-white shadow-xs'
+                  : 'bg-white dark:bg-[#1a1e24] text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 border border-gray-200 dark:border-gray-800'
+              }`}
+            >
+              <Icon className="w-3.5 h-3.5" />
+              <span>{tab.label}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {activeSubTab === 'inbody' && (
+        <InBodyTab
+          points={bodyPoints}
+          profile={ctgProfile}
+          lang={lang}
+          onAddPoint={onAddBodyPoint}
+          onDeletePoint={onDeleteBodyPoint}
+        />
+      )}
+
+      {activeSubTab === 'training' && (
+        <TrainingTab
+          plannedSessions={plannedSessions}
+          workoutSessions={workoutSessions}
+          sportSessions={sportSessions}
+          userWeightKg={selectedLog.weightKg || ctgProfile.targetWeightKg}
+          lang={lang}
+          onLogWorkoutSession={onLogWorkoutSession}
+          onDeleteWorkoutSession={onDeleteWorkoutSession}
+          onAddSportSession={onAddSportSession}
+          onDeleteSportSession={onDeleteSportSession}
+          onScheduleSessionToCalendar={onScheduleSessionToCalendar}
+        />
+      )}
+
+      {activeSubTab === 'nutrition' && (
+        <NutritionTab
+          meals={meals}
+          profile={ctgProfile}
+          userWeightKg={selectedLog.weightKg || ctgProfile.targetWeightKg}
+          nutritionSettings={nutritionSettings}
+          lang={lang}
+          onAddMealLog={onAddMealLog}
+          onDeleteMealLog={onDeleteMealLog}
+          onUpdateNutritionSettings={onUpdateNutritionSettings}
+        />
+      )}
+
+      {activeSubTab === 'branches' && (
+        <BranchesTab
+          profile={ctgProfile}
+          lang={lang}
+          onUpdateProfile={onUpdateCtgProfile}
+        />
+      )}
+
+      {activeSubTab === 'overview' && (
+        <>
+          {/* Sync result banner */}
       {(syncState.result || syncState.message) && (
         <div
           className={`rounded-2xl border p-3 mb-4 flex items-start gap-2 text-xs ${
@@ -681,6 +819,8 @@ export const HealthView: React.FC<HealthViewProps> = ({
           </div>
         </div>
       </div>
+      </>
+      )}
     </div>
   );
 };

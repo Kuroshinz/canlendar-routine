@@ -203,3 +203,4 @@ export function setAmbientVolume(volume: number): void {
 export function getAmbientStatus(): { isPlaying: boolean; track: AmbientTrack; volume: number } {
   return { isPlaying, track: currentTrack, volume: currentVolume };
 }
+

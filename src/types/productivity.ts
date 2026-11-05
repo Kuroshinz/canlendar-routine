@@ -273,3 +273,252 @@ export const DEFAULT_HEALTH_PROFILE: HealthProfile = {
   dailySleepHours: 8,
 };
 
+// ---------------------------------------------------------------------------
+// CTG Fitness & Body Composition
+// ---------------------------------------------------------------------------
+
+export type Sex = 'male' | 'female';
+export type Goal = 'cut' | 'maintain' | 'bulk';
+
+export const GOAL_LABEL: Record<Goal, string> = {
+  cut: 'Giảm mỡ',
+  maintain: 'Duy trì',
+  bulk: 'Tăng cơ',
+};
+
+export type ActivityLevel = 'sedentary' | 'light' | 'moderate' | 'active' | 'very_active';
+
+export const ACTIVITY_LABEL: Record<ActivityLevel, string> = {
+  sedentary: 'Ít vận động',
+  light: 'Vận động nhẹ',
+  moderate: 'Vận động vừa',
+  active: 'Vận động nhiều',
+  very_active: 'Vận động rất nhiều',
+};
+
+export const ACTIVITY_FACTOR: Record<ActivityLevel, number> = {
+  sedentary: 1.2,
+  light: 1.375,
+  moderate: 1.55,
+  active: 1.725,
+  very_active: 1.9,
+};
+
+export interface CtgProfile {
+  name: string;
+  sex: Sex;
+  age: number;
+  heightCm: number;
+  goal: Goal;
+  activity: ActivityLevel;
+  targetWeightKg: number;
+  targetBodyFatPct: number;
+  stepGoal: number;
+  branchId: string;
+  trainerName: string;
+}
+
+export interface BodyPoint {
+  id: string;
+  date: string; // YYYY-MM-DD
+  weightKg: number;
+  bodyFatPct: number;
+  waistCm?: number;
+  chestCm?: number;
+  armCm?: number;
+  thighCm?: number;
+  note?: string;
+  createdAt: number;
+}
+
+export type MuscleGroup =
+  | 'chest'
+  | 'back'
+  | 'legs'
+  | 'shoulders'
+  | 'arms'
+  | 'core'
+  | 'cardio';
+
+export const MUSCLE_LABEL: Record<MuscleGroup, string> = {
+  chest: 'Ngực',
+  back: 'Lưng',
+  legs: 'Chân',
+  shoulders: 'Vai',
+  arms: 'Tay',
+  core: 'Bụng',
+  cardio: 'Cardio',
+};
+
+export const MUSCLE_COLOR: Record<MuscleGroup, string> = {
+  chest: '#ff6025',
+  back: '#2f86e8',
+  legs: '#97f64f',
+  shoulders: '#c084fc',
+  arms: '#f0b429',
+  core: '#75c6ac',
+  cardio: '#e9dbcc',
+};
+
+export interface Exercise {
+  id: string;
+  name: string;
+  muscle: MuscleGroup;
+  equipment: string;
+  cue: string;
+}
+
+export interface Prescription {
+  exerciseId: string;
+  sets: number;
+  reps: string;
+  rpe: number;
+  restSeconds: number;
+  supersetId?: string;
+}
+
+export interface PlannedSession {
+  id: string;
+  weekIndex: number;
+  dayIndex: number; // 0 = Monday
+  title: string;
+  prescriptions: Prescription[];
+}
+
+export interface SetLog {
+  id: string;
+  exerciseId: string;
+  setIndex: number;
+  weightKg: number;
+  reps: number;
+  rpe?: number;
+}
+
+export interface WorkoutSession {
+  id: string;
+  date: string;
+  sessionId?: string;
+  title: string;
+  startedAt: number;
+  finishedAt?: number;
+  sets: SetLog[];
+  note?: string;
+}
+
+export type SportType =
+  | 'running'
+  | 'cycling'
+  | 'swimming'
+  | 'football'
+  | 'badminton'
+  | 'basketball'
+  | 'tennis'
+  | 'other';
+
+export const SPORT_LABEL: Record<SportType, string> = {
+  running: 'Chạy bộ',
+  cycling: 'Đạp xe',
+  swimming: 'Bơi',
+  football: 'Bóng đá',
+  badminton: 'Cầu lông',
+  basketball: 'Bóng rổ',
+  tennis: 'Tennis',
+  other: 'Bộ môn khác',
+};
+
+export const SPORT_MET: Record<SportType, number> = {
+  running: 9.8,
+  cycling: 7.5,
+  swimming: 8.0,
+  football: 7.0,
+  badminton: 5.5,
+  basketball: 6.5,
+  tennis: 7.3,
+  other: 5.0,
+};
+
+export interface SportSession {
+  id: string;
+  date: string;
+  type: SportType;
+  durationMin: number;
+  note?: string;
+  createdAt: number;
+}
+
+export type MealSlot = 'breakfast' | 'lunch' | 'dinner' | 'snack';
+
+export const MEAL_LABEL: Record<MealSlot, string> = {
+  breakfast: 'Bữa sáng',
+  lunch: 'Bữa trưa',
+  dinner: 'Bữa tối',
+  snack: 'Bữa phụ',
+};
+
+export interface FoodItem {
+  name: string;
+  amount: number;
+  unit: 'g' | 'ml';
+  kcal: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+}
+
+export interface MealLog {
+  id: string;
+  date: string;
+  slot: MealSlot;
+  description: string;
+  items: FoodItem[];
+  createdAt: number;
+}
+
+export interface MacroOverride {
+  protein: number;
+  carbs: number;
+  fat: number;
+}
+
+export interface NutritionSettings {
+  overrides: Partial<Record<Goal, MacroOverride>>;
+  tdeeOffset: number;
+}
+
+export interface Branch {
+  id: string;
+  name: string;
+  address: string;
+  phone: string;
+  openHours: string;
+  trainers: number;
+}
+
+export const DEFAULT_BRANCHES: Branch[] = [
+  {
+    id: 'q1',
+    name: 'CTG Quận 1',
+    address: '125 Nguyễn Du, Quận 1, TP.HCM',
+    phone: '028 3822 1188',
+    openHours: '05:00 – 23:00',
+    trainers: 12,
+  },
+  {
+    id: 'q7',
+    name: 'CTG Quận 7',
+    address: '42 Nguyễn Thị Thập, Quận 7, TP.HCM',
+    phone: '028 3775 2266',
+    openHours: '05:00 – 22:30',
+    trainers: 9,
+  },
+  {
+    id: 'thuduc',
+    name: 'CTG Thủ Đức',
+    address: '88 Võ Văn Ngân, TP. Thủ Đức',
+    phone: '028 3722 3344',
+    openHours: '06:00 – 22:00',
+    trainers: 7,
+  },
+];
+
+
