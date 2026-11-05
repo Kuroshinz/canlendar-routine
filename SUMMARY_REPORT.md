@@ -139,3 +139,16 @@ Cảnh báo còn lại của Vite (không phải lỗi, có từ trước): bund
 | **Sao lưu / khôi phục dữ liệu năng suất (.json)** | `ExportImportModal` có thêm mục xuất và khôi phục toàn bộ tasks, goals, phiên focus, giao dịch, ngân sách, nhật ký sức khỏe, workout, wellness, hồ sơ sức khỏe. Định dạng `kind: 'productivity-backup'` được kiểm tra bằng `parseProductivityBackup()` trước khi ghi đè — tệp lạ hoặc thiếu collection bị từ chối, không thể xoá dữ liệu. Nút "Nhập" chung cũng tự nhận diện tệp sao lưu năng suất. |
 | **Đặt lại toàn bộ** | Nút "Đặt lại" giờ khôi phục cả `gcal_prod_*` qua `productivity.resetAll()` (đã ghi ở mục 7.4). |
 | **Kiểm thử** | Thêm `src/utils/productivityBackup.test.ts`: round-trip qua JSON, từ chối mảng sự kiện / object lạ / thiếu collection / thiếu `budget` / `healthProfile` null, và giữ nguyên nội dung item sau khi khôi phục. |
+
+---
+
+## 9. Vòng cải tiến hệ thống và kết nối liên phân hệ (Unified Workflows)
+
+| Hạng mục | Chi tiết |
+| --- | --- |
+| **Hợp nhất MultiHubDrawer & RightSidebar** | Toàn bộ dữ liệu tài chính, tác vụ nhanh, đánh giá stress, phiên Pomodoro ở ngăn kéo phụ `MultiHubDrawer` và thanh công cụ bên phải `RightSidebar` đều được liên kết trực tiếp vào `useProductivityStore`. Không còn tình trạng dữ liệu mẫu cô lập hay mất đồng bộ giữa các panel. |
+| **Thêm nhanh công việc trên Tổng quan (Dashboard)** | Thêm thanh nhập nhanh trực tiếp ngay trong khối "Công việc hôm nay" của `ProductivityDashboard`, gõ tên và nhấn Enter để thêm việc vào lịch trình trong ngày mà không cần chuyển trang. |
+| **Khắc phục phần trăm tiến độ sức khỏe** | Khắc phục giá trị `NaN` ở thanh tiến độ thời gian ngủ trên Dashboard do parse chuỗi đơn vị `h`, đảm bảo tỷ lệ phần trăm luôn chuẩn xác theo mục tiêu ngày. |
+| **Nút "Tập trung (Pomodoro)" trên từng công việc** | Trong `TasksGoalsView`, mỗi tác vụ chưa hoàn thành có thêm nút "Tập trung (Pomodoro)". Bấm vào sẽ tự động gán task đó vào phiên học và chuyển thẳng sang đồng hồ Pomodoro. |
+| **Xuất báo cáo tài chính sang file CSV** | Trang `FinanceView` bổ sung nút "Xuất CSV" hỗ trợ định dạng UTF-8 với BOM để mở trực tiếp trên Excel không bị lỗi font tiếng Việt, bao gồm đầy đủ ngày tháng, danh mục, phân loại thu/chi, số tiền và ghi chú. |
+| **Danh bạ & Địa điểm động trên thanh bên phải** | Panel Contacts và Maps trên `RightSidebar` tự động quét và hợp nhất danh sách khách mời tham gia (`guests`) cùng các địa điểm (`location`) từ các sự kiện có trên lịch thật của bạn, kết hợp với các địa chỉ mặc định sẵn có. |
