@@ -207,4 +207,20 @@ Theo yêu cầu loại bỏ các thành phần rườm rà trong modal đồng b
 | **Cơ chế Bắt đầu từ Số 0 (Clean Slate Option)** | Bổ sung hộp chọn *"Làm sạch dữ liệu và bắt đầu từ số 0 (Khuyên dùng)"*. Khi kích hoạt, hệ thống sẽ gọi phương thức `clearAll` được thiết kế mới trong `useProductivityStore`, dọn sạch toàn bộ các sự kiện lịch, task mẫu, nhật ký dinh dưỡng và bài tập mẫu ban đầu, giúp người dùng có một không gian làm việc trống hoàn toàn cho riêng mình. |
 | **Bảo lưu & Đồng bộ Trạng thái** | Dữ liệu tài khoản mới được đồng bộ hóa tức thì vào `localStorage` (`gcal_active_user`) và cập nhật toàn bộ thanh điều hướng ứng dụng mà không cần tải lại trang. |
 
+---
+
+## 14. Nâng Cấp & Tối Ưu Toàn Diện Phân Hệ Thể Hình Theo Chuẩn CTG Web Nâng Cao
+
+Triển khai trọn vẹn và tối ưu hóa hệ thống thể hình theo tham chiếu thực tế từ `ctg-fitness` và đa nhiệm hóa cùng Calendar:
+
+| Hạng mục | Chi tiết triển khai |
+| --- | --- |
+| **Trình Tập Luyện Trực Tiếp (Live Workout Player & Rest Timer)** | Thêm nút **"Bắt Đầu Tập Ngay"** trên mỗi giáo án kháng lực (Upper A, Lower A,...). Khi kích hoạt, giao diện chuyển sang **Active Workout Player** chuyên nghiệp: <br>• Đồng hồ đếm giờ tập trực tiếp (`MM:SS`).<br>• Bộ đếm tổng tải trọng (Volume kg) và ước tính Calo tiêu thụ theo thời gian thực.<br>• **Đồng hồ đếm ngược nghỉ giữa hiệp (Rest Timer)** với các mốc chuẩn (60s, 90s, 120s, 150s), nút +30s và **âm thanh chuông báo (Web Audio Chime)** khi hết giờ nghỉ.<br>• Bảng nhập số kg và số reps thực tế cho từng hiệp, tự động kiểm tra và gắn huy hiệu **Kỷ Lục Mới (⭐ PR)** nếu vượt kỷ lục cũ.<br>• Nút **"Hoàn Thành Buổi Tập & Lưu Vào Lịch Sử"** với tùy chọn tự động đồng bộ ngay vào Google Calendar hôm nay. |
+| **Biểu Đồ Khối Lượng Tuần & Cân Bằng Nhóm Cơ** | Bổ sung biểu đồ cột `BarChart` thể hiện **Khối lượng tập luyện 4 tuần gần nhất (Progressive Overload Tonnage)** và thanh tiến độ phân bổ số hiệp theo từng nhóm cơ (Ngực, Lưng, Chân, Vai, Tay, Bụng) với màu sắc nhận diện đặc trưng. |
+| **Biểu Đồ Xu Hướng InBody Đa Chuỗi (Dual-Series Interactive Chart)** | Xây dựng component `MultiSeriesLineChart` trong `SimpleCharts.tsx`, hiển thị đồng thời cả Cân Nặng (kg - Cam) và Tỷ lệ Mỡ (% - Xanh dương) với bộ lọc thời gian linh hoạt (7 ngày, 30 ngày, 90 ngày, Tất cả) cùng cơ chế chạm/click để tra cứu chi tiết số đo từng ngày. |
+| **Đánh Giá Chỉ Số Cơ Nạc FFMI & Thước Dây** | Bổ sung hàm `ffmiCategory` phân loại hạng cơ nạc theo chuẩn vận động viên thể hình tự nhiên, kèm bảng so sánh độ thay đổi số đo thước dây (Vòng eo, ngực, bắp tay, đùi) giữa mốc đo ban đầu và hiện tại. |
+| **Vòng Tròn Macro Đa Lượng (Iconic SVG Donut Chart) & Nạp Nước Nhanh** | Thay thế thanh đo đơn điệu bằng **Biểu đồ vòng tròn Macro Donut** chuẩn CTG hiển thị tâm Calo nạp/mục tiêu và 3 phân đoạn Đạm/Tinh bột/Chất béo; bổ sung **Widget Theo Dõi Nước Nhanh** (+250ml cốc, +500ml chai, +1L bình) kết nối trực tiếp với nhật ký sức khỏe ngày. |
+| **Trợ Lý Thể Hình Thông Minh (AI Smart Fitness Coach)** | Tích hợp thẻ cố vấn thể hình cá nhân hóa trong `ProfileTab.tsx` tự động phân tích chiến lược Calo (Cut/Maintain/Bulk), khuyến nghị đạm, nước và tối ưu phục hồi hệ thần kinh trung ương (CNS). |
+
+
 
