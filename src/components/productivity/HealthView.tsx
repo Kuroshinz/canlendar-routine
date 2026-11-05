@@ -80,16 +80,22 @@ export interface HealthViewProps {
   onUpdateCtgProfile?: (patch: Partial<CtgProfile>) => void;
   bodyPoints?: BodyPoint[];
   onAddBodyPoint?: (point: Omit<BodyPoint, 'id' | 'createdAt'>) => BodyPoint;
+  onUpdateBodyPoint?: (id: string, patch: Partial<BodyPoint>) => void;
   onDeleteBodyPoint?: (id: string) => void;
   plannedSessions?: PlannedSession[];
+  onAddPlannedSession?: (session: PlannedSession) => void;
+  onUpdatePlannedSession?: (session: PlannedSession) => void;
+  onDeletePlannedSession?: (id: string) => void;
   workoutSessions?: WorkoutSession[];
   onLogWorkoutSession?: (w: Omit<WorkoutSession, 'id'>) => WorkoutSession;
+  onUpdateWorkoutSession?: (session: WorkoutSession) => void;
   onDeleteWorkoutSession?: (id: string) => void;
   sportSessions?: SportSession[];
   onAddSportSession?: (s: Omit<SportSession, 'id' | 'createdAt'>) => SportSession;
   onDeleteSportSession?: (id: string) => void;
   meals?: MealLog[];
   onAddMealLog?: (m: Omit<MealLog, 'id' | 'createdAt'>) => MealLog;
+  onUpdateMealLog?: (id: string, patch: Partial<MealLog>) => void;
   onDeleteMealLog?: (id: string) => void;
   nutritionSettings?: NutritionSettings;
   onUpdateNutritionSettings?: (patch: Partial<NutritionSettings>) => void;
@@ -122,16 +128,22 @@ export const HealthView: React.FC<HealthViewProps> = ({
   onUpdateCtgProfile = () => {},
   bodyPoints = SEED_BODY_POINTS,
   onAddBodyPoint = (p) => ({ ...p, id: 'tmp', createdAt: Date.now() }),
+  onUpdateBodyPoint = () => {},
   onDeleteBodyPoint = () => {},
   plannedSessions = SEED_PLANNED_SESSIONS,
+  onAddPlannedSession = () => {},
+  onUpdatePlannedSession = () => {},
+  onDeletePlannedSession = () => {},
   workoutSessions = SEED_WORKOUT_SESSIONS,
   onLogWorkoutSession = (w) => ({ ...w, id: 'tmp' }),
+  onUpdateWorkoutSession = () => {},
   onDeleteWorkoutSession = () => {},
   sportSessions = SEED_SPORTS,
   onAddSportSession = (s) => ({ ...s, id: 'tmp', createdAt: Date.now() }),
   onDeleteSportSession = () => {},
   meals = SEED_MEALS,
   onAddMealLog = (m) => ({ ...m, id: 'tmp', createdAt: Date.now() }),
+  onUpdateMealLog = () => {},
   onDeleteMealLog = () => {},
   nutritionSettings = DEFAULT_NUTRITION_SETTINGS,
   onUpdateNutritionSettings = () => {},
@@ -383,6 +395,7 @@ export const HealthView: React.FC<HealthViewProps> = ({
           profile={ctgProfile}
           lang={lang}
           onAddPoint={onAddBodyPoint}
+          onUpdatePoint={onUpdateBodyPoint}
           onDeletePoint={onDeleteBodyPoint}
         />
       )}
@@ -395,9 +408,13 @@ export const HealthView: React.FC<HealthViewProps> = ({
           userWeightKg={selectedLog.weightKg || ctgProfile.targetWeightKg}
           lang={lang}
           onLogWorkoutSession={onLogWorkoutSession}
+          onUpdateWorkoutSession={onUpdateWorkoutSession}
           onDeleteWorkoutSession={onDeleteWorkoutSession}
           onAddSportSession={onAddSportSession}
           onDeleteSportSession={onDeleteSportSession}
+          onAddPlannedSession={onAddPlannedSession}
+          onUpdatePlannedSession={onUpdatePlannedSession}
+          onDeletePlannedSession={onDeletePlannedSession}
           onScheduleSessionToCalendar={onScheduleSessionToCalendar}
         />
       )}
@@ -410,6 +427,7 @@ export const HealthView: React.FC<HealthViewProps> = ({
           nutritionSettings={nutritionSettings}
           lang={lang}
           onAddMealLog={onAddMealLog}
+          onUpdateMealLog={onUpdateMealLog}
           onDeleteMealLog={onDeleteMealLog}
           onUpdateNutritionSettings={onUpdateNutritionSettings}
           healthLogs={healthLogs}

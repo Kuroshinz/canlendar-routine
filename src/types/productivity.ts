@@ -386,6 +386,7 @@ export interface PlannedSession {
   dayIndex: number; // 0 = Monday
   title: string;
   prescriptions: Prescription[];
+  dayOfWeek?: string;
 }
 
 export interface SetLog {
@@ -478,9 +479,10 @@ export interface MealLog {
 }
 
 export interface MacroOverride {
-  protein: number;
-  carbs: number;
-  fat: number;
+  protein?: number;
+  carbs?: number;
+  fat?: number;
+  kcal?: number;
 }
 
 export interface NutritionSettings {

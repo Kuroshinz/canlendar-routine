@@ -6,6 +6,8 @@ import {
   CheckCircle2,
   Clock,
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
   BookOpen,
   Plus,
   Trash2,
@@ -18,6 +20,8 @@ import {
   X,
   Check,
   Zap,
+  History,
+  Minus,
 } from 'lucide-react';
 import {
   Exercise,
@@ -49,9 +53,13 @@ interface TrainingTabProps {
   userWeightKg: number;
   lang: 'vi' | 'en';
   onLogWorkoutSession: (w: Omit<WorkoutSession, 'id'>) => WorkoutSession;
+  onUpdateWorkoutSession?: (session: WorkoutSession) => void;
   onDeleteWorkoutSession: (id: string) => void;
   onAddSportSession: (s: Omit<SportSession, 'id' | 'createdAt'>) => SportSession;
   onDeleteSportSession: (id: string) => void;
+  onAddPlannedSession?: (session: PlannedSession) => void;
+  onUpdatePlannedSession?: (session: PlannedSession) => void;
+  onDeletePlannedSession?: (id: string) => void;
   onScheduleSessionToCalendar?: (title: string, date: string, color: string) => void;
 }
 
@@ -73,9 +81,13 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
   userWeightKg,
   lang,
   onLogWorkoutSession,
+  onUpdateWorkoutSession,
   onDeleteWorkoutSession,
   onAddSportSession,
   onDeleteSportSession,
+  onAddPlannedSession,
+  onUpdatePlannedSession,
+  onDeletePlannedSession,
   onScheduleSessionToCalendar,
 }) => {
   const [scheduledBanner, setScheduledBanner] = useState<string | null>(null);
@@ -93,6 +105,7 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
   interface ActiveSessionState {
     planned: PlannedSession;
     startedAt: number;
+    prescriptions: PlannedSession['prescriptions'];
     sets: Record<string, { weightKg: number; reps: number; completed: boolean }>;
   }
   const [activeSession, setActiveSession] = useState<ActiveSessionState | null>(null);
@@ -100,6 +113,21 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
   const [restSecondsLeft, setRestSecondsLeft] = useState<number | null>(null);
   const [restTotal, setRestTotal] = useState(90);
   const [autoScheduleOnFinish, setAutoScheduleOnFinish] = useState(true);
+  const [extraExerciseId, setExtraExerciseId] = useState('');
+
+  // Workout History details state
+  const [expandedWorkoutId, setExpandedWorkoutId] = useState<string | null>(null);
+
+  // Custom Plan Creation Modal state
+  const [showAddPlanModal, setShowAddPlanModal] = useState(false);
+  const [planTitle, setPlanTitle] = useState('');
+  const [planDayOfWeek, setPlanDayOfWeek] = useState('Thứ 2');
+  const [planPrescriptions, setPlanPrescriptions] = useState<
+    Array<{ exerciseId: string; sets: number; reps: string; rpe: number; restSeconds: number }>
+  >([
+    { exerciseId: 'bench-press', sets: 4, reps: '8-10', rpe: 8, restSeconds: 90 },
+    { exerciseId: 'incline-dumbbell-press', sets: 3, reps: '10-12', rpe: 8, restSeconds: 75 },
+  ]);
 
   const prs = personalRecords(workoutSessions);
 
@@ -163,11 +191,81 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
     });
     setActiveSession({
       planned: session,
+      prescriptions: [...session.prescriptions],
       startedAt: Date.now(),
       sets: initialSets,
     });
     setElapsedSeconds(0);
     setRestSecondsLeft(null);
+  };
+
+  const handleAddSetToExercise = (exerciseId: string) => {
+    if (!activeSession) return;
+    const existingKeys = Object.keys(activeSession.sets).filter((k) => k.startsWith(`${exerciseId}-`));
+    const newIndex = existingKeys.length;
+    const lastKey = `${exerciseId}-${newIndex - 1}`;
+    const fallbackWeight = prs[exerciseId]?.weightKg || 40;
+    const weightKg = activeSession.sets[lastKey]?.weightKg ?? fallbackWeight;
+    const reps = activeSession.sets[lastKey]?.reps ?? 10;
+
+    const nextPrescriptions = activeSession.prescriptions.map((p) =>
+      p.exerciseId === exerciseId ? { ...p, sets: p.sets + 1 } : p
+    );
+
+    setActiveSession({
+      ...activeSession,
+      prescriptions: nextPrescriptions,
+      sets: {
+        ...activeSession.sets,
+        [`${exerciseId}-${newIndex}`]: {
+          weightKg,
+          reps,
+          completed: false,
+        },
+      },
+    });
+  };
+
+  const handleRemoveSetFromExercise = (exerciseId: string, setIndex: number) => {
+    if (!activeSession) return;
+    const keyToRemove = `${exerciseId}-${setIndex}`;
+    const nextSets = { ...activeSession.sets };
+    delete nextSets[keyToRemove];
+
+    const nextPrescriptions = activeSession.prescriptions.map((p) =>
+      p.exerciseId === exerciseId ? { ...p, sets: Math.max(1, p.sets - 1) } : p
+    );
+
+    setActiveSession({
+      ...activeSession,
+      prescriptions: nextPrescriptions,
+      sets: nextSets,
+    });
+  };
+
+  const handleAddExerciseToActiveSession = (exerciseId: string) => {
+    if (!activeSession || !exerciseId) return;
+    if (activeSession.prescriptions.some((p) => p.exerciseId === exerciseId)) return;
+    const defaultSets = 3;
+    const defaultReps = 10;
+    const lastPr = prs[exerciseId]?.weightKg || 40;
+    const newSets: Record<string, { weightKg: number; reps: number; completed: boolean }> = { ...activeSession.sets };
+    for (let i = 0; i < defaultSets; i++) {
+      newSets[`${exerciseId}-${i}`] = {
+        weightKg: lastPr,
+        reps: defaultReps,
+        completed: false,
+      };
+    }
+    setActiveSession({
+      ...activeSession,
+      prescriptions: [
+        ...activeSession.prescriptions,
+        { exerciseId, sets: defaultSets, reps: '10', rpe: 8, restSeconds: 90 },
+      ],
+      sets: newSets,
+    });
+    setExtraExerciseId('');
   };
 
   const handleUpdateSet = (exerciseId: string, setIndex: number, weightKg: number, reps: number) => {
@@ -232,7 +330,7 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
       title: activeSession.planned.title,
       startedAt: activeSession.startedAt,
       finishedAt: Date.now(),
-      sets: sets.length > 0 ? sets : activeSession.planned.prescriptions.flatMap((p, pIdx) =>
+      sets: sets.length > 0 ? sets : activeSession.prescriptions.flatMap((p, pIdx) =>
         Array.from({ length: p.sets }, (_, sIdx) => ({
           id: `s-${Date.now()}-${pIdx}-${sIdx}`,
           exerciseId: p.exerciseId,
@@ -397,10 +495,28 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
 
       {/* Mesocycle Planned Sessions Grid */}
       <div>
-        <h3 className="text-xs font-bold text-gray-900 dark:text-gray-100 uppercase tracking-wider mb-3 flex items-center gap-2">
-          <Dumbbell className="w-4 h-4 text-orange-500" />
-          Giáo Án Kháng Lực Đang Áp Dụng (Mesocycle)
-        </h3>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-xs font-bold text-gray-900 dark:text-gray-100 uppercase tracking-wider flex items-center gap-2">
+            <Dumbbell className="w-4 h-4 text-orange-500" />
+            Giáo Án Kháng Lực Đang Áp Dụng (Mesocycle)
+          </h3>
+          <button
+            type="button"
+            onClick={() => {
+              setPlanTitle('');
+              setPlanDayOfWeek('Thứ 2');
+              setPlanPrescriptions([
+                { exerciseId: 'bench-press', sets: 4, reps: '8-10', rpe: 8, restSeconds: 90 },
+                { exerciseId: 'incline-dumbbell-press', sets: 3, reps: '10-12', rpe: 8, restSeconds: 75 },
+              ]);
+              setShowAddPlanModal(true);
+            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-semibold shadow-xs cursor-pointer transition-colors"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>Tạo Giáo Án Mới</span>
+          </button>
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {plannedSessions.map((session) => (
@@ -416,9 +532,30 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
                       {session.title}
                     </h4>
                   </div>
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400">
-                    {session.prescriptions.length} bài tập
-                  </span>
+                  <div className="flex items-center gap-1.5">
+                    {session.dayOfWeek && (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-orange-50 text-orange-700 dark:bg-orange-950/40 dark:text-orange-300">
+                        {session.dayOfWeek}
+                      </span>
+                    )}
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400">
+                      {session.prescriptions.length} bài tập
+                    </span>
+                    {onDeletePlannedSession && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (confirm(`Bạn có chắc muốn xóa giáo án "${session.title}"?`)) {
+                            onDeletePlannedSession(session.id);
+                          }
+                        }}
+                        className="p-1 rounded-lg text-gray-300 hover:text-rose-500 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 cursor-pointer ml-0.5 transition-colors"
+                        title="Xóa giáo án này"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 <div className="space-y-2 my-3">
@@ -570,6 +707,184 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
             })}
           </div>
         </div>
+      </div>
+
+      {/* Workout Sessions History Card */}
+      <div className="bg-white dark:bg-[#1a1e24] rounded-2xl border border-gray-200 dark:border-gray-800 p-4 shadow-xs">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <History className="w-4 h-4 text-orange-500" />
+            <h3 className="text-xs font-bold text-gray-900 dark:text-gray-100 uppercase tracking-wider">
+              Lịch Sử Buổi Tập Kháng Lực ({workoutSessions.length})
+            </h3>
+          </div>
+          <span className="text-[10px] text-gray-400">
+            Chi tiết tải trọng & từng hiệp đã hoàn thành
+          </span>
+        </div>
+
+        {workoutSessions.length === 0 ? (
+          <div className="text-center py-6 text-gray-400 border border-dashed border-gray-200 dark:border-gray-800 rounded-xl">
+            <Dumbbell className="w-8 h-8 mx-auto mb-2 opacity-30 text-orange-500" />
+            <p className="text-xs">Chưa có buổi tập kháng lực nào được ghi nhận.</p>
+            <p className="text-[11px] text-gray-400 mt-1">
+              Hãy nhấn "Bắt Đầu Tập Ngay" ở một giáo án bên trên để trải nghiệm tracking trực tiếp!
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {workoutSessions.map((session) => {
+              const isExpanded = expandedWorkoutId === session.id;
+              const totalSetsCount = session.sets.length;
+              const sessionVolume = session.sets.reduce((sum, s) => sum + s.weightKg * s.reps, 0);
+              const estKcal = gymCalories(session.sets, userWeightKg);
+              const durationMin =
+                session.finishedAt && session.startedAt
+                  ? Math.round((session.finishedAt - session.startedAt) / 60000)
+                  : 45;
+
+              // Group sets by exercise
+              const setsByEx: Record<string, typeof session.sets> = {};
+              session.sets.forEach((st) => {
+                if (!setsByEx[st.exerciseId]) setsByEx[st.exerciseId] = [];
+                setsByEx[st.exerciseId].push(st);
+              });
+
+              return (
+                <div
+                  key={session.id}
+                  className="rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50/60 dark:bg-gray-850/60 transition-all overflow-hidden"
+                >
+                  <div className="p-3.5 flex flex-wrap items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-orange-500" />
+                        <span className="font-bold text-xs sm:text-sm text-gray-900 dark:text-gray-100">
+                          {session.title}
+                        </span>
+                        <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
+                          {session.date}
+                        </span>
+                        {durationMin > 0 && (
+                          <span className="text-[10px] text-gray-400">
+                            ⏱ {durationMin} phút
+                          </span>
+                        )}
+                      </div>
+                      {session.note && (
+                        <p className="text-[11px] text-gray-500 dark:text-gray-400 italic mt-1">
+                          {session.note}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2 text-right">
+                        <div className="px-2 py-1 rounded-lg bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-900/40">
+                          <div className="text-[9px] uppercase font-bold text-orange-600 dark:text-orange-400">Tải trọng</div>
+                          <div className="text-xs font-bold text-gray-800 dark:text-gray-100 font-mono">
+                            {sessionVolume.toLocaleString()} kg
+                          </div>
+                        </div>
+                        <div className="px-2 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/40">
+                          <div className="text-[9px] uppercase font-bold text-emerald-600 dark:text-emerald-400">Tổng hiệp</div>
+                          <div className="text-xs font-bold text-gray-800 dark:text-gray-100 font-mono">
+                            {totalSetsCount} hiệp
+                          </div>
+                        </div>
+                        <div className="px-2 py-1 rounded-lg bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/40">
+                          <div className="text-[9px] uppercase font-bold text-rose-600 dark:text-rose-400">Tiêu thụ</div>
+                          <div className="text-xs font-bold text-gray-800 dark:text-gray-100 font-mono">
+                            {estKcal} kcal
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => setExpandedWorkoutId(isExpanded ? null : session.id)}
+                          className="p-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer flex items-center gap-1 text-xs"
+                          title="Xem chi tiết các hiệp"
+                        >
+                          <span className="text-[11px] font-semibold hidden sm:inline">
+                            {isExpanded ? 'Thu gọn' : 'Chi tiết'}
+                          </span>
+                          {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (confirm(`Bạn có chắc muốn xóa buổi tập "${session.title}" ngày ${session.date}?`)) {
+                              onDeleteWorkoutSession(session.id);
+                            }
+                          }}
+                          className="p-1.5 rounded-lg text-gray-300 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 cursor-pointer transition-colors"
+                          title="Xóa buổi tập này"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Expanded Accordion: List of Sets by Exercise */}
+                  {isExpanded && (
+                    <div className="border-t border-gray-200 dark:border-gray-800 p-3.5 bg-white dark:bg-gray-900/70 space-y-3 animate-fadeIn">
+                      <div className="text-[11px] font-bold uppercase text-gray-400 tracking-wider">
+                        Danh sách bài tập và thông số các hiệp:
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {Object.entries(setsByEx).map(([exId, setList]) => {
+                          const ex = exerciseById(exId);
+                          const color = ex ? MUSCLE_COLOR[ex.muscle] : '#ff6025';
+                          return (
+                            <div
+                              key={exId}
+                              className="p-2.5 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/40"
+                            >
+                              <div className="flex items-center justify-between mb-2">
+                                <div className="flex items-center gap-1.5 font-bold text-xs text-gray-800 dark:text-gray-200">
+                                  <span
+                                    className="text-[9px] px-1.5 py-0.5 rounded font-bold uppercase"
+                                    style={{ backgroundColor: `${color}22`, color }}
+                                  >
+                                    {ex ? MUSCLE_LABEL[ex.muscle] : 'Cơ'}
+                                  </span>
+                                  <span>{ex ? ex.name : exId}</span>
+                                </div>
+                                <span className="text-[10px] text-gray-400">
+                                  {setList.length} hiệp
+                                </span>
+                              </div>
+
+                              <div className="space-y-1">
+                                {setList.map((st, sIdx) => (
+                                  <div
+                                    key={st.id || sIdx}
+                                    className="flex items-center justify-between text-[11px] px-2 py-1 rounded-lg bg-white dark:bg-gray-800/80 border border-gray-100 dark:border-gray-700/60 font-mono"
+                                  >
+                                    <span className="text-gray-400">Hiệp {sIdx + 1}</span>
+                                    <span className="font-bold text-gray-900 dark:text-gray-100">
+                                      {st.weightKg} kg × {st.reps} reps
+                                    </span>
+                                    <span className="text-[10px] text-gray-400">
+                                      Vol: {st.weightKg * st.reps} kg
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Bottom Grid: Personal Records + Sports Log */}
@@ -801,6 +1116,7 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
           </div>
         </div>
       )}
+
       {/* Active Workout Player Modal / Sheet */}
       {activeSession && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
@@ -922,7 +1238,7 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
 
             {/* Exercise Prescriptions & Sets List */}
             <div className="flex-1 overflow-y-auto space-y-4 pr-1 my-1">
-              {activeSession.planned.prescriptions.map((pres) => {
+              {activeSession.prescriptions.map((pres) => {
                 const ex = exerciseById(pres.exerciseId);
                 const color = ex ? MUSCLE_COLOR[ex.muscle] : '#ff6025';
                 const curPr = prs[pres.exerciseId];
@@ -1037,27 +1353,80 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
                               )}
                             </div>
 
-                            <button
-                              type="button"
-                              onClick={() => handleToggleSet(pres.exerciseId, sIdx, pres.restSeconds)}
-                              className={`p-2 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 flex items-center gap-1 ${
-                                setItem.completed
-                                  ? 'bg-emerald-600 text-white hover:bg-emerald-700'
-                                  : 'bg-gray-100 hover:bg-orange-500 hover:text-white dark:bg-gray-700 text-gray-700 dark:text-gray-200'
-                              }`}
-                            >
-                              <Check className="w-4 h-4" />
-                              <span className="text-[11px]">
-                                {setItem.completed ? 'Xong' : 'Ghi'}
-                              </span>
-                            </button>
+                            <div className="flex items-center gap-1 shrink-0">
+                              {!setItem.completed && pres.sets > 1 && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveSetFromExercise(pres.exerciseId, sIdx)}
+                                  className="p-1.5 rounded-lg text-gray-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 cursor-pointer"
+                                  title="Xóa hiệp này"
+                                >
+                                  <Minus className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+
+                              <button
+                                type="button"
+                                onClick={() => handleToggleSet(pres.exerciseId, sIdx, pres.restSeconds)}
+                                className={`p-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                                  setItem.completed
+                                    ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                                    : 'bg-gray-100 hover:bg-orange-500 hover:text-white dark:bg-gray-700 text-gray-700 dark:text-gray-200'
+                                }`}
+                              >
+                                <Check className="w-4 h-4" />
+                                <span className="text-[11px]">
+                                  {setItem.completed ? 'Xong' : 'Ghi'}
+                                </span>
+                              </button>
+                            </div>
                           </div>
                         );
                       })}
                     </div>
+
+                    {/* Add extra set button */}
+                    <div className="flex justify-end pt-1">
+                      <button
+                        type="button"
+                        onClick={() => handleAddSetToExercise(pres.exerciseId)}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-dashed border-orange-300 dark:border-orange-800 text-orange-600 dark:text-orange-400 text-[10px] font-bold hover:bg-orange-50 dark:hover:bg-orange-950/30 cursor-pointer transition-colors"
+                      >
+                        <Plus className="w-3 h-3" />
+                        <span>+ Thêm hiệp cho bài này</span>
+                      </button>
+                    </div>
                   </div>
                 );
               })}
+
+              {/* Add extra exercise dropdown in active workout */}
+              <div className="p-3.5 rounded-2xl border border-dashed border-gray-300 dark:border-gray-700 bg-gray-50/30 dark:bg-gray-800/20 flex flex-wrap items-center justify-between gap-2.5">
+                <div className="flex items-center gap-2 flex-1 min-w-[220px]">
+                  <Dumbbell className="w-4 h-4 text-orange-500 shrink-0" />
+                  <select
+                    value={extraExerciseId}
+                    onChange={(e) => setExtraExerciseId(e.target.value)}
+                    className="w-full text-xs px-2.5 py-1.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
+                  >
+                    <option value="">-- Thêm bài tập khác vào buổi tập này --</option>
+                    {EXERCISES.map((ex) => (
+                      <option key={ex.id} value={ex.id}>
+                        {ex.name} ({MUSCLE_LABEL[ex.muscle]} · {ex.equipment})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <button
+                  type="button"
+                  disabled={!extraExerciseId}
+                  onClick={() => handleAddExerciseToActiveSession(extraExerciseId)}
+                  className="px-3.5 py-1.5 rounded-xl bg-orange-600 hover:bg-orange-700 disabled:opacity-50 text-white text-xs font-semibold cursor-pointer shrink-0 flex items-center gap-1 transition-colors"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Thêm bài tập</span>
+                </button>
+              </div>
             </div>
 
             {/* Bottom Actions */}
@@ -1081,6 +1450,212 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
                 <span>Hoàn Thành Buổi Tập & Lưu Vào Lịch Sử</span>
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create Custom Planned Session Modal */}
+      {showAddPlanModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-white dark:bg-[#1a1e24] rounded-3xl border border-gray-200 dark:border-gray-800 max-w-xl w-full p-5 space-y-4 shadow-2xl max-h-[90vh] flex flex-col animate-fadeIn">
+            <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3">
+              <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                <Dumbbell className="w-4 h-4 text-orange-500" />
+                Tạo Giáo Án Kháng Lực Mới (Mesocycle Plan)
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowAddPlanModal(false)}
+                className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (!planTitle.trim()) return;
+                const newPlan: PlannedSession = {
+                  id: `plan-${Date.now()}`,
+                  weekIndex: 0,
+                  dayIndex: 0,
+                  title: planTitle.trim(),
+                  dayOfWeek: planDayOfWeek,
+                  prescriptions: planPrescriptions,
+                };
+                onAddPlannedSession?.(newPlan);
+                setShowAddPlanModal(false);
+                setScheduledBanner(`Đã thêm giáo án mới "${newPlan.title}" vào mesocycle!`);
+                setTimeout(() => setScheduledBanner(null), 4000);
+              }}
+              className="space-y-4 flex-1 overflow-y-auto pr-1"
+            >
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="sm:col-span-2">
+                  <label className="text-[10px] font-semibold uppercase text-gray-400">Tên Giáo Án / Buổi Tập</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Ví dụ: Leg Day (Đùi Trước & Sau), Pull Day Focus..."
+                    value={planTitle}
+                    onChange={(e) => setPlanTitle(e.target.value)}
+                    className="mt-1 w-full text-xs px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-semibold uppercase text-gray-400">Thứ Trong Tuần</label>
+                  <select
+                    value={planDayOfWeek}
+                    onChange={(e) => setPlanDayOfWeek(e.target.value)}
+                    className="mt-1 w-full text-xs px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
+                  >
+                    {['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'Chủ Nhật'].map((d) => (
+                      <option key={d} value={d}>
+                        {d}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Prescriptions list */}
+              <div className="space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-[10px] font-semibold uppercase text-gray-400">
+                    Danh Sách Bài Tập ({planPrescriptions.length})
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPlanPrescriptions([
+                        ...planPrescriptions,
+                        { exerciseId: 'lat-pulldown', sets: 3, reps: '10-12', rpe: 8, restSeconds: 75 },
+                      ]);
+                    }}
+                    className="inline-flex items-center gap-1 text-[11px] font-bold text-orange-600 dark:text-orange-400 hover:underline cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Thêm bài tập</span>
+                  </button>
+                </div>
+
+                {planPrescriptions.map((p, idx) => (
+                  <div
+                    key={idx}
+                    className="p-3 rounded-2xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/40 space-y-2"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <select
+                        value={p.exerciseId}
+                        onChange={(e) => {
+                          const next = [...planPrescriptions];
+                          next[idx].exerciseId = e.target.value;
+                          setPlanPrescriptions(next);
+                        }}
+                        className="flex-1 text-xs px-2.5 py-1.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
+                      >
+                        {EXERCISES.map((ex) => (
+                          <option key={ex.id} value={ex.id}>
+                            {ex.name} ({MUSCLE_LABEL[ex.muscle]})
+                          </option>
+                        ))}
+                      </select>
+
+                      {planPrescriptions.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPlanPrescriptions(planPrescriptions.filter((_, i) => i !== idx));
+                          }}
+                          className="p-1.5 rounded-lg text-gray-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 cursor-pointer"
+                          title="Xóa bài tập này"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-4 gap-2 text-xs">
+                      <div>
+                        <span className="text-[9px] text-gray-400 uppercase font-semibold">Số hiệp</span>
+                        <input
+                          type="number"
+                          min="1"
+                          max="10"
+                          value={p.sets}
+                          onChange={(e) => {
+                            const next = [...planPrescriptions];
+                            next[idx].sets = Math.max(1, Number(e.target.value) || 1);
+                            setPlanPrescriptions(next);
+                          }}
+                          className="mt-0.5 w-full text-center py-1 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900"
+                        />
+                      </div>
+                      <div>
+                        <span className="text-[9px] text-gray-400 uppercase font-semibold">Reps</span>
+                        <input
+                          type="text"
+                          value={p.reps}
+                          onChange={(e) => {
+                            const next = [...planPrescriptions];
+                            next[idx].reps = e.target.value;
+                            setPlanPrescriptions(next);
+                          }}
+                          className="mt-0.5 w-full text-center py-1 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900"
+                        />
+                      </div>
+                      <div>
+                        <span className="text-[9px] text-gray-400 uppercase font-semibold">RPE</span>
+                        <input
+                          type="number"
+                          min="6"
+                          max="10"
+                          value={p.rpe}
+                          onChange={(e) => {
+                            const next = [...planPrescriptions];
+                            next[idx].rpe = Number(e.target.value) || 8;
+                            setPlanPrescriptions(next);
+                          }}
+                          className="mt-0.5 w-full text-center py-1 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900"
+                        />
+                      </div>
+                      <div>
+                        <span className="text-[9px] text-gray-400 uppercase font-semibold">Nghỉ (s)</span>
+                        <input
+                          type="number"
+                          min="30"
+                          step="15"
+                          value={p.restSeconds}
+                          onChange={(e) => {
+                            const next = [...planPrescriptions];
+                            next[idx].restSeconds = Number(e.target.value) || 90;
+                            setPlanPrescriptions(next);
+                          }}
+                          className="mt-0.5 w-full text-center py-1 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-gray-100 dark:border-gray-800">
+                <button
+                  type="button"
+                  onClick={() => setShowAddPlanModal(false)}
+                  className="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-700 text-xs font-semibold cursor-pointer"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold cursor-pointer transition-colors shadow-sm"
+                >
+                  Lưu Giáo Án
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

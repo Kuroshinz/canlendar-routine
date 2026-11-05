@@ -10,6 +10,9 @@ import {
   Sparkles,
   Ruler,
   Info,
+  Edit2,
+  Check,
+  X,
 } from 'lucide-react';
 import { BodyPoint, CtgProfile, GOAL_LABEL } from '../../../types/productivity';
 import {
@@ -35,6 +38,7 @@ interface InBodyTabProps {
   profile: CtgProfile;
   lang: 'vi' | 'en';
   onAddPoint: (point: Omit<BodyPoint, 'id' | 'createdAt'>) => void;
+  onUpdatePoint?: (id: string, patch: Partial<BodyPoint>) => void;
   onDeletePoint: (id: string) => void;
 }
 
@@ -43,6 +47,7 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
   profile,
   lang,
   onAddPoint,
+  onUpdatePoint,
   onDeletePoint,
 }) => {
   const sorted = useMemo(() => sortPoints(points), [points]);
@@ -50,6 +55,7 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
   const latest = useMemo(() => (sorted.length > 0 ? sorted[sorted.length - 1] : null), [sorted]);
 
   const [range, setRange] = useState<'7d' | '30d' | '90d' | 'all'>('30d');
+  const [editingPoint, setEditingPoint] = useState<BodyPoint | null>(null);
 
   const filteredPoints = useMemo(() => {
     if (range === 'all' || sorted.length === 0) return sorted;
@@ -531,13 +537,24 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
                       {p.note || '—'}
                     </td>
                     <td className="py-2 px-3 text-right">
-                      <button
-                        onClick={() => onDeletePoint(p.id)}
-                        className="p-1 rounded-lg text-gray-300 hover:text-rose-500 cursor-pointer"
-                        title="Xóa mốc đo"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                      <div className="flex items-center justify-end gap-1">
+                        <button
+                          type="button"
+                          onClick={() => setEditingPoint(p)}
+                          className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/40 cursor-pointer transition-colors"
+                          title="Chỉnh sửa số đo này"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onDeletePoint(p.id)}
+                          className="p-1.5 rounded-lg text-gray-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 cursor-pointer transition-colors"
+                          title="Xóa mốc đo"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -546,6 +563,150 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
           </table>
         </div>
       </div>
+
+      {/* Edit InBody Measurement Modal */}
+      {editingPoint && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-white dark:bg-[#1a1e24] rounded-2xl border border-gray-200 dark:border-gray-800 max-w-lg w-full p-5 space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3">
+              <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                <Edit2 className="w-4 h-4 text-blue-500" />
+                Chỉnh Sửa Mốc Đo InBody ({editingPoint.date})
+              </h3>
+              <button
+                type="button"
+                onClick={() => setEditingPoint(null)}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (!editingPoint) return;
+                onUpdatePoint?.(editingPoint.id, {
+                  date: editingPoint.date,
+                  weightKg: Number(editingPoint.weightKg),
+                  bodyFatPct: Number(editingPoint.bodyFatPct),
+                  waistCm: editingPoint.waistCm ? Number(editingPoint.waistCm) : undefined,
+                  chestCm: editingPoint.chestCm ? Number(editingPoint.chestCm) : undefined,
+                  armCm: editingPoint.armCm ? Number(editingPoint.armCm) : undefined,
+                  thighCm: editingPoint.thighCm ? Number(editingPoint.thighCm) : undefined,
+                  note: editingPoint.note?.trim() || undefined,
+                });
+                setEditingPoint(null);
+              }}
+              className="space-y-3"
+            >
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[10px] font-semibold uppercase text-gray-400">Ngày đo</label>
+                  <input
+                    type="date"
+                    value={editingPoint.date}
+                    onChange={(e) => setEditingPoint({ ...editingPoint, date: e.target.value })}
+                    className="mt-1 w-full text-xs px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-semibold uppercase text-gray-400">Cân nặng (kg)</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={editingPoint.weightKg}
+                    onChange={(e) =>
+                      setEditingPoint({ ...editingPoint, weightKg: Number(e.target.value) || 0 })
+                    }
+                    className="mt-1 w-full text-xs px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 font-bold"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-semibold uppercase text-gray-400">% Mỡ cơ thể</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={editingPoint.bodyFatPct}
+                    onChange={(e) =>
+                      setEditingPoint({ ...editingPoint, bodyFatPct: Number(e.target.value) || 0 })
+                    }
+                    className="mt-1 w-full text-xs px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 font-bold"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-semibold uppercase text-gray-400">Vòng eo (cm)</label>
+                  <input
+                    type="number"
+                    step="0.5"
+                    value={editingPoint.waistCm || ''}
+                    onChange={(e) =>
+                      setEditingPoint({ ...editingPoint, waistCm: Number(e.target.value) || undefined })
+                    }
+                    placeholder="Tùy chọn"
+                    className="mt-1 w-full text-xs px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-semibold uppercase text-gray-400">Vòng ngực (cm)</label>
+                  <input
+                    type="number"
+                    step="0.5"
+                    value={editingPoint.chestCm || ''}
+                    onChange={(e) =>
+                      setEditingPoint({ ...editingPoint, chestCm: Number(e.target.value) || undefined })
+                    }
+                    placeholder="Tùy chọn"
+                    className="mt-1 w-full text-xs px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-semibold uppercase text-gray-400">Bắp tay (cm)</label>
+                  <input
+                    type="number"
+                    step="0.5"
+                    value={editingPoint.armCm || ''}
+                    onChange={(e) =>
+                      setEditingPoint({ ...editingPoint, armCm: Number(e.target.value) || undefined })
+                    }
+                    placeholder="Tùy chọn"
+                    className="mt-1 w-full text-xs px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
+                  />
+                </div>
+                <div className="col-span-2">
+                  <label className="text-[10px] font-semibold uppercase text-gray-400">Ghi chú</label>
+                  <input
+                    type="text"
+                    value={editingPoint.note || ''}
+                    onChange={(e) => setEditingPoint({ ...editingPoint, note: e.target.value })}
+                    placeholder="Ghi chú buổi đo InBody..."
+                    className="mt-1 w-full text-xs px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-gray-100 dark:border-gray-800">
+                <button
+                  type="button"
+                  onClick={() => setEditingPoint(null)}
+                  className="px-3.5 py-2 rounded-xl border border-gray-300 dark:border-gray-700 text-xs font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-50 cursor-pointer"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs cursor-pointer"
+                >
+                  Lưu Thay Đổi
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -275,12 +275,19 @@ export function macroTargets(
   settings: NutritionSettings
 ): MacroTargets {
   const override = settings?.overrides?.[goal];
-  if (override && (override.protein > 0 || override.carbs > 0 || override.fat > 0)) {
+  if (
+    override &&
+    ((override.protein ?? 0) > 0 || (override.carbs ?? 0) > 0 || (override.fat ?? 0) > 0 || (override.kcal ?? 0) > 0)
+  ) {
+    const p = override.protein ?? Math.round(weightKg * (goal === 'cut' ? 2.0 : 1.8));
+    const f = override.fat ?? Math.round((kcal * 0.25) / 9);
+    const c = override.carbs ?? Math.max(0, Math.round((kcal - p * 4 - f * 9) / 4));
+    const totalKcal = override.kcal || Math.round(p * 4 + c * 4 + f * 9);
     return {
-      kcal: Math.round(override.protein * 4 + override.carbs * 4 + override.fat * 9),
-      protein: override.protein,
-      carbs: override.carbs,
-      fat: override.fat,
+      kcal: totalKcal,
+      protein: p,
+      carbs: c,
+      fat: f,
       manual: true,
     };
   }
@@ -374,19 +381,30 @@ export function itemFromTotals(name: string, amount: number, unit: 'g' | 'ml', t
  * Heuristic parser for Vietnamese food description.
  */
 export const FOOD_LEXICON: { keys: string[]; per100: MealTotals; unit: 'g' | 'ml' }[] = [
-  { keys: ['cơm trắng', 'cơm'], per100: { kcal: 130, protein: 2.7, carbs: 28, fat: 0.3 }, unit: 'g' },
+  { keys: ['cơm trắng', 'cơm', 'cơm nguội'], per100: { kcal: 130, protein: 2.7, carbs: 28, fat: 0.3 }, unit: 'g' },
+  { keys: ['cơm tấm', 'sườn'], per100: { kcal: 185, protein: 7.5, carbs: 28, fat: 5 }, unit: 'g' },
   { keys: ['ức gà', 'gà'], per100: { kcal: 165, protein: 31, carbs: 0, fat: 3.6 }, unit: 'g' },
   { keys: ['thịt bò', 'bò'], per100: { kcal: 250, protein: 26, carbs: 0, fat: 15 }, unit: 'g' },
-  { keys: ['trứng'], per100: { kcal: 155, protein: 13, carbs: 1.1, fat: 11 }, unit: 'g' },
-  { keys: ['cá hồi', 'cá'], per100: { kcal: 208, protein: 20, carbs: 0, fat: 13 }, unit: 'g' },
+  { keys: ['thịt lợn', 'thịt heo', 'heo', 'lợn'], per100: { kcal: 240, protein: 26, carbs: 0, fat: 14 }, unit: 'g' },
+  { keys: ['trứng', 'hột gà'], per100: { kcal: 155, protein: 13, carbs: 1.1, fat: 11 }, unit: 'g' },
+  { keys: ['cá hồi', 'hồi'], per100: { kcal: 208, protein: 20, carbs: 0, fat: 13 }, unit: 'g' },
+  { keys: ['cá ngừ', 'cá'], per100: { kcal: 132, protein: 28, carbs: 0, fat: 1.2 }, unit: 'g' },
+  { keys: ['tôm'], per100: { kcal: 99, protein: 24, carbs: 0.2, fat: 0.3 }, unit: 'g' },
   { keys: ['khoai lang'], per100: { kcal: 86, protein: 1.6, carbs: 20, fat: 0.1 }, unit: 'g' },
-  { keys: ['yến mạch'], per100: { kcal: 389, protein: 16.9, carbs: 66, fat: 6.9 }, unit: 'g' },
+  { keys: ['yến mạch', 'oats'], per100: { kcal: 389, protein: 16.9, carbs: 66, fat: 6.9 }, unit: 'g' },
   { keys: ['sữa tươi', 'sữa'], per100: { kcal: 42, protein: 3.4, carbs: 5, fat: 1 }, unit: 'ml' },
+  { keys: ['sữa chua', 'yogurt'], per100: { kcal: 60, protein: 3.5, carbs: 5, fat: 3 }, unit: 'g' },
+  { keys: ['whey', 'protein'], per100: { kcal: 385, protein: 75, carbs: 8, fat: 4 }, unit: 'g' },
   { keys: ['chuối'], per100: { kcal: 89, protein: 1.1, carbs: 23, fat: 0.3 }, unit: 'g' },
   { keys: ['táo'], per100: { kcal: 52, protein: 0.3, carbs: 14, fat: 0.2 }, unit: 'g' },
-  { keys: ['rau', 'salad'], per100: { kcal: 25, protein: 1.5, carbs: 4, fat: 0.3 }, unit: 'g' },
-  { keys: ['phở'], per100: { kcal: 90, protein: 5, carbs: 14, fat: 1.6 }, unit: 'g' },
+  { keys: ['bơ', 'avocado'], per100: { kcal: 160, protein: 2, carbs: 9, fat: 15 }, unit: 'g' },
+  { keys: ['hạt', 'hạnh nhân', 'hạt điều'], per100: { kcal: 580, protein: 21, carbs: 22, fat: 50 }, unit: 'g' },
+  { keys: ['rau', 'salad', 'cải', 'muống'], per100: { kcal: 25, protein: 1.5, carbs: 4, fat: 0.3 }, unit: 'g' },
+  { keys: ['phở'], per100: { kcal: 105, protein: 6, carbs: 16, fat: 2 }, unit: 'g' },
+  { keys: ['bún bò', 'bún'], per100: { kcal: 115, protein: 6.5, carbs: 17, fat: 2.5 }, unit: 'g' },
+  { keys: ['bún chả'], per100: { kcal: 155, protein: 8.5, carbs: 20, fat: 4.5 }, unit: 'g' },
   { keys: ['bánh mì'], per100: { kcal: 265, protein: 9, carbs: 49, fat: 3.2 }, unit: 'g' },
+  { keys: ['xôi'], per100: { kcal: 280, protein: 5, carbs: 58, fat: 2.5 }, unit: 'g' },
   { keys: ['đậu hũ', 'đậu phụ'], per100: { kcal: 76, protein: 8, carbs: 1.9, fat: 4.8 }, unit: 'g' },
 ];
 
@@ -424,15 +442,17 @@ export function parseFoodText(text: string): ParsedFood[] {
 
     const entry = FOOD_LEXICON.find((f) => f.keys.some((k) => lower.includes(k)));
     if (!entry) {
+      // Sensible baseline estimation instead of leaving raw 0 kcal
+      const factor = amount / 100;
       return {
         item: {
           name: segment,
           amount,
           unit,
-          kcal: 0,
-          protein: 0,
-          carbs: 0,
-          fat: 0,
+          kcal: Math.round(135 * factor),
+          protein: Math.round(6.5 * factor * 10) / 10,
+          carbs: Math.round(18 * factor * 10) / 10,
+          fat: Math.round(3.5 * factor * 10) / 10,
         },
         recognised: false,
       };

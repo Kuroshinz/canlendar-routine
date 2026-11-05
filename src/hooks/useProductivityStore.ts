@@ -123,6 +123,7 @@ export interface ProductivityStore {
   updateCtgProfile: (patch: Partial<CtgProfile>) => void;
   bodyPoints: BodyPoint[];
   addBodyPoint: (point: Omit<BodyPoint, 'id' | 'createdAt'>) => BodyPoint;
+  updateBodyPoint: (id: string, patch: Partial<BodyPoint>) => void;
   deleteBodyPoint: (id: string) => void;
   plannedSessions: PlannedSession[];
   addPlannedSession: (session: PlannedSession) => void;
@@ -130,12 +131,14 @@ export interface ProductivityStore {
   deletePlannedSession: (id: string) => void;
   workoutSessions: WorkoutSession[];
   logWorkoutSession: (session: Omit<WorkoutSession, 'id'>) => WorkoutSession;
+  updateWorkoutSession: (session: WorkoutSession) => void;
   deleteWorkoutSession: (id: string) => void;
   sportSessions: SportSession[];
   addSportSession: (sport: Omit<SportSession, 'id' | 'createdAt'>) => SportSession;
   deleteSportSession: (id: string) => void;
   meals: MealLog[];
   addMealLog: (meal: Omit<MealLog, 'id' | 'createdAt'>) => MealLog;
+  updateMealLog: (id: string, patch: Partial<MealLog>) => void;
   deleteMealLog: (id: string) => void;
   nutritionSettings: NutritionSettings;
   updateNutritionSettings: (patch: Partial<NutritionSettings>) => void;
@@ -513,6 +516,15 @@ export function useProductivityStore(): ProductivityStore {
     [setBodyPoints]
   );
 
+  const updateBodyPoint = useCallback(
+    (id: string, patch: Partial<BodyPoint>) => {
+      setBodyPoints((prev) =>
+        prev.map((p) => (p.id === id ? { ...p, ...patch } : p)).sort((a, b) => a.date.localeCompare(b.date))
+      );
+    },
+    [setBodyPoints]
+  );
+
   const addPlannedSession = useCallback(
     (session: PlannedSession) => {
       setPlannedSessions((prev) => [...prev, session]);
@@ -553,6 +565,13 @@ export function useProductivityStore(): ProductivityStore {
     [setWorkoutSessions]
   );
 
+  const updateWorkoutSession = useCallback(
+    (session: WorkoutSession) => {
+      setWorkoutSessions((prev) => prev.map((s) => (s.id === session.id ? session : s)));
+    },
+    [setWorkoutSessions]
+  );
+
   const addSportSession = useCallback(
     (input: Omit<SportSession, 'id' | 'createdAt'>) => {
       const sport: SportSession = {
@@ -589,6 +608,13 @@ export function useProductivityStore(): ProductivityStore {
   const deleteMealLog = useCallback(
     (id: string) => {
       setMeals((prev) => prev.filter((m) => m.id !== id));
+    },
+    [setMeals]
+  );
+
+  const updateMealLog = useCallback(
+    (id: string, patch: Partial<MealLog>) => {
+      setMeals((prev) => prev.map((m) => (m.id === id ? { ...m, ...patch } : m)));
     },
     [setMeals]
   );
@@ -806,6 +832,7 @@ export function useProductivityStore(): ProductivityStore {
     updateCtgProfile,
     bodyPoints,
     addBodyPoint,
+    updateBodyPoint,
     deleteBodyPoint,
     plannedSessions,
     addPlannedSession,
@@ -813,12 +840,14 @@ export function useProductivityStore(): ProductivityStore {
     deletePlannedSession,
     workoutSessions,
     logWorkoutSession,
+    updateWorkoutSession,
     deleteWorkoutSession,
     sportSessions,
     addSportSession,
     deleteSportSession,
     meals,
     addMealLog,
+    updateMealLog,
     deleteMealLog,
     nutritionSettings,
     updateNutritionSettings,
