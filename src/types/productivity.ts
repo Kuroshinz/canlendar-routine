@@ -55,6 +55,23 @@ export interface GoalProgress {
 }
 
 // ---------------------------------------------------------------------------
+// Daily Habits & Routines
+// ---------------------------------------------------------------------------
+
+export type RoutineTimeOfDay = 'morning' | 'afternoon' | 'evening' | 'anytime';
+
+export interface HabitItem {
+  id: string;
+  title: string;
+  category: string;
+  timeOfDay: RoutineTimeOfDay;
+  color: string;
+  targetDaysPerWeek: number;
+  completedDates: string[]; // List of YYYY-MM-DD
+  createdAt: number;
+}
+
+// ---------------------------------------------------------------------------
 // Focus sessions
 // ---------------------------------------------------------------------------
 

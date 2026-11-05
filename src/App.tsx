@@ -856,6 +856,11 @@ export default function App() {
                   dueDate: todayString(),
                 })
               }
+              habits={productivity.habits}
+              onToggleHabit={productivity.toggleHabitDate}
+              onScheduleTask={(taskId, dateStr, startTime, endTime) => {
+                productivity.updateTask(taskId, { dueDate: dateStr, startTime, endTime });
+              }}
             />
           )}
 
@@ -891,6 +896,10 @@ export default function App() {
                 } catch {}
                 handleViewChange('focus');
               }}
+              habits={productivity.habits}
+              onAddHabit={productivity.addHabit}
+              onToggleHabit={productivity.toggleHabitDate}
+              onDeleteHabit={productivity.deleteHabit}
             />
           )}
 

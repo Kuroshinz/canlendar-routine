@@ -8,10 +8,13 @@ import {
   dailyCashFlow,
   expenseByCategory,
   filterTransactions,
+  findFreeTimeSlots,
   focusMinutesByDay,
   formatDuration,
   formatMoney,
+  habitCurrentStreak,
   healthAverages,
+  isHabitDoneOn,
   isTaskOverdue,
   macroCalories,
   macroPercentages,
@@ -23,9 +26,10 @@ import {
   totalFocusMinutes,
   weightTrend,
 } from './productivityUtils';
-import { BudgetSettings, GoalItem, TaskItem, Transaction } from '../types/productivity';
+import { BudgetSettings, GoalItem, HabitItem, TaskItem, Transaction } from '../types/productivity';
 import { FocusSession } from '../types/productivity';
 import { HealthDayLog } from '../types/productivity';
+import { CalendarEvent } from '../types/calendar';
 
 function assert(condition: boolean, msg: string) {
   if (!condition) throw new Error(`Assertion failed: ${msg}`);
@@ -239,6 +243,59 @@ assert(averages.steps === 8000, 'average steps over three days');
 assert(averages.sleepHours === 7.5, 'average sleep over three days');
 assert(averages.caloriesIn === 2200, 'average calories over three days');
 assert(healthAverages([], 7).steps === 0, 'no logs yields zeros');
+
+// --- Habits & Smart Scheduler ---------------------------------------------
+
+const sampleHabit: HabitItem = {
+  id: 'h1',
+  title: 'Uống 500ml nước',
+  category: 'health',
+  timeOfDay: 'morning',
+  color: '#039BE5',
+  targetDaysPerWeek: 7,
+  completedDates: ['2026-10-27', '2026-10-28', '2026-10-29', '2026-10-30'],
+  createdAt: 1000,
+};
+
+assert(isHabitDoneOn(sampleHabit, '2026-10-30') === true, 'habit done today');
+assert(isHabitDoneOn(sampleHabit, '2026-10-25') === false, 'habit not done');
+assert(habitCurrentStreak(sampleHabit, '2026-10-30') === 4, 'streak is 4 days');
+assert(habitCurrentStreak(sampleHabit, '2026-10-31') === 4, 'streak counts from yesterday if not done today yet');
+assert(habitCurrentStreak(sampleHabit, '2026-11-05') === 0, 'streak is broken after missed days');
+
+const dayEvents: CalendarEvent[] = [
+  {
+    id: 'e1',
+    title: 'Họp sáng',
+    startDate: '2026-10-30',
+    startTime: '09:00',
+    endDate: '2026-10-30',
+    endTime: '10:00',
+    allDay: false,
+    calendarId: 'work',
+    color: '#039BE5',
+    type: 'event',
+    createdAt: 1000,
+  },
+  {
+    id: 'e2',
+    title: 'Ăn trưa',
+    startDate: '2026-10-30',
+    startTime: '12:00',
+    endDate: '2026-10-30',
+    endTime: '13:00',
+    allDay: false,
+    calendarId: 'work',
+    color: '#039BE5',
+    type: 'event',
+    createdAt: 1000,
+  },
+];
+
+const freeSlots = findFreeTimeSlots(dayEvents, '2026-10-30', 8, 17);
+assert(freeSlots.length >= 2, 'found at least two open time blocks');
+assert(freeSlots[0].start === '08:00' && freeSlots[0].end === '09:00', 'first free slot is 8 to 9');
+assert(freeSlots[1].start === '10:00' && freeSlots[1].end === '12:00', 'second free slot is 10 to 12');
 
 console.log('All productivityUtils tests passed successfully!');
 

@@ -8,6 +8,7 @@ import {
   FocusSession,
   GoalItem,
   GoalProgress,
+  HabitItem,
   HealthDayLog,
   HealthProfile,
   TaskItem,
@@ -19,6 +20,7 @@ import {
 import {
   SEED_FOCUS_SESSIONS,
   SEED_GOALS,
+  SEED_HABITS,
   SEED_HEALTH_LOGS,
   SEED_TASKS,
   SEED_TRANSACTIONS,
@@ -44,6 +46,7 @@ const KEYS = {
   workouts: 'gcal_prod_workouts',
   wellness: 'gcal_prod_wellness',
   profile: 'gcal_prod_health_profile',
+  habits: 'gcal_prod_habits',
 } as const;
 
 export interface ProductivityStore {
@@ -63,6 +66,12 @@ export interface ProductivityStore {
   updateGoal: (id: string, patch: Partial<GoalItem>) => void;
   deleteGoal: (id: string) => void;
   goalProgress: GoalProgress[];
+
+  // Habits & Routines
+  habits: HabitItem[];
+  addHabit: (habit: Omit<HabitItem, 'id' | 'createdAt' | 'completedDates'>) => HabitItem;
+  toggleHabitDate: (id: string, dateStr: string) => void;
+  deleteHabit: (id: string) => void;
 
   // Focus
   sessions: FocusSession[];
@@ -119,6 +128,7 @@ export function useProductivityStore(): ProductivityStore {
     KEYS.profile,
     DEFAULT_HEALTH_PROFILE
   );
+  const [habits, setHabits] = usePersistentState<HabitItem[]>(KEYS.habits, SEED_HABITS);
 
   // --- Tasks ---------------------------------------------------------------
 
@@ -259,6 +269,47 @@ export function useProductivityStore(): ProductivityStore {
     [goals, tasks]
   );
 
+  // --- Habits & Routines ----------------------------------------------------
+
+  const addHabit = useCallback(
+    (input: Omit<HabitItem, 'id' | 'createdAt' | 'completedDates'>) => {
+      const habit: HabitItem = {
+        ...input,
+        id: uid('habit'),
+        completedDates: [],
+        createdAt: Date.now(),
+      };
+      setHabits((prev) => [habit, ...prev]);
+      return habit;
+    },
+    [setHabits]
+  );
+
+  const toggleHabitDate = useCallback(
+    (id: string, dateStr: string) => {
+      setHabits((prev) =>
+        prev.map((h) => {
+          if (h.id !== id) return h;
+          const has = h.completedDates.includes(dateStr);
+          return {
+            ...h,
+            completedDates: has
+              ? h.completedDates.filter((d) => d !== dateStr)
+              : [...h.completedDates, dateStr],
+          };
+        })
+      );
+    },
+    [setHabits]
+  );
+
+  const deleteHabit = useCallback(
+    (id: string) => {
+      setHabits((prev) => prev.filter((h) => h.id !== id));
+    },
+    [setHabits]
+  );
+
   // --- Focus ---------------------------------------------------------------
 
   const addSession = useCallback(
@@ -378,8 +429,9 @@ export function useProductivityStore(): ProductivityStore {
       workouts,
       wellness,
       healthProfile,
+      habits,
     }),
-    [tasks, goals, sessions, transactions, budget, healthLogs, workouts, wellness, healthProfile]
+    [tasks, goals, sessions, transactions, budget, healthLogs, workouts, wellness, healthProfile, habits]
   );
 
   const restore = useCallback(
@@ -393,6 +445,7 @@ export function useProductivityStore(): ProductivityStore {
       setWorkouts(data.workouts);
       setWellness(data.wellness);
       setHealthProfile(data.healthProfile);
+      if (data.habits) setHabits(data.habits);
     },
     [
       setTasks,
@@ -404,6 +457,7 @@ export function useProductivityStore(): ProductivityStore {
       setWorkouts,
       setWellness,
       setHealthProfile,
+      setHabits,
     ]
   );
 
@@ -417,6 +471,7 @@ export function useProductivityStore(): ProductivityStore {
     setWorkouts(SEED_WORKOUTS);
     setWellness(SEED_WELLNESS);
     setHealthProfile(DEFAULT_HEALTH_PROFILE);
+    setHabits(SEED_HABITS);
   }, [
     setTasks,
     setGoals,
@@ -427,6 +482,7 @@ export function useProductivityStore(): ProductivityStore {
     setWorkouts,
     setWellness,
     setHealthProfile,
+    setHabits,
   ]);
 
   return {
@@ -443,6 +499,10 @@ export function useProductivityStore(): ProductivityStore {
     updateGoal,
     deleteGoal,
     goalProgress,
+    habits,
+    addHabit,
+    toggleHabitDate,
+    deleteHabit,
     sessions,
     addSession,
     deleteSession,

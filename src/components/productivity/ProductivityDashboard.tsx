@@ -14,6 +14,11 @@ import {
   Footprints,
   TrendingDown,
   Plus,
+  Sparkles,
+  Sunrise,
+  Sun,
+  Sunset,
+  CalendarPlus,
 } from 'lucide-react';
 import { CalendarEvent, CalendarViewType } from '../../types/calendar';
 import {
@@ -21,6 +26,7 @@ import {
   FocusSession,
   GoalItem,
   GoalProgress,
+  HabitItem,
   HealthDayLog,
   HealthProfile,
   TaskItem,
@@ -29,8 +35,11 @@ import {
 import { ProgressBar } from '../charts/SimpleCharts';
 import {
   computeBudgetStatus,
+  findFreeTimeSlots,
   formatMoney,
   formatMoneyCompact,
+  habitCurrentStreak,
+  isHabitDoneOn,
   isTaskOverdue,
   monthPrefixOf,
   sortTasks,
@@ -50,11 +59,14 @@ interface ProductivityDashboardProps {
   budget: BudgetSettings;
   healthLogs: HealthDayLog[];
   healthProfile: HealthProfile;
+  habits?: HabitItem[];
   lang: 'vi' | 'en';
   onNavigate: (view: CalendarViewType) => void;
   onSetTaskStatus: (id: string, status: TaskItem['status']) => void;
   onOpenEvent: (event: CalendarEvent) => void;
   onAddTask?: (title: string) => void;
+  onToggleHabit?: (id: string, dateStr: string) => void;
+  onScheduleTask?: (taskId: string, dateStr: string, startTime: string, endTime: string) => void;
 }
 
 export const ProductivityDashboard: React.FC<ProductivityDashboardProps> = ({
@@ -67,13 +79,17 @@ export const ProductivityDashboard: React.FC<ProductivityDashboardProps> = ({
   budget,
   healthLogs,
   healthProfile,
+  habits = [],
   lang,
   onNavigate,
   onSetTaskStatus,
   onOpenEvent,
   onAddTask,
+  onToggleHabit,
+  onScheduleTask,
 }) => {
   const [quickTaskTitle, setQuickTaskTitle] = useState('');
+  const [habitFilter, setHabitFilter] = useState<'all' | 'morning' | 'afternoon' | 'evening'>('all');
   const today = formatDateString(new Date());
   const monthPrefix = monthPrefixOf(new Date());
 
@@ -93,6 +109,23 @@ export const ProductivityDashboard: React.FC<ProductivityDashboardProps> = ({
 
   const todaysTasks = useMemo(() => sortTasks(tasksDueOn(tasks, today)), [tasks, today]);
   const openTasks = useMemo(() => todaysTasks.filter((t) => t.status !== 'completed'), [todaysTasks]);
+
+  // Smart free slots detection for today
+  const freeSlots = useMemo(() => findFreeTimeSlots(events, today, 8, 20), [events, today]);
+  const tasksWithoutTime = useMemo(() => openTasks.filter((t) => !t.startTime), [openTasks]);
+
+  // Habits calculations
+  const completedHabitsToday = useMemo(
+    () => habits.filter((h) => isHabitDoneOn(h, today)).length,
+    [habits, today]
+  );
+  const habitCompletionPercent =
+    habits.length > 0 ? Math.round((completedHabitsToday / habits.length) * 100) : 0;
+
+  const filteredHabits = useMemo(() => {
+    if (habitFilter === 'all') return habits;
+    return habits.filter((h) => h.timeOfDay === habitFilter || h.timeOfDay === 'anytime');
+  }, [habits, habitFilter]);
 
   const focusToday = useMemo(() => totalFocusMinutes(sessions, today, today), [sessions, today]);
   const focusWeek = useMemo(() => {
@@ -394,10 +427,165 @@ export const ProductivityDashboard: React.FC<ProductivityDashboardProps> = ({
               </div>
             )}
           </div>
+
+          {/* Smart Day Schedule Suggestions */}
+          {freeSlots.length > 0 && tasksWithoutTime.length > 0 && onScheduleTask && (
+            <div className="bg-linear-to-r from-blue-50/80 to-indigo-50/80 dark:from-blue-950/30 dark:to-indigo-950/30 rounded-2xl border border-blue-200 dark:border-blue-900/60 p-4 shadow-xs">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-1.5">
+                  <Sparkles className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                  <h3 className="text-xs font-bold text-blue-950 dark:text-blue-200">
+                    {lang === 'vi' ? 'Gợi ý phân bổ lịch trình thông minh' : 'Smart Day Schedule Suggestions'}
+                  </h3>
+                </div>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 font-semibold font-mono">
+                  {freeSlots.length} {lang === 'vi' ? 'khoảng trống' : 'free slots'}
+                </span>
+              </div>
+              <p className="text-[11px] text-gray-600 dark:text-gray-300 mb-3 leading-relaxed">
+                {lang === 'vi'
+                  ? `Hôm nay bạn có ${freeSlots.length} khung giờ trống: ${freeSlots
+                      .slice(0, 3)
+                      .map((s) => `${s.start}–${s.end} (${s.durationMin}p)`)
+                      .join(', ')}. Xếp việc cần làm vào lịch để làm việc hiệu quả!`
+                  : `You have ${freeSlots.length} free time blocks today: ${freeSlots
+                      .slice(0, 3)
+                      .map((s) => `${s.start}–${s.end}`)
+                      .join(', ')}.`}
+              </p>
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const task = tasksWithoutTime[0];
+                    const slot = freeSlots[0];
+                    if (task && slot) {
+                      onScheduleTask(task.id, today, slot.start, slot.end);
+                    }
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-2xs transition-all cursor-pointer"
+                >
+                  <CalendarPlus className="w-3.5 h-3.5" />
+                  <span>
+                    {lang === 'vi'
+                      ? `Xếp "${tasksWithoutTime[0].title.slice(0, 20)}..." vào ${freeSlots[0].start}`
+                      : `Schedule into ${freeSlots[0].start}`}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onNavigate('day')}
+                  className="text-[11px] px-2.5 py-1.5 text-blue-700 dark:text-blue-300 hover:underline font-medium cursor-pointer"
+                >
+                  {lang === 'vi' ? 'Xem lịch ngày' : 'View Day View'}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Right column */}
         <div className="xl:col-span-5 space-y-4">
+          {/* Daily Habits & Routines */}
+          <div className="bg-white dark:bg-[#1a1e24] rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs p-4">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-1.5">
+                <Flame className="w-4 h-4 text-amber-500 fill-amber-500" />
+                <h3 className="text-xs font-bold text-gray-900 dark:text-gray-100">
+                  {lang === 'vi' ? 'Thói Quen & Routine Hôm Nay' : 'Daily Habits & Routine'}
+                </h3>
+              </div>
+              <span className="text-xs font-mono font-bold text-amber-600 dark:text-amber-400">
+                {completedHabitsToday}/{habits.length}
+              </span>
+            </div>
+
+            <div className="mb-3">
+              <ProgressBar percent={habitCompletionPercent} color="#F59E0B" height={6} />
+            </div>
+
+            {/* Time of day filter tabs */}
+            <div className="flex items-center gap-1 mb-3 text-[11px]">
+              {[
+                { id: 'all', vi: 'Tất cả', en: 'All' },
+                { id: 'morning', vi: 'Sáng', en: 'Morning', icon: Sunrise },
+                { id: 'afternoon', vi: 'Chiều', en: 'Afternoon', icon: Sun },
+                { id: 'evening', vi: 'Tối', en: 'Evening', icon: Sunset },
+              ].map((tab) => {
+                const isActive = habitFilter === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setHabitFilter(tab.id as any)}
+                    className={`px-2 py-0.5 rounded-lg font-medium cursor-pointer transition-colors ${
+                      isActive
+                        ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 font-bold'
+                        : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'
+                    }`}
+                  >
+                    {lang === 'vi' ? tab.vi : tab.en}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Habits list */}
+            <div className="space-y-1.5">
+              {filteredHabits.map((habit) => {
+                const isDone = isHabitDoneOn(habit, today);
+                const streak = habitCurrentStreak(habit, today);
+                return (
+                  <div
+                    key={habit.id}
+                    onClick={() => onToggleHabit?.(habit.id, today)}
+                    className="flex items-center justify-between p-2 rounded-xl border border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-[#242931] cursor-pointer transition-colors group"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <button
+                        type="button"
+                        className="cursor-pointer shrink-0"
+                        aria-label={isDone ? 'Mark habit undone' : 'Mark habit done'}
+                      >
+                        {isDone ? (
+                          <CheckCircle2 className="w-4 h-4 text-emerald-500 fill-emerald-100 dark:fill-emerald-950" />
+                        ) : (
+                          <Circle className="w-4 h-4 text-gray-300 dark:text-gray-600 group-hover:text-amber-500" />
+                        )}
+                      </button>
+                      <span
+                        className={`text-xs truncate ${
+                          isDone
+                            ? 'line-through text-gray-400 dark:text-gray-500 font-normal'
+                            : 'text-gray-800 dark:text-gray-100 font-medium'
+                        }`}
+                      >
+                        {habit.title}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                      {streak > 0 && (
+                        <span
+                          className="flex items-center gap-0.5 text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-1.5 py-0.2 rounded-full"
+                          title={`${streak} ${lang === 'vi' ? 'ngày liên tiếp' : 'days streak'}`}
+                        >
+                          <Flame className="w-3 h-3 text-amber-500 fill-amber-500" />
+                          <span>{streak}</span>
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+              {filteredHabits.length === 0 && (
+                <p className="text-center text-xs text-gray-400 py-4">
+                  {lang === 'vi'
+                    ? 'Chưa có thói quen nào trong khung giờ này.'
+                    : 'No habits in this time of day.'}
+                </p>
+              )}
+            </div>
+          </div>
           {/* Goals */}
           <div className="bg-white dark:bg-[#1a1e24] rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs p-4">
             <h3 className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 mb-3">

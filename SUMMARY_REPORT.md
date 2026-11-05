@@ -152,3 +152,16 @@ Cảnh báo còn lại của Vite (không phải lỗi, có từ trước): bund
 | **Nút "Tập trung (Pomodoro)" trên từng công việc** | Trong `TasksGoalsView`, mỗi tác vụ chưa hoàn thành có thêm nút "Tập trung (Pomodoro)". Bấm vào sẽ tự động gán task đó vào phiên học và chuyển thẳng sang đồng hồ Pomodoro. |
 | **Xuất báo cáo tài chính sang file CSV** | Trang `FinanceView` bổ sung nút "Xuất CSV" hỗ trợ định dạng UTF-8 với BOM để mở trực tiếp trên Excel không bị lỗi font tiếng Việt, bao gồm đầy đủ ngày tháng, danh mục, phân loại thu/chi, số tiền và ghi chú. |
 | **Danh bạ & Địa điểm động trên thanh bên phải** | Panel Contacts và Maps trên `RightSidebar` tự động quét và hợp nhất danh sách khách mời tham gia (`guests`) cùng các địa điểm (`location`) từ các sự kiện có trên lịch thật của bạn, kết hợp với các địa chỉ mặc định sẵn có. |
+
+---
+
+## 10. Hệ thống Thói Quen Hàng Ngày (Routine & Habit Tracker) & Môi Trường Tập Trung Nâng Cao
+
+| Hạng mục | Chi tiết |
+| --- | --- |
+| **Hệ thống Quản lý Thói quen (Daily Routine & Habit Tracker)** | Đúng với tên gọi của dự án `canlendar-routine`, hệ thống đã bổ sung cấu trúc quản lý thói quen hàng ngày (`HabitItem`) tích hợp trong `ProductivityStore`. Hỗ trợ phân loại theo buổi (Sáng 🌅 / Chiều ☀️ / Tối 🌙 / Linh hoạt), số ngày mục tiêu trong tuần và đếm chuỗi liên tiếp (Streak 🔥). |
+| **Thẻ Routine trên Tổng quan (ProductivityDashboard)** | Hiển thị thẻ Thói quen hôm nay với tỷ lệ % hoàn thành, thanh tiến độ, bộ lọc theo buổi, nút tick hoàn thành 1 chạm kèm huy hiệu đếm chuỗi ngày liên tiếp (`Streak`). |
+| **Quản lý Thói quen trong Tasks & Goals** | Cho phép thêm mới thói quen, đặt tên, khung thời gian, màu sắc và xóa thói quen trực tiếp trên giao diện `TasksGoalsView`. |
+| **Bộ tổng hợp âm thanh nền tập trung (Ambient Focus Sound Synthesizer)** | Tạo mới `src/utils/ambientSound.ts` sử dụng **Web Audio API thuần**, 100% offline, không tốn băng thông hay phụ thuộc tệp âm thanh ngoài: 🌧️ Mưa rơi (Pink noise + Lowpass filter), 🌊 Sóng biển (Low-frequency oscillation swell), 🎧 Tiếng ồn nâu (Brown noise), 🍃 Rừng thiền (Bandpass wind). Tích hợp vào `StudyFocusView` và chế độ Zen toàn màn hình với thanh điều chỉnh âm lượng mượt mà. |
+| **Gợi ý phân bổ lịch trình thông minh (Smart Day Scheduler)** | Thuật toán `findFreeTimeSlots` tự động quét các sự kiện trong ngày để tìm khoảng thời gian trống (từ 30 phút trở lên), hiển thị thẻ gợi ý trên Dashboard và hỗ trợ 1 nút bấm để xếp ngay công việc ưu tiên chưa có giờ vào khung thời gian trống. |
+| **Kiểm thử bổ sung** | Bổ sung unit test cho `isHabitDoneOn`, `habitCurrentStreak` (tính đúng chuỗi liên tiếp và không bị đứt chuỗi trong ngày hiện tại) và `findFreeTimeSlots` trong `src/utils/productivityUtils.test.ts`. |

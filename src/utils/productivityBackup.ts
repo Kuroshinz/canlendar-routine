@@ -2,6 +2,7 @@ import {
   BudgetSettings,
   FocusSession,
   GoalItem,
+  HabitItem,
   HealthDayLog,
   HealthProfile,
   TaskItem,
@@ -21,6 +22,7 @@ export interface ProductivitySnapshotData {
   workouts: WorkoutLog[];
   wellness: WellnessCheck[];
   healthProfile: HealthProfile;
+  habits?: HabitItem[];
 }
 
 export interface ProductivityBackup extends ProductivitySnapshotData {
@@ -84,5 +86,6 @@ export function parseProductivityBackup(raw: unknown): ProductivityBackup | null
     workouts: raw.workouts as WorkoutLog[],
     wellness: raw.wellness as WellnessCheck[],
     healthProfile: raw.healthProfile as unknown as HealthProfile,
+    habits: isArray(raw.habits) ? (raw.habits as HabitItem[]) : undefined,
   };
 }

@@ -14,9 +14,15 @@ import {
   X,
   Pencil,
   Timer,
+  Flame,
+  Sunrise,
+  Sun,
+  Sunset,
 } from 'lucide-react';
 import {
   GoalItem,
+  HabitItem,
+  RoutineTimeOfDay,
   TASK_PRIORITY_META,
   TASK_STATUS_META,
   TaskItem,
@@ -27,6 +33,8 @@ import { CalendarCategory } from '../../types/calendar';
 import { ProgressBar } from '../charts/SimpleCharts';
 import {
   computeTaskCompletionRatio,
+  habitCurrentStreak,
+  isHabitDoneOn,
   isTaskOverdue,
   sortTasks,
 } from '../../utils/productivityUtils';
@@ -49,6 +57,10 @@ interface TasksGoalsViewProps {
   onDeleteGoal: (id: string) => void;
   onOpenTaskOnCalendar: (dateStr: string) => void;
   onStartFocus?: (taskId: string) => void;
+  habits?: HabitItem[];
+  onAddHabit?: (habit: Omit<HabitItem, 'id' | 'createdAt' | 'completedDates'>) => HabitItem;
+  onToggleHabit?: (id: string, dateStr: string) => void;
+  onDeleteHabit?: (id: string) => void;
 }
 
 const STATUS_TABS: { id: TaskStatus | 'all'; labelVi: string; labelEn: string }[] = [
@@ -75,6 +87,10 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
   onDeleteGoal,
   onOpenTaskOnCalendar,
   onStartFocus,
+  habits = [],
+  onAddHabit,
+  onToggleHabit,
+  onDeleteHabit,
 }) => {
   const [statusFilter, setStatusFilter] = useState<TaskStatus | 'all'>('all');
   const [priorityFilter, setPriorityFilter] = useState<TaskPriority | 'all'>('all');
@@ -82,8 +98,14 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [showTaskForm, setShowTaskForm] = useState(false);
   const [showGoalForm, setShowGoalForm] = useState(false);
+  const [showHabitForm, setShowHabitForm] = useState(false);
   const [editingTask, setEditingTask] = useState<TaskItem | null>(null);
   const [subtaskDraft, setSubtaskDraft] = useState<Record<string, string>>({});
+
+  // Habit form state
+  const [habitTitle, setHabitTitle] = useState('');
+  const [habitTimeOfDay, setHabitTimeOfDay] = useState<RoutineTimeOfDay>('morning');
+  const [habitColor, setHabitColor] = useState('#039BE5');
 
   const today = formatDateString(new Date());
 
@@ -152,6 +174,20 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
     setGoalTitle('');
     setGoalTargetDate('');
     setShowGoalForm(false);
+  };
+
+  const handleSubmitHabit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!habitTitle.trim() || !onAddHabit) return;
+    onAddHabit({
+      title: habitTitle.trim(),
+      category: 'personal',
+      timeOfDay: habitTimeOfDay,
+      color: habitColor,
+      targetDaysPerWeek: 7,
+    });
+    setHabitTitle('');
+    setShowHabitForm(false);
   };
 
   const toggleExpanded = (id: string) => {
@@ -646,6 +682,105 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
               );
             })
           )}
+
+          {/* Daily Habits & Routines */}
+          <div className="pt-4 border-t border-gray-200 dark:border-gray-800 space-y-3">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-bold text-gray-900 dark:text-gray-100 flex items-center gap-1.5">
+                <Flame className="w-4 h-4 text-amber-500 fill-amber-500" />
+                {lang === 'vi' ? 'Thói Quen & Routine Hàng Ngày' : 'Daily Habits & Routines'}
+              </h2>
+              {onAddHabit && (
+                <button
+                  type="button"
+                  onClick={() => setShowHabitForm(true)}
+                  className="flex items-center gap-1 text-[11px] font-semibold text-amber-600 dark:text-amber-400 hover:underline cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>{lang === 'vi' ? 'Thêm thói quen' : 'Add habit'}</span>
+                </button>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              {habits.map((habit) => {
+                const isDone = isHabitDoneOn(habit, today);
+                const streak = habitCurrentStreak(habit, today);
+                return (
+                  <div
+                    key={habit.id}
+                    className="bg-white dark:bg-[#1a1e24] p-3 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs flex items-center justify-between gap-2"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <button
+                        type="button"
+                        onClick={() => onToggleHabit?.(habit.id, today)}
+                        className="cursor-pointer shrink-0"
+                      >
+                        {isDone ? (
+                          <CheckCircle2 className="w-4 h-4 text-emerald-500 fill-emerald-100 dark:fill-emerald-950" />
+                        ) : (
+                          <Circle className="w-4 h-4 text-gray-300 dark:text-gray-600 hover:text-amber-500" />
+                        )}
+                      </button>
+                      <div className="min-w-0">
+                        <p
+                          className={`text-xs font-semibold truncate ${
+                            isDone
+                              ? 'line-through text-gray-400 dark:text-gray-500 font-normal'
+                              : 'text-gray-800 dark:text-gray-100'
+                          }`}
+                        >
+                          {habit.title}
+                        </p>
+                        <span className="text-[10px] text-gray-400">
+                          {habit.timeOfDay === 'morning'
+                            ? lang === 'vi'
+                              ? 'Buổi sáng'
+                              : 'Morning'
+                            : habit.timeOfDay === 'afternoon'
+                            ? lang === 'vi'
+                              ? 'Buổi chiều'
+                              : 'Afternoon'
+                            : habit.timeOfDay === 'evening'
+                            ? lang === 'vi'
+                              ? 'Buổi tối'
+                              : 'Evening'
+                            : lang === 'vi'
+                            ? 'Cả ngày'
+                            : 'Anytime'}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      {streak > 0 && (
+                        <span className="flex items-center gap-0.5 text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded-full">
+                          <Flame className="w-3 h-3 text-amber-500 fill-amber-500" />
+                          <span>{streak}d</span>
+                        </span>
+                      )}
+                      {onDeleteHabit && (
+                        <button
+                          type="button"
+                          onClick={() => onDeleteHabit(habit.id)}
+                          className="p-1 text-gray-300 hover:text-rose-500 rounded cursor-pointer"
+                          title={lang === 'vi' ? 'Xoá thói quen' : 'Delete habit'}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+              {habits.length === 0 && (
+                <p className="text-xs text-gray-400 text-center py-4">
+                  {lang === 'vi' ? 'Chưa có thói quen nào.' : 'No habits yet.'}
+                </p>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -905,6 +1040,84 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
               >
                 {lang === 'vi' ? 'Tạo mục tiêu' : 'Create goal'}
               </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Habit form modal */}
+      {showHabitForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
+          <form
+            onSubmit={handleSubmitHabit}
+            className="bg-white dark:bg-[#1a1e24] w-full max-w-md rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden"
+          >
+            <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-100 dark:border-gray-800">
+              <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                <Flame className="w-4 h-4 text-amber-500 fill-amber-500" />
+                <span>{lang === 'vi' ? 'Thêm thói quen mới' : 'New Habit'}</span>
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowHabitForm(false)}
+                className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-3">
+              <div>
+                <label className="block text-[11px] font-semibold text-gray-600 dark:text-gray-300 mb-1">
+                  {lang === 'vi' ? 'Tên thói quen' : 'Habit title'}
+                </label>
+                <input
+                  type="text"
+                  value={habitTitle}
+                  onChange={(e) => setHabitTitle(e.target.value)}
+                  autoFocus
+                  required
+                  placeholder={
+                    lang === 'vi'
+                      ? 'Ví dụ: Đọc sách 20 phút mỗi ngày...'
+                      : 'e.g. Read 20 minutes daily...'
+                  }
+                  className="w-full text-xs px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-gray-600 dark:text-gray-300 mb-1">
+                  {lang === 'vi' ? 'Khung thời gian' : 'Time of day'}
+                </label>
+                <select
+                  value={habitTimeOfDay}
+                  onChange={(e) => setHabitTimeOfDay(e.target.value as RoutineTimeOfDay)}
+                  className="w-full text-xs px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
+                >
+                  <option value="morning">{lang === 'vi' ? 'Buổi sáng' : 'Morning'}</option>
+                  <option value="afternoon">{lang === 'vi' ? 'Buổi chiều' : 'Afternoon'}</option>
+                  <option value="evening">{lang === 'vi' ? 'Buổi tối' : 'Evening'}</option>
+                  <option value="anytime">{lang === 'vi' ? 'Linh hoạt cả ngày' : 'Anytime'}</option>
+                </select>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowHabitForm(false)}
+                  className="px-3.5 py-1.5 rounded-lg text-xs font-medium border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 cursor-pointer"
+                >
+                  {lang === 'vi' ? 'Hủy' : 'Cancel'}
+                </button>
+                <button
+                  type="submit"
+                  disabled={!habitTitle.trim()}
+                  className="px-4 py-1.5 rounded-lg text-xs font-semibold bg-amber-600 hover:bg-amber-700 text-white cursor-pointer disabled:opacity-40"
+                >
+                  {lang === 'vi' ? 'Lưu thói quen' : 'Save habit'}
+                </button>
+              </div>
             </div>
           </form>
         </div>

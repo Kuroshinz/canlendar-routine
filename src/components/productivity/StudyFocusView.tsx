@@ -13,6 +13,7 @@ import {
   Target,
   BarChart3,
   Volume2,
+  Headphones,
 } from 'lucide-react';
 import {
   FocusMode,
@@ -26,6 +27,13 @@ import { focusMinutesByDay, formatDuration, totalFocusMinutes } from '../../util
 import { playNotificationSound } from '../../utils/sound';
 import { formatDateString } from '../../utils/calendarUtils';
 import { usePersistentState } from '../../hooks/usePersistentState';
+import {
+  AMBIENT_TRACKS,
+  AmbientTrack,
+  startAmbientSound,
+  stopAmbientSound,
+  setAmbientVolume,
+} from '../../utils/ambientSound';
 
 interface StudyFocusViewProps {
   tasks: TaskItem[];
@@ -95,6 +103,39 @@ export const StudyFocusView: React.FC<StudyFocusViewProps> = ({
   const [timer, setTimer] = usePersistentState<PersistedTimer>('gcal_focus_timer', DEFAULT_TIMER);
   const [zen, setZen] = useState(false);
   const [now, setNow] = useState(() => Date.now());
+
+  // Ambient sound state
+  const [ambientPlaying, setAmbientPlaying] = useState(false);
+  const [ambientTrack, setAmbientTrack] = useState<AmbientTrack>('rain');
+  const [ambientVol, setAmbientVol] = useState(0.4);
+
+  useEffect(() => {
+    return () => {
+      stopAmbientSound();
+    };
+  }, []);
+
+  const handleToggleAmbient = () => {
+    if (ambientPlaying) {
+      stopAmbientSound();
+      setAmbientPlaying(false);
+    } else {
+      startAmbientSound(ambientTrack, ambientVol);
+      setAmbientPlaying(true);
+    }
+  };
+
+  const handleSelectTrack = (track: AmbientTrack) => {
+    setAmbientTrack(track);
+    if (ambientPlaying) {
+      startAmbientSound(track, ambientVol);
+    }
+  };
+
+  const handleChangeVolume = (v: number) => {
+    setAmbientVol(v);
+    setAmbientVolume(v);
+  };
 
   const { mode, phase, countdownMinutes, linkedTaskId, running, soundOn, completedPomodoros } = timer;
   const phaseSeconds = mode === 'pomodoro' ? PHASE_SECONDS[phase] : countdownMinutes * 60;
@@ -469,6 +510,61 @@ export const StudyFocusView: React.FC<StudyFocusViewProps> = ({
         </button>
       </div>
 
+      {/* Ambient Sound Bar */}
+      <div className="w-full max-w-sm mt-5 pt-4 border-t border-gray-100 dark:border-gray-800">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-1.5 text-xs font-semibold text-gray-700 dark:text-gray-300">
+            <Headphones className={`w-3.5 h-3.5 ${ambientPlaying ? 'text-violet-500 animate-pulse' : 'text-gray-400'}`} />
+            <span>{lang === 'vi' ? 'Âm thanh nền tập trung' : 'Focus Ambient Sound'}</span>
+          </div>
+          <button
+            type="button"
+            onClick={handleToggleAmbient}
+            className={`text-xs px-2.5 py-1 rounded-lg font-medium cursor-pointer transition-colors ${
+              ambientPlaying
+                ? 'bg-violet-600 text-white shadow-2xs'
+                : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200'
+            }`}
+          >
+            {ambientPlaying ? (lang === 'vi' ? 'Đang phát' : 'Playing') : (lang === 'vi' ? 'Bật âm thanh' : 'Play Sound')}
+          </button>
+        </div>
+
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {AMBIENT_TRACKS.map((trk) => (
+            <button
+              key={trk.id}
+              type="button"
+              onClick={() => handleSelectTrack(trk.id)}
+              className={`text-xs px-2.5 py-1 rounded-lg flex items-center gap-1 cursor-pointer transition-all ${
+                ambientTrack === trk.id
+                  ? 'bg-violet-100 dark:bg-violet-950/60 text-violet-700 dark:text-violet-300 font-bold border border-violet-300 dark:border-violet-700'
+                  : 'bg-gray-50 dark:bg-gray-800/60 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 border border-transparent'
+              }`}
+            >
+              <span>{trk.emoji}</span>
+              <span>{lang === 'vi' ? trk.labelVi : trk.labelEn}</span>
+            </button>
+          ))}
+        </div>
+
+        {ambientPlaying && (
+          <div className="flex items-center gap-2 mt-2.5 px-1 animate-in fade-in duration-100">
+            <span className="text-[10px] text-gray-400 uppercase tracking-wider">{lang === 'vi' ? 'Âm lượng' : 'Volume'}</span>
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.05}
+              value={ambientVol}
+              onChange={(e) => handleChangeVolume(Number(e.target.value))}
+              className="flex-1 accent-violet-600 h-1 bg-gray-200 dark:bg-gray-700 rounded-lg cursor-pointer"
+            />
+            <span className="text-[10px] font-mono text-gray-400 w-8 text-right">{Math.round(ambientVol * 100)}%</span>
+          </div>
+        )}
+      </div>
+
       <p className="text-[11px] text-gray-400 mt-4">
         {lang === 'vi'
           ? `Đã hoàn thành ${completedPomodoros} phiên Pomodoro trong lần chạy này`
@@ -526,6 +622,15 @@ export const StudyFocusView: React.FC<StudyFocusViewProps> = ({
             className="p-3.5 rounded-full bg-white/10 hover:bg-white/20 text-gray-300 cursor-pointer"
           >
             <RotateCcw className="w-4 h-4" />
+          </button>
+          <button
+            onClick={handleToggleAmbient}
+            title={lang === 'vi' ? 'Bật/tắt âm thanh nền' : 'Toggle ambient sound'}
+            className={`p-3.5 rounded-full transition-colors cursor-pointer ${
+              ambientPlaying ? 'bg-violet-600 text-white' : 'bg-white/10 hover:bg-white/20 text-gray-300'
+            }`}
+          >
+            <Headphones className="w-4 h-4" />
           </button>
         </div>
       </div>

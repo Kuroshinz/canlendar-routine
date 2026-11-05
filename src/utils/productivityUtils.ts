@@ -7,6 +7,7 @@ import {
   FocusSession,
   GoalItem,
   GoalProgress,
+  HabitItem,
   HealthDayLog,
   TaskItem,
   Transaction,
@@ -404,5 +405,119 @@ export function healthAverages(
     sleepHours: Math.round((sum((l) => l.sleepHours) / scoped.length) * 10) / 10,
     caloriesIn: Math.round(sum((l) => l.caloriesIn) / scoped.length),
   };
+}
+
+// ---------------------------------------------------------------------------
+// Habits & Routines
+// ---------------------------------------------------------------------------
+
+/** Check if a habit was completed on a given YYYY-MM-DD date. */
+export function isHabitDoneOn(habit: HabitItem, dateStr: string): boolean {
+  return habit.completedDates.includes(dateStr);
+}
+
+/**
+ * Calculate the current consecutive streak (in days) for a habit.
+ * If done today, streak includes today. If not yet done today, streak
+ * counts backwards from yesterday (so streak is not broken during the current day).
+ */
+export function habitCurrentStreak(habit: HabitItem, todayStr: string): number {
+  if (habit.completedDates.length === 0) return 0;
+  const completedSet = new Set(habit.completedDates);
+
+  const [y, m, d] = todayStr.split('-').map(Number);
+  const cursor = new Date(y, m - 1, d);
+
+  let streak = 0;
+  const todayDone = completedSet.has(todayStr);
+
+  if (todayDone) {
+    streak = 1;
+    cursor.setDate(cursor.getDate() - 1);
+  } else {
+    // Check if done yesterday
+    cursor.setDate(cursor.getDate() - 1);
+    const yesterdayStr = formatDateString(cursor);
+    if (!completedSet.has(yesterdayStr)) {
+      return 0;
+    }
+    streak = 1;
+    cursor.setDate(cursor.getDate() - 1);
+  }
+
+  while (true) {
+    const prevStr = formatDateString(cursor);
+    if (completedSet.has(prevStr)) {
+      streak += 1;
+      cursor.setDate(cursor.getDate() - 1);
+    } else {
+      break;
+    }
+  }
+
+  return streak;
+}
+
+/**
+ * Find open free time slots during daytime (default 08:00 to 20:00)
+ * for a specific date, between existing events.
+ */
+export function findFreeTimeSlots(
+  events: CalendarEvent[],
+  dateStr: string,
+  startHour: number = 8,
+  endHour: number = 20
+): Array<{ start: string; end: string; durationMin: number }> {
+  const dayEvents = events.filter(
+    (e) => !e.allDay && e.startDate === dateStr && e.startTime && e.endTime
+  );
+  const intervals = dayEvents
+    .map((e) => ({
+      start: timeStringToMinutes(e.startTime),
+      end: timeStringToMinutes(e.endTime),
+    }))
+    .filter((iv) => iv.end > iv.start)
+    .sort((a, b) => a.start - b.start);
+
+  const dayStart = startHour * 60;
+  const dayEnd = endHour * 60;
+
+  const freeSlots: Array<{ start: string; end: string; durationMin: number }> = [];
+  let currentStart = dayStart;
+
+  for (const iv of intervals) {
+    if (iv.start > currentStart) {
+      const dur = iv.start - currentStart;
+      if (dur >= 30) {
+        freeSlots.push({
+          start: `${String(Math.floor(currentStart / 60)).padStart(2, '0')}:${String(
+            currentStart % 60
+          ).padStart(2, '0')}`,
+          end: `${String(Math.floor(iv.start / 60)).padStart(2, '0')}:${String(
+            iv.start % 60
+          ).padStart(2, '0')}`,
+          durationMin: dur,
+        });
+      }
+    }
+    currentStart = Math.max(currentStart, iv.end);
+  }
+
+  if (currentStart < dayEnd) {
+    const dur = dayEnd - currentStart;
+    if (dur >= 30) {
+      freeSlots.push({
+        start: `${String(Math.floor(currentStart / 60)).padStart(2, '0')}:${String(
+          currentStart % 60
+        ).padStart(2, '0')}`,
+        end: `${String(Math.floor(dayEnd / 60)).padStart(2, '0')}:${String(
+          dayEnd % 60
+        ).padStart(2, '0')}`,
+        durationMin: dur,
+      });
+    }
+  }
+
+  return freeSlots;
 }
 
