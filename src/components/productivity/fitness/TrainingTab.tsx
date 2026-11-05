@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Dumbbell,
   Calendar,
@@ -27,7 +27,9 @@ import {
   Exercise,
   MUSCLE_COLOR,
   MUSCLE_LABEL,
+  MuscleGroup,
   PlannedSession,
+  RoutineSplitTemplate,
   SPORT_LABEL,
   SportSession,
   SportType,
@@ -51,6 +53,10 @@ interface TrainingTabProps {
   workoutSessions: WorkoutSession[];
   sportSessions: SportSession[];
   userWeightKg: number;
+  customExercises?: Exercise[];
+  onAddCustomExercise?: (exercise: Omit<Exercise, 'id'>) => Exercise;
+  onDeleteCustomExercise?: (id: string) => void;
+  onApplySplitTemplate?: (template: RoutineSplitTemplate) => void;
   lang: 'vi' | 'en';
   onLogWorkoutSession: (w: Omit<WorkoutSession, 'id'>) => WorkoutSession;
   onUpdateWorkoutSession?: (session: WorkoutSession) => void;
@@ -79,6 +85,10 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
   workoutSessions,
   sportSessions,
   userWeightKg,
+  customExercises = [],
+  onAddCustomExercise,
+  onDeleteCustomExercise,
+  onApplySplitTemplate,
   lang,
   onLogWorkoutSession,
   onUpdateWorkoutSession,
@@ -114,6 +124,20 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
   const [restTotal, setRestTotal] = useState(90);
   const [autoScheduleOnFinish, setAutoScheduleOnFinish] = useState(true);
   const [extraExerciseId, setExtraExerciseId] = useState('');
+
+  // Combined Exercises & Lookup
+  const allExercises = useMemo(() => [...EXERCISES, ...customExercises], [customExercises]);
+  const getExercise = useCallback((id: string) => exerciseById(id, customExercises), [customExercises]);
+
+  // Custom Exercise Modal state
+  const [showAddExerciseModal, setShowAddExerciseModal] = useState(false);
+  const [newExName, setNewExName] = useState('');
+  const [newExMuscle, setNewExMuscle] = useState<MuscleGroup>('chest');
+  const [newExEquipment, setNewExEquipment] = useState('Dumbbell');
+  const [newExCue, setNewExCue] = useState('');
+
+  // Active Split Template
+  const [currentSplit, setCurrentSplit] = useState<RoutineSplitTemplate>('upper_lower');
 
   // Workout History details state
   const [expandedWorkoutId, setExpandedWorkoutId] = useState<string | null>(null);
@@ -383,8 +407,8 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
   }, [workoutSessions]);
 
   const muscleSets = useMemo(() => {
-    return setsByMuscle(workoutSessions, EXERCISES);
-  }, [workoutSessions]);
+    return setsByMuscle(workoutSessions, allExercises);
+  }, [workoutSessions, allExercises]);
 
   const handleSchedule = (session: PlannedSession) => {
     const today = todayString();
@@ -393,6 +417,42 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
     }
     setScheduledBanner(`Đã lên lịch "${session.title}" vào Google Calendar hôm nay (${today})!`);
     setTimeout(() => setScheduledBanner(null), 4000);
+  };
+
+  const handleScheduleFullWeek = () => {
+    if (!onScheduleSessionToCalendar || plannedSessions.length === 0) return;
+    const now = new Date();
+    const day = now.getDay();
+    const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+    const monday = new Date(now.setDate(diff));
+
+    plannedSessions.forEach((session, idx) => {
+      const sessionDate = new Date(monday);
+      const dayOffset = session.dayIndex !== undefined ? session.dayIndex : idx;
+      sessionDate.setDate(monday.getDate() + dayOffset);
+      const dateStr = sessionDate.toISOString().slice(0, 10);
+      onScheduleSessionToCalendar(session.title, dateStr, '#ff6025');
+    });
+
+    setScheduledBanner(`Đã đồng bộ toàn bộ ${plannedSessions.length} buổi tập tuần này lên Lịch tuần!`);
+    setTimeout(() => setScheduledBanner(null), 5000);
+  };
+
+  const handleSaveCustomExercise = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newExName.trim()) return;
+    onAddCustomExercise?.({
+      name: newExName.trim(),
+      muscle: newExMuscle,
+      equipment: newExEquipment.trim() || 'Tự do',
+      cue: newExCue.trim() || 'Tập trung cảm nhận cơ bắp',
+      isCustom: true,
+    });
+    setScheduledBanner(`Đã thêm bài tập ngoài "${newExName.trim()}" vào thư viện!`);
+    setTimeout(() => setScheduledBanner(null), 4000);
+    setShowAddExerciseModal(false);
+    setNewExName('');
+    setNewExCue('');
   };
 
   const handleQuickLog = (session: PlannedSession) => {
@@ -440,7 +500,7 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
     setTimeout(() => setScheduledBanner(null), 4000);
   };
 
-  const filteredExercises = EXERCISES.filter(
+  const filteredExercises = allExercises.filter(
     (e) =>
       e.name.toLowerCase().includes(exerciseSearch.toLowerCase()) ||
       MUSCLE_LABEL[e.muscle]?.toLowerCase().includes(exerciseSearch.toLowerCase())
@@ -492,6 +552,74 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
           <span>{scheduledBanner}</span>
         </div>
       )}
+
+      {/* Routine Split Selector & Week Synchronizer */}
+      <div className="bg-white dark:bg-[#1a1e24] rounded-2xl border border-gray-200 dark:border-gray-800 p-4 shadow-xs space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border-b border-gray-100 dark:border-gray-800 pb-3">
+          <div>
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-orange-500" />
+              <h3 className="text-xs font-bold text-gray-900 dark:text-gray-100 uppercase tracking-wider">
+                Chọn Lịch Tập &amp; Phân Chia Nhóm Cơ (Splits)
+              </h3>
+            </div>
+            <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
+              Chuyển đổi tức thì giữa các phân chia giáo án thể hình kinh điển hoặc tự tạo buổi tập riêng
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 self-start sm:self-auto">
+            {onScheduleSessionToCalendar && (
+              <button
+                type="button"
+                onClick={handleScheduleFullWeek}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-xs cursor-pointer transition-colors"
+                title="Đồng bộ lịch các buổi tập tuần này vào Google Calendar"
+              >
+                <Calendar className="w-3.5 h-3.5" />
+                <span>Đồng bộ tuần lên Lịch</span>
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => setShowAddExerciseModal(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs cursor-pointer transition-colors"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Thêm Bài Ngoài</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Preset Split Chips */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs">
+          {[
+            { id: 'ppl' as const, label: 'PPL (Push - Pull - Legs)', desc: '5 buổi: Đẩy / Kéo / Chân' },
+            { id: 'upper_lower' as const, label: 'Upper / Lower (UL)', desc: '4 buổi: Thân Trên / Thân Dưới' },
+            { id: 'arnold' as const, label: 'Arnold Split', desc: '6 buổi: Ngực+Lưng / Vai+Tay / Chân' },
+            { id: 'fullbody' as const, label: 'Full Body', desc: '3 buổi: Toàn Thân A / B / C' },
+          ].map((s) => (
+            <button
+              key={s.id}
+              type="button"
+              onClick={() => {
+                setCurrentSplit(s.id);
+                onApplySplitTemplate?.(s.id);
+                setScheduledBanner(`Đã tạo và nạp thành công lịch tập ${s.label}!`);
+                setTimeout(() => setScheduledBanner(null), 4000);
+              }}
+              className={`px-3 py-2 rounded-xl text-xs font-semibold border transition-all cursor-pointer shrink-0 text-left ${
+                currentSplit === s.id
+                  ? 'bg-orange-500 text-white border-orange-500 shadow-xs'
+                  : 'bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700/60'
+              }`}
+            >
+              <div className="font-bold">{s.label}</div>
+              <div className="text-[10px] opacity-75">{s.desc}</div>
+            </button>
+          ))}
+        </div>
+      </div>
 
       {/* Mesocycle Planned Sessions Grid */}
       <div>
@@ -560,9 +688,9 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
 
                 <div className="space-y-2 my-3">
                   {session.prescriptions.map((pres, idx) => {
-                    const ex = exerciseById(pres.exerciseId);
-                    const muscleLabel = ex ? MUSCLE_LABEL[ex.muscle] : 'Toàn thân';
-                    const muscleColor = ex ? MUSCLE_COLOR[ex.muscle] : '#ff6025';
+                    const ex = getExercise(pres.exerciseId);
+                    const muscleLabel = ex ? MUSCLE_LABEL[ex.muscle as MuscleGroup] : 'Toàn thân';
+                    const muscleColor = ex ? MUSCLE_COLOR[ex.muscle as MuscleGroup] : '#ff6025';
 
                     return (
                       <div
@@ -836,8 +964,8 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         {Object.entries(setsByEx).map(([exId, setList]) => {
-                          const ex = exerciseById(exId);
-                          const color = ex ? MUSCLE_COLOR[ex.muscle] : '#ff6025';
+                          const ex = getExercise(exId);
+                          const color = ex ? MUSCLE_COLOR[ex.muscle as MuscleGroup] : '#ff6025';
                           return (
                             <div
                               key={exId}
@@ -849,7 +977,7 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
                                     className="text-[9px] px-1.5 py-0.5 rounded font-bold uppercase"
                                     style={{ backgroundColor: `${color}22`, color }}
                                   >
-                                    {ex ? MUSCLE_LABEL[ex.muscle] : 'Cơ'}
+                                    {ex ? MUSCLE_LABEL[ex.muscle as MuscleGroup] : 'Cơ'}
                                   </span>
                                   <span>{ex ? ex.name : exId}</span>
                                 </div>
@@ -1070,16 +1198,28 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white dark:bg-[#1a1e24] rounded-2xl border border-gray-200 dark:border-gray-800 max-w-lg w-full p-5 space-y-4 shadow-xl max-h-[85vh] flex flex-col">
             <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3">
-              <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+              <div className="flex items-center gap-2">
                 <BookOpen className="w-4 h-4 text-blue-500" />
-                Thư Viện Bài Tập & Cách Đọc Cues
-              </h3>
-              <button
-                onClick={() => setShowLibraryModal(false)}
-                className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 cursor-pointer"
-              >
-                Đóng
-              </button>
+                <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                  Thư Viện Bài Tập ({allExercises.length})
+                </h3>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowAddExerciseModal(true)}
+                  className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold cursor-pointer transition-colors flex items-center gap-1"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>+ Bài ngoài</span>
+                </button>
+                <button
+                  onClick={() => setShowLibraryModal(false)}
+                  className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 cursor-pointer"
+                >
+                  Đóng
+                </button>
+              </div>
             </div>
 
             <input
@@ -1096,15 +1236,38 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
                 return (
                   <div key={ex.id} className="py-2.5">
                     <div className="flex items-center justify-between">
-                      <span className="font-bold text-xs text-gray-900 dark:text-gray-100">
-                        {ex.name}
-                      </span>
-                      <span
-                        className="text-[9px] px-1.5 py-0.5 rounded font-bold uppercase"
-                        style={{ backgroundColor: `${color}22`, color }}
-                      >
-                        {MUSCLE_LABEL[ex.muscle]} · {ex.equipment}
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-bold text-xs text-gray-900 dark:text-gray-100">
+                          {ex.name}
+                        </span>
+                        {ex.isCustom && (
+                          <span className="text-[9px] px-1.5 py-0.2 rounded font-extrabold uppercase bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                            Bài Ngoài
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span
+                          className="text-[9px] px-1.5 py-0.5 rounded font-bold uppercase"
+                          style={{ backgroundColor: `${color}22`, color }}
+                        >
+                          {MUSCLE_LABEL[ex.muscle]} · {ex.equipment}
+                        </span>
+                        {ex.isCustom && onDeleteCustomExercise && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (window.confirm(`Xóa bài tập ngoài "${ex.name}" khỏi thư viện?`)) {
+                                onDeleteCustomExercise(ex.id);
+                              }
+                            }}
+                            className="p-1 rounded text-gray-400 hover:text-rose-500 cursor-pointer transition-colors"
+                            title="Xóa bài tập ngoài"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
                     </div>
                     <div className="text-[11px] text-gray-500 dark:text-gray-400 mt-1 italic flex items-center gap-1">
                       <span className="text-orange-500 font-bold not-italic">Cue:</span> {ex.cue}
@@ -1239,8 +1402,8 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
             {/* Exercise Prescriptions & Sets List */}
             <div className="flex-1 overflow-y-auto space-y-4 pr-1 my-1">
               {activeSession.prescriptions.map((pres) => {
-                const ex = exerciseById(pres.exerciseId);
-                const color = ex ? MUSCLE_COLOR[ex.muscle] : '#ff6025';
+                const ex = getExercise(pres.exerciseId);
+                const color = ex ? MUSCLE_COLOR[ex.muscle as MuscleGroup] : '#ff6025';
                 const curPr = prs[pres.exerciseId];
 
                 return (
@@ -1255,7 +1418,7 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
                             className="text-[9px] px-1.5 py-0.5 rounded font-bold uppercase"
                             style={{ backgroundColor: `${color}22`, color }}
                           >
-                            {ex ? MUSCLE_LABEL[ex.muscle] : 'Cơ'} · {ex?.equipment}
+                            {ex ? MUSCLE_LABEL[ex.muscle as MuscleGroup] : 'Cơ'} · {ex?.equipment}
                           </span>
                           <span className="font-bold text-xs sm:text-sm text-gray-900 dark:text-gray-100">
                             {ex?.name || pres.exerciseId}
@@ -1410,9 +1573,9 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
                     className="w-full text-xs px-2.5 py-1.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
                   >
                     <option value="">-- Thêm bài tập khác vào buổi tập này --</option>
-                    {EXERCISES.map((ex) => (
+                    {allExercises.map((ex) => (
                       <option key={ex.id} value={ex.id}>
-                        {ex.name} ({MUSCLE_LABEL[ex.muscle]} · {ex.equipment})
+                        {ex.name} ({MUSCLE_LABEL[ex.muscle]} · {ex.equipment}){ex.isCustom ? ' [Bài Ngoài]' : ''}
                       </option>
                     ))}
                   </select>
@@ -1555,9 +1718,9 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
                         }}
                         className="flex-1 text-xs px-2.5 py-1.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
                       >
-                        {EXERCISES.map((ex) => (
+                        {allExercises.map((ex) => (
                           <option key={ex.id} value={ex.id}>
-                            {ex.name} ({MUSCLE_LABEL[ex.muscle]})
+                            {ex.name} ({MUSCLE_LABEL[ex.muscle]}){ex.isCustom ? ' [Bài Ngoài]' : ''}
                           </option>
                         ))}
                       </select>
@@ -1653,6 +1816,108 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
                   className="px-5 py-2 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold cursor-pointer transition-colors shadow-sm"
                 >
                   Lưu Giáo Án
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Add Custom Exercise Modal ("Thêm Bài Ngoài") */}
+      {showAddExerciseModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-white dark:bg-[#1a1e24] rounded-2xl border border-gray-200 dark:border-gray-800 max-w-md w-full p-5 space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3">
+              <div className="flex items-center gap-2">
+                <Dumbbell className="w-5 h-5 text-emerald-500" />
+                <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                  Thêm Bài Tập Ngoài / Tùy Chỉnh
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAddExerciseModal(false)}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveCustomExercise} className="space-y-3.5">
+              <div>
+                <label className="block text-[10px] font-semibold uppercase text-gray-400 mb-1">
+                  Tên bài tập
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ví dụ: Dumbbell Bulgarian Split Squat, Cable Lateral Raise..."
+                  value={newExName}
+                  onChange={(e) => setNewExName(e.target.value)}
+                  className="w-full text-xs px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 font-bold"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-semibold uppercase text-gray-400 mb-1">
+                    Nhóm cơ chính
+                  </label>
+                  <select
+                    value={newExMuscle}
+                    onChange={(e) => setNewExMuscle(e.target.value as MuscleGroup)}
+                    className="w-full text-xs px-2.5 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 font-semibold"
+                  >
+                    <option value="chest">Ngực (Chest)</option>
+                    <option value="back">Lưng (Back)</option>
+                    <option value="legs">Chân &amp; Đùi (Legs)</option>
+                    <option value="shoulders">Vai (Shoulders)</option>
+                    <option value="arms">Tay (Arms)</option>
+                    <option value="core">Bụng (Core)</option>
+                    <option value="cardio">Cardio</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-semibold uppercase text-gray-400 mb-1">
+                    Thiết bị / Dụng cụ
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Barbell, Dumbbell, Cable..."
+                    value={newExEquipment}
+                    onChange={(e) => setNewExEquipment(e.target.value)}
+                    className="w-full text-xs px-2.5 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-semibold uppercase text-gray-400 mb-1">
+                  Hướng dẫn kỹ thuật (Cue / Lưu ý tư thế)
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ví dụ: Giữ lưng thẳng, hạ chậm 2 giây, không khóa khớp gối..."
+                  value={newExCue}
+                  onChange={(e) => setNewExCue(e.target.value)}
+                  className="w-full text-xs px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-gray-100 dark:border-gray-800">
+                <button
+                  type="button"
+                  onClick={() => setShowAddExerciseModal(false)}
+                  className="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-700 text-xs font-semibold cursor-pointer"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold cursor-pointer transition-colors shadow-sm"
+                >
+                  Thêm Vào Thư Viện
                 </button>
               </div>
             </form>

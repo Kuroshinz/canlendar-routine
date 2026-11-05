@@ -1003,6 +1003,13 @@ export default function App() {
               bodyPhotos={productivity.bodyPhotos}
               onAddBodyPhoto={productivity.addBodyPhoto}
               onDeleteBodyPhoto={productivity.deleteBodyPhoto}
+              savedRoadmaps={productivity.savedRoadmaps}
+              onAddSavedRoadmap={productivity.addSavedRoadmap}
+              onDeleteSavedRoadmap={productivity.deleteSavedRoadmap}
+              customExercises={productivity.customExercises}
+              onAddCustomExercise={productivity.addCustomExercise}
+              onDeleteCustomExercise={productivity.deleteCustomExercise}
+              onApplySplitTemplate={productivity.applySplitTemplate}
               plannedSessions={productivity.plannedSessions}
               onAddPlannedSession={productivity.addPlannedSession}
               onUpdatePlannedSession={productivity.updatePlannedSession}

@@ -13,13 +13,28 @@ import {
   Award,
   Zap,
   Info,
+  Bookmark,
+  BookmarkCheck,
+  Save,
+  Trash2,
+  Sliders,
+  Check,
+  X,
+  History,
+  Layers,
+  Utensils,
 } from 'lucide-react';
-import { CtgProfile, Goal, Sex } from '../../../types/productivity';
+import { CtgProfile, Goal, NutritionSettings, SavedRoadmap, Sex } from '../../../types/productivity';
 import { ffmi, leanMassKg, fatMassKg, tdee, calorieTarget, macroTargets } from '../../../utils/fitnessMetrics';
 
 interface RoadmapTabProps {
   profile: CtgProfile;
   lang: 'vi' | 'en';
+  savedRoadmaps?: SavedRoadmap[];
+  onAddSavedRoadmap?: (roadmap: Omit<SavedRoadmap, 'id' | 'createdAt'>) => SavedRoadmap;
+  onDeleteSavedRoadmap?: (id: string) => void;
+  nutritionSettings?: NutritionSettings;
+  onUpdateNutritionSettings?: (patch: Partial<NutritionSettings>) => void;
   onUpdateProfile: (patch: Partial<CtgProfile>) => void;
   onNavigateTab?: (tab: 'inbody' | 'training' | 'nutrition' | 'profile') => void;
 }
@@ -73,6 +88,11 @@ const BODYFAT_BANDS = {
 export const RoadmapTab: React.FC<RoadmapTabProps> = ({
   profile,
   lang,
+  savedRoadmaps = [],
+  onAddSavedRoadmap,
+  onDeleteSavedRoadmap,
+  nutritionSettings,
+  onUpdateNutritionSettings,
   onUpdateProfile,
   onNavigateTab,
 }) => {
@@ -84,6 +104,19 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
   const [waistCm, setWaistCm] = useState('80');
   const [userGoal, setUserGoal] = useState<'auto' | Goal>('auto');
   const [appliedBanner, setAppliedBanner] = useState<string | null>(null);
+
+  // Saved Roadmaps Modal & State
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [saveTitle, setSaveTitle] = useState('');
+  const [saveNote, setSaveNote] = useState('');
+
+  // Macro Studio Customizer State
+  type MacroPreset = 'viet_balanced' | 'high_protein' | 'cutting' | 'low_carb' | 'custom';
+  const [macroPreset, setMacroPreset] = useState<MacroPreset>('viet_balanced');
+  const [isCustomMacroActive, setIsCustomMacroActive] = useState(false);
+  const [customProtein, setCustomProtein] = useState(140);
+  const [customCarbs, setCustomCarbs] = useState(200);
+  const [customFat, setCustomFat] = useState(55);
 
   const sexKey = sex === 'female' ? 'nu' : 'nam';
   const hNum = Number(heightCm) || 172;
@@ -180,6 +213,137 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
     });
     setAppliedBanner(
       `Đã áp dụng lộ trình: Mục tiêu ${analysis.effectiveGoal === 'cut' ? 'Giảm mỡ' : analysis.effectiveGoal === 'bulk' ? 'Tăng cơ' : 'Duy trì'} (${analysis.projectedWeightKg}kg / ${analysis.projectedBodyfatPct}% mỡ). Mục tiêu Calo và Giáo án đã được tự động điều chỉnh!`
+    );
+    setTimeout(() => setAppliedBanner(null), 6000);
+  };
+
+  const handleSelectMacroPreset = (preset: MacroPreset) => {
+    setMacroPreset(preset);
+    setIsCustomMacroActive(true);
+    const kcal = analysis.targetKcal;
+    if (preset === 'viet_balanced') {
+      setCustomProtein(Math.round((kcal * 0.30) / 4));
+      setCustomFat(Math.round((kcal * 0.25) / 9));
+      setCustomCarbs(Math.round((kcal * 0.45) / 4));
+    } else if (preset === 'high_protein') {
+      const p = Math.round(wNum * 2.2);
+      const f = Math.round(wNum * 1.0);
+      const c = Math.max(20, Math.round((kcal - p * 4 - f * 9) / 4));
+      setCustomProtein(p);
+      setCustomFat(f);
+      setCustomCarbs(c);
+    } else if (preset === 'cutting') {
+      const p = Math.round(wNum * 2.4);
+      const f = Math.round(wNum * 0.7);
+      const c = Math.max(15, Math.round((kcal - p * 4 - f * 9) / 4));
+      setCustomProtein(p);
+      setCustomFat(f);
+      setCustomCarbs(c);
+    } else if (preset === 'low_carb') {
+      const p = Math.round((kcal * 0.25) / 4);
+      const f = Math.round((kcal * 0.65) / 9);
+      const c = Math.round((kcal * 0.10) / 4);
+      setCustomProtein(p);
+      setCustomFat(f);
+      setCustomCarbs(c);
+    }
+  };
+
+  const currentActiveMacros = useMemo(() => {
+    if (isCustomMacroActive) {
+      return {
+        protein: customProtein,
+        carbs: customCarbs,
+        fat: customFat,
+      };
+    }
+    return analysis.macros;
+  }, [isCustomMacroActive, customProtein, customCarbs, customFat, analysis.macros]);
+
+  const customMacroKcal = currentActiveMacros.protein * 4 + currentActiveMacros.carbs * 4 + currentActiveMacros.fat * 9;
+
+  const handleApplyMacroToNutrition = () => {
+    onUpdateNutritionSettings?.({
+      overrides: {
+        ...(nutritionSettings?.overrides || {}),
+        [analysis.effectiveGoal]: {
+          kcal: customMacroKcal,
+          protein: currentActiveMacros.protein,
+          carbs: currentActiveMacros.carbs,
+          fat: currentActiveMacros.fat,
+        },
+      },
+    });
+    setAppliedBanner(
+      `Đã đồng bộ Macro (${currentActiveMacros.protein}g Protein · ${currentActiveMacros.carbs}g Carbs · ${currentActiveMacros.fat}g Fat = ${customMacroKcal} kcal) vào mục tiêu dinh dưỡng!`
+    );
+    setTimeout(() => setAppliedBanner(null), 5000);
+  };
+
+  const handleSaveRoadmapSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const title = saveTitle.trim() || `Lộ trình ${analysis.planLabelVi} (${analysis.projectedWeightKg}kg / ${analysis.projectedBodyfatPct}% mỡ)`;
+    onAddSavedRoadmap?.({
+      title,
+      date: new Date().toISOString().slice(0, 10),
+      weightKg: wNum,
+      bodyfatPct: bfNum,
+      heightCm: hNum,
+      sex,
+      goal: analysis.effectiveGoal,
+      lbmKg: analysis.lbmKg,
+      bfmKg: analysis.bfmKg,
+      ffmi: analysis.ffmi,
+      targetWeightKg: analysis.projectedWeightKg,
+      targetBodyfatPct: analysis.projectedBodyfatPct,
+      targetKcal: analysis.targetKcal,
+      macros: {
+        protein: currentActiveMacros.protein,
+        carbs: currentActiveMacros.carbs,
+        fat: currentActiveMacros.fat,
+      },
+      note: saveNote.trim() || undefined,
+    });
+    setShowSaveModal(false);
+    setSaveTitle('');
+    setSaveNote('');
+    setAppliedBanner(`Đã lưu mốc định hướng chiến lược "${title}" vào thư viện!`);
+    setTimeout(() => setAppliedBanner(null), 5000);
+  };
+
+  const handleLoadSavedRoadmap = (rm: SavedRoadmap) => {
+    setSex(rm.sex);
+    setHeightCm(String(rm.heightCm));
+    setWeightKg(String(rm.weightKg));
+    setBodyfatPct(String(rm.bodyfatPct));
+    setUserGoal(rm.goal);
+    setIsCustomMacroActive(true);
+    setCustomProtein(rm.macros.protein);
+    setCustomCarbs(rm.macros.carbs);
+    setCustomFat(rm.macros.fat);
+
+    onUpdateProfile({
+      sex: rm.sex,
+      heightCm: rm.heightCm,
+      targetWeightKg: rm.targetWeightKg,
+      targetBodyFatPct: rm.targetBodyfatPct,
+      goal: rm.goal,
+    });
+
+    onUpdateNutritionSettings?.({
+      overrides: {
+        ...(nutritionSettings?.overrides || {}),
+        [rm.goal]: {
+          kcal: rm.targetKcal,
+          protein: rm.macros.protein,
+          carbs: rm.macros.carbs,
+          fat: rm.macros.fat,
+        },
+      },
+    });
+
+    setAppliedBanner(
+      `Đã kích hoạt lại định hướng "${rm.title}": Mục tiêu ${rm.targetWeightKg}kg · ${rm.targetBodyfatPct}% mỡ · ${rm.targetKcal} kcal!`
     );
     setTimeout(() => setAppliedBanner(null), 6000);
   };
@@ -556,33 +720,201 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
               </div>
             </div>
 
-            {/* Recommended Macro Splits */}
-            <div className="p-3.5 rounded-xl bg-[#0e0f11] border border-white/5 space-y-2">
-              <div className="flex items-center justify-between text-xs">
-                <span className="font-semibold text-white/70 text-[11px]">Đa lượng Macro đề xuất mỗi ngày:</span>
-                <span className="text-[10px] text-white/40">Ăn món Việt chuẩn dinh dưỡng</span>
+            {/* Advanced Macro Studio Customizer */}
+            <div className="p-4 rounded-2xl bg-[#0e0f11] border border-white/5 space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/5 pb-2.5">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <Utensils className="w-4 h-4 text-[#ff6025]" />
+                    <span className="font-bold text-white text-xs">Căn Chỉnh Tỉ Lệ Đa Lượng Macro</span>
+                  </div>
+                  <p className="text-[10px] text-white/40 mt-0.5">
+                    Tùy biến theo thể trạng, phương pháp ăn hoặc chọn nhanh cấu hình chuẩn
+                  </p>
+                </div>
+
+                {/* Energy balance check */}
+                <div className="flex items-center gap-1.5 self-start sm:self-auto">
+                  <span className="text-[10px] text-white/50">Năng lượng:</span>
+                  <span className="text-xs font-mono font-bold text-white">{customMacroKcal} kcal</span>
+                  <span className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-full ${
+                    Math.abs(customMacroKcal - analysis.targetKcal) <= 50
+                      ? 'bg-emerald-500/20 text-emerald-400'
+                      : customMacroKcal > analysis.targetKcal
+                      ? 'bg-rose-500/20 text-rose-400'
+                      : 'bg-amber-500/20 text-amber-400'
+                  }`}>
+                    {customMacroKcal >= analysis.targetKcal ? `+${customMacroKcal - analysis.targetKcal}` : `${customMacroKcal - analysis.targetKcal}`}
+                  </span>
+                </div>
               </div>
-              <div className="grid grid-cols-3 gap-2 text-center">
-                <div className="p-2 rounded-lg bg-rose-500/10 border border-rose-500/20">
-                  <span className="text-[9px] uppercase font-bold text-rose-400 block">Đạm (Protein)</span>
-                  <span className="text-sm font-bold text-white font-mono">{analysis.macros.protein}g</span>
-                  <span className="text-[9px] text-white/40 block">~{(analysis.macros.protein / wNum).toFixed(1)}g/kg</span>
+
+              {/* Macro Presets Selector */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 text-xs">
+                {[
+                  { id: 'viet_balanced' as const, label: 'Chuẩn Việt (30/45/25)', desc: 'Cơm canh thịt cá' },
+                  { id: 'high_protein' as const, label: 'Tăng Cơ (2.2g/kg)', desc: 'Tối đa cơ nạc' },
+                  { id: 'cutting' as const, label: 'Siết Mỡ (2.4g/kg)', desc: 'Thâm hụt giữ cơ' },
+                  { id: 'low_carb' as const, label: 'Low Carb (25/10/65)', desc: 'Ít tinh bột' },
+                ].map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => handleSelectMacroPreset(p.id)}
+                    className={`p-2 rounded-xl text-left border transition-all cursor-pointer ${
+                      macroPreset === p.id
+                        ? 'bg-[#ff6025]/15 border-[#ff6025] text-white'
+                        : 'bg-white/5 border-white/5 text-white/70 hover:bg-white/10'
+                    }`}
+                  >
+                    <div className="text-[11px] font-bold">{p.label}</div>
+                    <div className="text-[9px] text-white/40">{p.desc}</div>
+                  </button>
+                ))}
+              </div>
+
+              {/* 3 Interactive Macro Cards & Sliders */}
+              <div className="grid grid-cols-3 gap-2.5 text-center pt-1">
+                {/* Protein */}
+                <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 space-y-1.5">
+                  <span className="text-[10px] uppercase font-bold text-rose-400 block">Đạm (Protein)</span>
+                  <div className="flex items-center justify-center gap-1">
+                    <input
+                      type="number"
+                      min="40"
+                      max="350"
+                      value={currentActiveMacros.protein}
+                      onChange={(e) => {
+                        setIsCustomMacroActive(true);
+                        setMacroPreset('custom');
+                        setCustomProtein(Number(e.target.value) || 0);
+                      }}
+                      className="w-16 text-center text-sm font-bold text-white bg-black/40 border border-rose-500/30 rounded-lg py-0.5 font-mono"
+                    />
+                    <span className="text-xs text-white/60">g</span>
+                  </div>
+                  <span className="text-[10px] text-rose-300/80 block font-mono">
+                    ~{(currentActiveMacros.protein / wNum).toFixed(1)}g/kg ({currentActiveMacros.protein * 4} kcal)
+                  </span>
+                  <input
+                    type="range"
+                    min="50"
+                    max="280"
+                    step="5"
+                    value={currentActiveMacros.protein}
+                    onChange={(e) => {
+                      setIsCustomMacroActive(true);
+                      setMacroPreset('custom');
+                      setCustomProtein(Number(e.target.value));
+                    }}
+                    className="w-full h-1.5 bg-rose-950/60 rounded-lg appearance-none cursor-pointer accent-rose-500"
+                  />
                 </div>
-                <div className="p-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
-                  <span className="text-[9px] uppercase font-bold text-amber-400 block">Tinh Bột (Carbs)</span>
-                  <span className="text-sm font-bold text-white font-mono">{analysis.macros.carbs}g</span>
-                  <span className="text-[9px] text-white/40 block">Cơm, yến mạch, bún</span>
+
+                {/* Carbs */}
+                <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 space-y-1.5">
+                  <span className="text-[10px] uppercase font-bold text-amber-400 block">Tinh Bột (Carbs)</span>
+                  <div className="flex items-center justify-center gap-1">
+                    <input
+                      type="number"
+                      min="10"
+                      max="500"
+                      value={currentActiveMacros.carbs}
+                      onChange={(e) => {
+                        setIsCustomMacroActive(true);
+                        setMacroPreset('custom');
+                        setCustomCarbs(Number(e.target.value) || 0);
+                      }}
+                      className="w-16 text-center text-sm font-bold text-white bg-black/40 border border-amber-500/30 rounded-lg py-0.5 font-mono"
+                    />
+                    <span className="text-xs text-white/60">g</span>
+                  </div>
+                  <span className="text-[10px] text-amber-300/80 block font-mono">
+                    {Math.round(((currentActiveMacros.carbs * 4) / customMacroKcal) * 100) || 0}% calo ({currentActiveMacros.carbs * 4} kcal)
+                  </span>
+                  <input
+                    type="range"
+                    min="20"
+                    max="450"
+                    step="5"
+                    value={currentActiveMacros.carbs}
+                    onChange={(e) => {
+                      setIsCustomMacroActive(true);
+                      setMacroPreset('custom');
+                      setCustomCarbs(Number(e.target.value));
+                    }}
+                    className="w-full h-1.5 bg-amber-950/60 rounded-lg appearance-none cursor-pointer accent-amber-500"
+                  />
                 </div>
-                <div className="p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
-                  <span className="text-[9px] uppercase font-bold text-emerald-400 block">Chất Béo (Fat)</span>
-                  <span className="text-sm font-bold text-white font-mono">{analysis.macros.fat}g</span>
-                  <span className="text-[9px] text-white/40 block">25% tổng Calo</span>
+
+                {/* Fat */}
+                <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 space-y-1.5">
+                  <span className="text-[10px] uppercase font-bold text-emerald-400 block">Chất Béo (Fat)</span>
+                  <div className="flex items-center justify-center gap-1">
+                    <input
+                      type="number"
+                      min="15"
+                      max="200"
+                      value={currentActiveMacros.fat}
+                      onChange={(e) => {
+                        setIsCustomMacroActive(true);
+                        setMacroPreset('custom');
+                        setCustomFat(Number(e.target.value) || 0);
+                      }}
+                      className="w-16 text-center text-sm font-bold text-white bg-black/40 border border-emerald-500/30 rounded-lg py-0.5 font-mono"
+                    />
+                    <span className="text-xs text-white/60">g</span>
+                  </div>
+                  <span className="text-[10px] text-emerald-300/80 block font-mono">
+                    {Math.round(((currentActiveMacros.fat * 9) / customMacroKcal) * 100) || 0}% calo ({currentActiveMacros.fat * 9} kcal)
+                  </span>
+                  <input
+                    type="range"
+                    min="20"
+                    max="150"
+                    step="2"
+                    value={currentActiveMacros.fat}
+                    onChange={(e) => {
+                      setIsCustomMacroActive(true);
+                      setMacroPreset('custom');
+                      setCustomFat(Number(e.target.value));
+                    }}
+                    className="w-full h-1.5 bg-emerald-950/60 rounded-lg appearance-none cursor-pointer accent-emerald-500"
+                  />
                 </div>
+              </div>
+
+              {/* Sync Macro Button */}
+              <div className="flex items-center justify-between pt-1">
+                <span className="text-[10px] text-white/40">
+                  Tự động chia thành mục tiêu từng bữa ăn (Sáng, Trưa, Tối, Phụ)
+                </span>
+                <button
+                  type="button"
+                  onClick={handleApplyMacroToNutrition}
+                  className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-[11px] font-semibold transition-colors cursor-pointer flex items-center gap-1.5"
+                >
+                  <Utensils className="w-3.5 h-3.5 text-[#ff6025]" />
+                  <span>Đồng bộ Macro vào Dinh Dưỡng</span>
+                </button>
               </div>
             </div>
 
             {/* Apply & Action Buttons */}
             <div className="flex flex-wrap items-center justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setSaveTitle(`Lộ trình ${analysis.planLabelVi} (${analysis.projectedWeightKg}kg / ${analysis.projectedBodyfatPct}% mỡ)`);
+                  setSaveNote(`Mục tiêu Calo: ${analysis.targetKcal} kcal. Macro: ${currentActiveMacros.protein}P / ${currentActiveMacros.carbs}C / ${currentActiveMacros.fat}F.`);
+                  setShowSaveModal(true);
+                }}
+                className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-white/20 hover:bg-white/10 text-white text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-2"
+              >
+                <Bookmark className="w-4 h-4 text-amber-400" />
+                <span>Lưu Mốc Định Hướng Này</span>
+              </button>
+
               <button
                 type="button"
                 onClick={handleApplyRoadmap}
@@ -595,6 +927,201 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Saved Roadmaps Milestone Ledger */}
+      <div className="bg-[#121212] rounded-3xl border border-white/10 p-5 sm:p-6 shadow-xl space-y-4">
+        <div className="flex items-center justify-between border-b border-white/10 pb-3">
+          <div className="flex items-center gap-2.5">
+            <BookmarkCheck className="w-5 h-5 text-amber-400" />
+            <div>
+              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                Thư Viện Định Hướng &amp; Mốc Mục Tiêu Đã Lưu
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  {savedRoadmaps.length} mốc
+                </span>
+              </h3>
+              <p className="text-xs text-white/50 mt-0.5">
+                Lưu giữ các bản kế hoạch chiến lược để đối chiếu và tái kích hoạt bất kỳ lúc nào
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {savedRoadmaps.length === 0 ? (
+          <div className="py-8 px-4 rounded-2xl border border-dashed border-white/10 text-center flex flex-col items-center justify-center space-y-2">
+            <Bookmark className="w-8 h-8 text-white/30" />
+            <h4 className="text-xs font-bold text-white/80">Chưa có mốc định hướng nào được lưu</h4>
+            <p className="text-[11px] text-white/40 max-w-md leading-relaxed">
+              Bấm nút &quot;Lưu Mốc Định Hướng Này&quot; ở trên sau khi phân tích để lưu lại kế hoạch siết mỡ hoặc tăng cơ, giúp bạn theo dõi quá trình chuyển hóa cơ thể qua từng giai đoạn.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+            {savedRoadmaps.map((rm) => (
+              <div
+                key={rm.id}
+                className="p-4 rounded-2xl bg-[#1c1d21] border border-white/10 space-y-3 flex flex-col justify-between hover:border-white/20 transition-all shadow-xs"
+              >
+                <div className="space-y-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <span className="text-[10px] font-mono text-white/40 block">{rm.date}</span>
+                      <h4 className="text-xs font-bold text-white leading-tight mt-0.5">{rm.title}</h4>
+                    </div>
+                    <span className={`text-[10px] px-2 py-0.5 rounded-md font-bold uppercase shrink-0 ${
+                      rm.goal === 'cut'
+                        ? 'bg-rose-500/20 text-rose-400'
+                        : rm.goal === 'bulk'
+                        ? 'bg-blue-500/20 text-blue-400'
+                        : 'bg-emerald-500/20 text-emerald-400'
+                    }`}>
+                      {rm.goal === 'cut' ? 'Cắt mỡ' : rm.goal === 'bulk' ? 'Tăng cơ' : 'Duy trì'}
+                    </span>
+                  </div>
+
+                  {/* Metrics preview */}
+                  <div className="grid grid-cols-3 gap-1.5 p-2 rounded-xl bg-black/40 text-center font-mono">
+                    <div>
+                      <span className="text-[9px] text-white/40 block">Cân nặng</span>
+                      <span className="text-xs font-bold text-white">{rm.weightKg} &rarr; {rm.targetWeightKg}kg</span>
+                    </div>
+                    <div>
+                      <span className="text-[9px] text-white/40 block">% Mỡ</span>
+                      <span className="text-xs font-bold text-emerald-400">{rm.bodyfatPct}% &rarr; {rm.targetBodyfatPct}%</span>
+                    </div>
+                    <div>
+                      <span className="text-[9px] text-white/40 block">Calo/ngày</span>
+                      <span className="text-xs font-bold text-indigo-400">{rm.targetKcal} kcal</span>
+                    </div>
+                  </div>
+
+                  {/* Macro preview */}
+                  <div className="flex items-center justify-between text-[10px] text-white/60 bg-white/5 px-2.5 py-1.5 rounded-lg">
+                    <span>Macro:</span>
+                    <span className="font-mono text-white/90">
+                      <b className="text-rose-400">{rm.macros.protein}g P</b> · <b className="text-amber-400">{rm.macros.carbs}g C</b> · <b className="text-emerald-400">{rm.macros.fat}g F</b>
+                    </span>
+                  </div>
+
+                  {rm.note && (
+                    <p className="text-[11px] text-white/50 italic line-clamp-2 leading-relaxed">
+                      {rm.note}
+                    </p>
+                  )}
+                </div>
+
+                {/* Card Actions */}
+                <div className="flex items-center justify-between pt-2 border-t border-white/5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (window.confirm(`Xóa mốc định hướng "${rm.title}"?`)) {
+                        onDeleteSavedRoadmap?.(rm.id);
+                      }
+                    }}
+                    className="p-1.5 rounded-lg text-white/40 hover:text-rose-400 hover:bg-white/5 cursor-pointer transition-colors"
+                    title="Xóa mốc định hướng"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleLoadSavedRoadmap(rm)}
+                    className="px-3 py-1.5 rounded-lg bg-[#ff6025] hover:bg-[#e0531e] text-white text-[11px] font-bold cursor-pointer transition-colors flex items-center gap-1.5"
+                  >
+                    <Check className="w-3.5 h-3.5" />
+                    <span>Kích Hoạt Lại</span>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Save Roadmap Modal */}
+      {showSaveModal && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-[#1a1e24] rounded-3xl border border-white/10 max-w-md w-full p-5 sm:p-6 space-y-4 shadow-2xl text-white">
+            <div className="flex items-center justify-between border-b border-white/10 pb-3">
+              <div className="flex items-center gap-2">
+                <Bookmark className="w-5 h-5 text-amber-400" />
+                <h3 className="text-sm font-bold">Lưu Bản Định Hướng Chiến Lược</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowSaveModal(false)}
+                className="text-white/40 hover:text-white cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveRoadmapSubmit} className="space-y-3.5">
+              <div>
+                <label className="block text-[11px] font-semibold uppercase text-white/50 mb-1">
+                  Tiêu đề mốc định hướng
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={saveTitle}
+                  onChange={(e) => setSaveTitle(e.target.value)}
+                  placeholder="Ví dụ: Siết Mỡ 6 Tuần Đón Tết..."
+                  className="w-full text-xs px-3 py-2.5 rounded-xl border border-white/15 bg-black/40 text-white focus:outline-none focus:border-[#ff6025]"
+                />
+              </div>
+
+              {/* Snapshot summary pill */}
+              <div className="p-3 rounded-xl bg-black/40 border border-white/5 space-y-1.5 text-xs">
+                <div className="flex justify-between text-white/70">
+                  <span>Mục tiêu:</span>
+                  <span className="font-bold text-[#ff6025]">{analysis.planLabelVi}</span>
+                </div>
+                <div className="flex justify-between text-white/70">
+                  <span>Cân nặng &amp; % Mỡ:</span>
+                  <span className="font-mono text-white">{wNum}kg ({bfNum}%) &rarr; {analysis.projectedWeightKg}kg ({analysis.projectedBodyfatPct}%)</span>
+                </div>
+                <div className="flex justify-between text-white/70">
+                  <span>Năng lượng &amp; Macro:</span>
+                  <span className="font-mono text-white">{analysis.targetKcal} kcal ({currentActiveMacros.protein}P/{currentActiveMacros.carbs}C/{currentActiveMacros.fat}F)</span>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold uppercase text-white/50 mb-1">
+                  Ghi chú &amp; Chiến lược cá nhân
+                </label>
+                <textarea
+                  rows={2}
+                  value={saveNote}
+                  onChange={(e) => setSaveNote(e.target.value)}
+                  placeholder="Ví dụ: Giữ cardio 3 buổi/tuần, cắt calo chủ yếu từ bữa tối..."
+                  className="w-full text-xs px-3 py-2 rounded-xl border border-white/15 bg-black/40 text-white focus:outline-none focus:border-[#ff6025]"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-white/10">
+                <button
+                  type="button"
+                  onClick={() => setShowSaveModal(false)}
+                  className="px-4 py-2 rounded-xl border border-white/20 text-xs font-semibold text-white/70 hover:bg-white/5 cursor-pointer"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-xl bg-[#ff6025] hover:bg-[#e0531e] text-white text-xs font-bold cursor-pointer transition-colors shadow-sm flex items-center gap-1.5"
+                >
+                  <Save className="w-3.5 h-3.5" />
+                  <span>Lưu Định Hướng</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -22,12 +22,15 @@ import {
   BodyCheckPhoto,
   BodyPoint,
   CtgProfile,
+  Exercise,
   HealthDayLog,
   HealthProfile,
   HealthSource,
   MealLog,
   NutritionSettings,
   PlannedSession,
+  RoutineSplitTemplate,
+  SavedRoadmap,
   SportSession,
   WorkoutLog,
   WorkoutSession,
@@ -88,6 +91,13 @@ export interface HealthViewProps {
   bodyPhotos?: BodyCheckPhoto[];
   onAddBodyPhoto?: (photo: Omit<BodyCheckPhoto, 'id' | 'createdAt'>) => BodyCheckPhoto;
   onDeleteBodyPhoto?: (id: string) => void;
+  savedRoadmaps?: SavedRoadmap[];
+  onAddSavedRoadmap?: (roadmap: Omit<SavedRoadmap, 'id' | 'createdAt'>) => SavedRoadmap;
+  onDeleteSavedRoadmap?: (id: string) => void;
+  customExercises?: Exercise[];
+  onAddCustomExercise?: (exercise: Omit<Exercise, 'id'>) => Exercise;
+  onDeleteCustomExercise?: (id: string) => void;
+  onApplySplitTemplate?: (template: RoutineSplitTemplate) => void;
   plannedSessions?: PlannedSession[];
   onAddPlannedSession?: (session: PlannedSession) => void;
   onUpdatePlannedSession?: (session: PlannedSession) => void;
@@ -139,6 +149,13 @@ export const HealthView: React.FC<HealthViewProps> = ({
   bodyPhotos = [],
   onAddBodyPhoto = (p) => ({ ...p, id: 'tmp', createdAt: Date.now() }),
   onDeleteBodyPhoto = () => {},
+  savedRoadmaps = [],
+  onAddSavedRoadmap = (r) => ({ ...r, id: 'tmp', createdAt: Date.now() }),
+  onDeleteSavedRoadmap = () => {},
+  customExercises = [],
+  onAddCustomExercise = (e) => ({ ...e, id: 'tmp', isCustom: true }),
+  onDeleteCustomExercise = () => {},
+  onApplySplitTemplate = () => {},
   plannedSessions = SEED_PLANNED_SESSIONS,
   onAddPlannedSession = () => {},
   onUpdatePlannedSession = () => {},
@@ -405,6 +422,11 @@ export const HealthView: React.FC<HealthViewProps> = ({
         <RoadmapTab
           profile={ctgProfile}
           lang={lang}
+          savedRoadmaps={savedRoadmaps}
+          onAddSavedRoadmap={onAddSavedRoadmap}
+          onDeleteSavedRoadmap={onDeleteSavedRoadmap}
+          nutritionSettings={nutritionSettings}
+          onUpdateNutritionSettings={onUpdateNutritionSettings}
           onUpdateProfile={onUpdateCtgProfile}
           onNavigateTab={(tab) => setActiveSubTab(tab as SubTab)}
         />
@@ -430,6 +452,10 @@ export const HealthView: React.FC<HealthViewProps> = ({
           workoutSessions={workoutSessions}
           sportSessions={sportSessions}
           userWeightKg={selectedLog.weightKg || ctgProfile.targetWeightKg}
+          customExercises={customExercises}
+          onAddCustomExercise={onAddCustomExercise}
+          onDeleteCustomExercise={onDeleteCustomExercise}
+          onApplySplitTemplate={onApplySplitTemplate}
           lang={lang}
           onLogWorkoutSession={onLogWorkoutSession}
           onUpdateWorkoutSession={onUpdateWorkoutSession}

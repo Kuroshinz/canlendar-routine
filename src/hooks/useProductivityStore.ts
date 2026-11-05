@@ -6,6 +6,7 @@ import {
   CtgProfile,
   DEFAULT_BUDGET,
   DEFAULT_HEALTH_PROFILE,
+  Exercise,
   FinanceCategoryId,
   FinanceSummary,
   FocusSession,
@@ -17,6 +18,8 @@ import {
   MealLog,
   NutritionSettings,
   PlannedSession,
+  RoutineSplitTemplate,
+  SavedRoadmap,
   SportSession,
   TaskItem,
   TaskStatus,
@@ -50,6 +53,7 @@ import {
   summarizeFinance,
 } from '../utils/productivityUtils';
 import type { ProductivitySnapshotData } from '../utils/productivityBackup';
+import { generateSplitSessions } from '../utils/fitnessMetrics';
 
 const KEYS = {
   tasks: 'gcal_prod_tasks',
@@ -70,6 +74,8 @@ const KEYS = {
   meals: 'gcal_ctg_meals',
   nutritionSettings: 'gcal_ctg_nutrition_settings',
   bodyPhotos: 'gcal_prod_body_photos',
+  savedRoadmaps: 'gcal_prod_saved_roadmaps',
+  customExercises: 'gcal_prod_custom_exercises',
 } as const;
 
 export interface ProductivityStore {
@@ -130,6 +136,13 @@ export interface ProductivityStore {
   bodyPhotos: BodyCheckPhoto[];
   addBodyPhoto: (photo: Omit<BodyCheckPhoto, 'id' | 'createdAt'>) => BodyCheckPhoto;
   deleteBodyPhoto: (id: string) => void;
+  savedRoadmaps: SavedRoadmap[];
+  addSavedRoadmap: (roadmap: Omit<SavedRoadmap, 'id' | 'createdAt'>) => SavedRoadmap;
+  deleteSavedRoadmap: (id: string) => void;
+  customExercises: Exercise[];
+  addCustomExercise: (exercise: Omit<Exercise, 'id'>) => Exercise;
+  deleteCustomExercise: (id: string) => void;
+  applySplitTemplate: (template: RoutineSplitTemplate) => void;
   plannedSessions: PlannedSession[];
   addPlannedSession: (session: PlannedSession) => void;
   updatePlannedSession: (session: PlannedSession) => void;
@@ -204,6 +217,8 @@ export function useProductivityStore(): ProductivityStore {
     DEFAULT_NUTRITION_SETTINGS
   );
   const [bodyPhotos, setBodyPhotos] = usePersistentState<BodyCheckPhoto[]>(KEYS.bodyPhotos, []);
+  const [savedRoadmaps, setSavedRoadmaps] = usePersistentState<SavedRoadmap[]>(KEYS.savedRoadmaps, []);
+  const [customExercises, setCustomExercises] = usePersistentState<Exercise[]>(KEYS.customExercises, []);
 
   // --- Tasks ---------------------------------------------------------------
 
@@ -551,6 +566,54 @@ export function useProductivityStore(): ProductivityStore {
     [setBodyPhotos]
   );
 
+  const addSavedRoadmap = useCallback(
+    (input: Omit<SavedRoadmap, 'id' | 'createdAt'>) => {
+      const rm: SavedRoadmap = {
+        ...input,
+        id: uid('rm'),
+        createdAt: Date.now(),
+      };
+      setSavedRoadmaps((prev) => [rm, ...prev]);
+      return rm;
+    },
+    [setSavedRoadmaps]
+  );
+
+  const deleteSavedRoadmap = useCallback(
+    (id: string) => {
+      setSavedRoadmaps((prev) => prev.filter((r) => r.id !== id));
+    },
+    [setSavedRoadmaps]
+  );
+
+  const addCustomExercise = useCallback(
+    (input: Omit<Exercise, 'id'>) => {
+      const ex: Exercise = {
+        ...input,
+        id: uid('custom-ex'),
+        isCustom: true,
+      };
+      setCustomExercises((prev) => [...prev, ex]);
+      return ex;
+    },
+    [setCustomExercises]
+  );
+
+  const deleteCustomExercise = useCallback(
+    (id: string) => {
+      setCustomExercises((prev) => prev.filter((e) => e.id !== id));
+    },
+    [setCustomExercises]
+  );
+
+  const applySplitTemplate = useCallback(
+    (template: RoutineSplitTemplate) => {
+      const sessions = generateSplitSessions(template);
+      setPlannedSessions(sessions);
+    },
+    [setPlannedSessions]
+  );
+
   const addPlannedSession = useCallback(
     (session: PlannedSession) => {
       setPlannedSessions((prev) => [...prev, session]);
@@ -753,6 +816,8 @@ export function useProductivityStore(): ProductivityStore {
     setMeals(SEED_MEALS);
     setNutritionSettings(DEFAULT_NUTRITION_SETTINGS);
     setBodyPhotos([]);
+    setSavedRoadmaps([]);
+    setCustomExercises([]);
   }, [
     setTasks,
     setGoals,
@@ -772,6 +837,8 @@ export function useProductivityStore(): ProductivityStore {
     setMeals,
     setNutritionSettings,
     setBodyPhotos,
+    setSavedRoadmaps,
+    setCustomExercises,
   ]);
 
   const clearAll = useCallback(
@@ -798,6 +865,8 @@ export function useProductivityStore(): ProductivityStore {
       setMeals([]);
       setNutritionSettings(DEFAULT_NUTRITION_SETTINGS);
       setBodyPhotos([]);
+      setSavedRoadmaps([]);
+      setCustomExercises([]);
     },
     [
       setTasks,
@@ -818,6 +887,8 @@ export function useProductivityStore(): ProductivityStore {
       setMeals,
       setNutritionSettings,
       setBodyPhotos,
+      setSavedRoadmaps,
+      setCustomExercises,
     ]
   );
 
@@ -867,6 +938,13 @@ export function useProductivityStore(): ProductivityStore {
     bodyPhotos,
     addBodyPhoto,
     deleteBodyPhoto,
+    savedRoadmaps,
+    addSavedRoadmap,
+    deleteSavedRoadmap,
+    customExercises,
+    addCustomExercise,
+    deleteCustomExercise,
+    applySplitTemplate,
     plannedSessions,
     addPlannedSession,
     updatePlannedSession,

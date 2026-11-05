@@ -10,6 +10,7 @@ import {
   MuscleGroup,
   NutritionSettings,
   PlannedSession,
+  RoutineSplitTemplate,
   SPORT_MET,
   SetLog,
   Sex,
@@ -656,4 +657,233 @@ export const EXERCISES: Exercise[] = [
   { id: 'treadmill', name: 'Treadmill', muscle: 'cardio', equipment: 'Machine', cue: 'Nhịp đều, thở mũi' },
 ];
 
-export const exerciseById = (id: string): Exercise | undefined => EXERCISES.find((e) => e.id === id);
+export const exerciseById = (id: string, customList: Exercise[] = []): Exercise | undefined =>
+  [...EXERCISES, ...customList].find((e) => e.id === id);
+
+export const generateSplitSessions = (template: RoutineSplitTemplate): PlannedSession[] => {
+  switch (template) {
+    case 'ppl':
+      return [
+        {
+          id: 'ppl-push',
+          weekIndex: 0,
+          dayIndex: 0,
+          title: 'Push (Đẩy: Ngực, Vai & Tay sau)',
+          dayOfWeek: 'Thứ 2',
+          prescriptions: [
+            { exerciseId: 'bench-press', sets: 4, reps: '6-8', rpe: 8, restSeconds: 120 },
+            { exerciseId: 'incline-db-press', sets: 3, reps: '8-10', rpe: 8, restSeconds: 90 },
+            { exerciseId: 'ohp', sets: 3, reps: '8-10', rpe: 8, restSeconds: 90 },
+            { exerciseId: 'lateral-raise', sets: 4, reps: '12-15', rpe: 9, restSeconds: 60 },
+            { exerciseId: 'triceps-pushdown', sets: 3, reps: '10-12', rpe: 9, restSeconds: 60 },
+          ],
+        },
+        {
+          id: 'ppl-pull',
+          weekIndex: 0,
+          dayIndex: 1,
+          title: 'Pull (Kéo: Lưng & Tay trước)',
+          dayOfWeek: 'Thứ 3',
+          prescriptions: [
+            { exerciseId: 'lat-pulldown', sets: 4, reps: '8-10', rpe: 8, restSeconds: 90 },
+            { exerciseId: 'barbell-row', sets: 4, reps: '6-8', rpe: 8, restSeconds: 120 },
+            { exerciseId: 'face-pull', sets: 4, reps: '12-15', rpe: 9, restSeconds: 60 },
+            { exerciseId: 'barbell-curl', sets: 3, reps: '10-12', rpe: 8, restSeconds: 60 },
+            { exerciseId: 'hammer-curl', sets: 3, reps: '10-12', rpe: 8, restSeconds: 60 },
+          ],
+        },
+        {
+          id: 'ppl-legs',
+          weekIndex: 0,
+          dayIndex: 2,
+          title: 'Legs & Core (Chân & Bụng)',
+          dayOfWeek: 'Thứ 4',
+          prescriptions: [
+            { exerciseId: 'back-squat', sets: 4, reps: '6-8', rpe: 8, restSeconds: 120 },
+            { exerciseId: 'romanian-deadlift', sets: 3, reps: '8-10', rpe: 8, restSeconds: 90 },
+            { exerciseId: 'leg-press', sets: 3, reps: '10-12', rpe: 8, restSeconds: 90 },
+            { exerciseId: 'leg-curl', sets: 3, reps: '10-12', rpe: 9, restSeconds: 60 },
+            { exerciseId: 'calf-raise', sets: 4, reps: '12-15', rpe: 9, restSeconds: 60 },
+            { exerciseId: 'hanging-leg-raise', sets: 3, reps: '12-15', rpe: 8, restSeconds: 60 },
+          ],
+        },
+        {
+          id: 'ppl-push-2',
+          weekIndex: 0,
+          dayIndex: 3,
+          title: 'Push Hypertrophy (Đẩy Phì Đại)',
+          dayOfWeek: 'Thứ 5',
+          prescriptions: [
+            { exerciseId: 'incline-db-press', sets: 4, reps: '8-10', rpe: 8, restSeconds: 90 },
+            { exerciseId: 'cable-fly', sets: 3, reps: '12-15', rpe: 9, restSeconds: 60 },
+            { exerciseId: 'lateral-raise', sets: 4, reps: '12-15', rpe: 9, restSeconds: 60 },
+            { exerciseId: 'triceps-pushdown', sets: 4, reps: '10-12', rpe: 9, restSeconds: 60 },
+          ],
+        },
+        {
+          id: 'ppl-pull-2',
+          weekIndex: 0,
+          dayIndex: 4,
+          title: 'Pull Hypertrophy (Kéo Phì Đại)',
+          dayOfWeek: 'Thứ 6',
+          prescriptions: [
+            { exerciseId: 'pull-up', sets: 4, reps: '8-10', rpe: 8, restSeconds: 90 },
+            { exerciseId: 'seated-cable-row', sets: 4, reps: '10-12', rpe: 8, restSeconds: 90 },
+            { exerciseId: 'face-pull', sets: 3, reps: '12-15', rpe: 9, restSeconds: 60 },
+            { exerciseId: 'hammer-curl', sets: 3, reps: '10-12', rpe: 8, restSeconds: 60 },
+          ],
+        },
+      ];
+    case 'upper_lower':
+      return [
+        {
+          id: 'ul-upper-1',
+          weekIndex: 0,
+          dayIndex: 0,
+          title: 'Upper Power (Thân Trên Sức Mạnh)',
+          dayOfWeek: 'Thứ 2',
+          prescriptions: [
+            { exerciseId: 'bench-press', sets: 4, reps: '5-6', rpe: 8, restSeconds: 120 },
+            { exerciseId: 'barbell-row', sets: 4, reps: '6-8', rpe: 8, restSeconds: 120 },
+            { exerciseId: 'ohp', sets: 3, reps: '6-8', rpe: 8, restSeconds: 90 },
+            { exerciseId: 'lat-pulldown', sets: 3, reps: '8-10', rpe: 8, restSeconds: 90 },
+            { exerciseId: 'barbell-curl', sets: 3, reps: '8-10', rpe: 8, restSeconds: 60 },
+          ],
+        },
+        {
+          id: 'ul-lower-1',
+          weekIndex: 0,
+          dayIndex: 1,
+          title: 'Lower Power (Thân Dưới Sức Mạnh)',
+          dayOfWeek: 'Thứ 3',
+          prescriptions: [
+            { exerciseId: 'back-squat', sets: 4, reps: '5-6', rpe: 8, restSeconds: 150 },
+            { exerciseId: 'romanian-deadlift', sets: 3, reps: '6-8', rpe: 8, restSeconds: 120 },
+            { exerciseId: 'leg-press', sets: 3, reps: '8-10', rpe: 8, restSeconds: 90 },
+            { exerciseId: 'calf-raise', sets: 4, reps: '10-12', rpe: 9, restSeconds: 60 },
+            { exerciseId: 'cable-crunch', sets: 3, reps: '12-15', rpe: 8, restSeconds: 60 },
+          ],
+        },
+        {
+          id: 'ul-upper-2',
+          weekIndex: 0,
+          dayIndex: 3,
+          title: 'Upper Hypertrophy (Thân Trên Phì Đại)',
+          dayOfWeek: 'Thứ 5',
+          prescriptions: [
+            { exerciseId: 'incline-db-press', sets: 4, reps: '8-10', rpe: 8, restSeconds: 90 },
+            { exerciseId: 'seated-cable-row', sets: 4, reps: '10-12', rpe: 8, restSeconds: 90 },
+            { exerciseId: 'lateral-raise', sets: 4, reps: '12-15', rpe: 9, restSeconds: 60 },
+            { exerciseId: 'cable-fly', sets: 3, reps: '12-15', rpe: 9, restSeconds: 60 },
+            { exerciseId: 'triceps-pushdown', sets: 3, reps: '10-12', rpe: 9, restSeconds: 60 },
+          ],
+        },
+        {
+          id: 'ul-lower-2',
+          weekIndex: 0,
+          dayIndex: 4,
+          title: 'Lower Hypertrophy (Thân Dưới Phì Đại)',
+          dayOfWeek: 'Thứ 6',
+          prescriptions: [
+            { exerciseId: 'leg-press', sets: 4, reps: '10-12', rpe: 8, restSeconds: 90 },
+            { exerciseId: 'leg-curl', sets: 4, reps: '10-12', rpe: 9, restSeconds: 60 },
+            { exerciseId: 'calf-raise', sets: 4, reps: '12-15', rpe: 9, restSeconds: 60 },
+            { exerciseId: 'hanging-leg-raise', sets: 3, reps: '12-15', rpe: 8, restSeconds: 60 },
+            { exerciseId: 'plank', sets: 3, reps: '45-60s', rpe: 8, restSeconds: 60 },
+          ],
+        },
+      ];
+    case 'arnold':
+      return [
+        {
+          id: 'arn-cb-1',
+          weekIndex: 0,
+          dayIndex: 0,
+          title: 'Chest & Back (Ngực & Lưng Xô)',
+          dayOfWeek: 'Thứ 2',
+          prescriptions: [
+            { exerciseId: 'bench-press', sets: 4, reps: '8-10', rpe: 8, restSeconds: 90 },
+            { exerciseId: 'barbell-row', sets: 4, reps: '8-10', rpe: 8, restSeconds: 90 },
+            { exerciseId: 'incline-db-press', sets: 3, reps: '10-12', rpe: 8, restSeconds: 90 },
+            { exerciseId: 'lat-pulldown', sets: 3, reps: '10-12', rpe: 8, restSeconds: 90 },
+            { exerciseId: 'cable-fly', sets: 3, reps: '12-15', rpe: 9, restSeconds: 60 },
+          ],
+        },
+        {
+          id: 'arn-sa-1',
+          weekIndex: 0,
+          dayIndex: 1,
+          title: 'Shoulders & Arms (Vai & Tay)',
+          dayOfWeek: 'Thứ 3',
+          prescriptions: [
+            { exerciseId: 'ohp', sets: 4, reps: '8-10', rpe: 8, restSeconds: 90 },
+            { exerciseId: 'lateral-raise', sets: 4, reps: '12-15', rpe: 9, restSeconds: 60 },
+            { exerciseId: 'face-pull', sets: 3, reps: '12-15', rpe: 9, restSeconds: 60 },
+            { exerciseId: 'barbell-curl', sets: 3, reps: '10-12', rpe: 8, restSeconds: 60 },
+            { exerciseId: 'triceps-pushdown', sets: 3, reps: '10-12', rpe: 9, restSeconds: 60 },
+            { exerciseId: 'hammer-curl', sets: 3, reps: '10-12', rpe: 8, restSeconds: 60 },
+          ],
+        },
+        {
+          id: 'arn-legs-1',
+          weekIndex: 0,
+          dayIndex: 2,
+          title: 'Legs & Core (Chân & Bụng)',
+          dayOfWeek: 'Thứ 4',
+          prescriptions: [
+            { exerciseId: 'back-squat', sets: 4, reps: '8-10', rpe: 8, restSeconds: 120 },
+            { exerciseId: 'romanian-deadlift', sets: 3, reps: '10-12', rpe: 8, restSeconds: 90 },
+            { exerciseId: 'leg-press', sets: 3, reps: '10-12', rpe: 8, restSeconds: 90 },
+            { exerciseId: 'leg-curl', sets: 3, reps: '12-15', rpe: 9, restSeconds: 60 },
+            { exerciseId: 'hanging-leg-raise', sets: 3, reps: '12-15', rpe: 8, restSeconds: 60 },
+          ],
+        },
+      ];
+    case 'fullbody':
+    default:
+      return [
+        {
+          id: 'fb-day-1',
+          weekIndex: 0,
+          dayIndex: 0,
+          title: 'Full Body A (Toàn Thân - Squat & Push)',
+          dayOfWeek: 'Thứ 2',
+          prescriptions: [
+            { exerciseId: 'back-squat', sets: 3, reps: '8-10', rpe: 8, restSeconds: 90 },
+            { exerciseId: 'bench-press', sets: 3, reps: '8-10', rpe: 8, restSeconds: 90 },
+            { exerciseId: 'lat-pulldown', sets: 3, reps: '10-12', rpe: 8, restSeconds: 90 },
+            { exerciseId: 'lateral-raise', sets: 3, reps: '12-15', rpe: 9, restSeconds: 60 },
+            { exerciseId: 'hanging-leg-raise', sets: 3, reps: '12-15', rpe: 8, restSeconds: 60 },
+          ],
+        },
+        {
+          id: 'fb-day-2',
+          weekIndex: 0,
+          dayIndex: 2,
+          title: 'Full Body B (Toàn Thân - Hinge & OHP)',
+          dayOfWeek: 'Thứ 4',
+          prescriptions: [
+            { exerciseId: 'romanian-deadlift', sets: 3, reps: '8-10', rpe: 8, restSeconds: 90 },
+            { exerciseId: 'ohp', sets: 3, reps: '8-10', rpe: 8, restSeconds: 90 },
+            { exerciseId: 'barbell-row', sets: 3, reps: '8-10', rpe: 8, restSeconds: 90 },
+            { exerciseId: 'leg-curl', sets: 3, reps: '10-12', rpe: 9, restSeconds: 60 },
+            { exerciseId: 'triceps-pushdown', sets: 3, reps: '10-12', rpe: 9, restSeconds: 60 },
+          ],
+        },
+        {
+          id: 'fb-day-3',
+          weekIndex: 0,
+          dayIndex: 4,
+          title: 'Full Body C (Toàn Thân - Hypertrophy)',
+          dayOfWeek: 'Thứ 6',
+          prescriptions: [
+            { exerciseId: 'leg-press', sets: 3, reps: '10-12', rpe: 8, restSeconds: 90 },
+            { exerciseId: 'incline-db-press', sets: 3, reps: '8-10', rpe: 8, restSeconds: 90 },
+            { exerciseId: 'pull-up', sets: 3, reps: '8-10', rpe: 8, restSeconds: 90 },
+            { exerciseId: 'barbell-curl', sets: 3, reps: '10-12', rpe: 8, restSeconds: 60 },
+            { exerciseId: 'plank', sets: 3, reps: '45-60s', rpe: 8, restSeconds: 60 },
+          ],
+        },
+      ];
+  }
+};

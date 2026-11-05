@@ -383,6 +383,33 @@ export interface Exercise {
   muscle: MuscleGroup;
   equipment: string;
   cue: string;
+  isCustom?: boolean;
+}
+
+export type RoutineSplitTemplate = 'ppl' | 'upper_lower' | 'arnold' | 'fullbody' | 'custom';
+
+export interface SavedRoadmap {
+  id: string;
+  title: string;
+  createdAt: number;
+  date: string;
+  weightKg: number;
+  bodyfatPct: number;
+  heightCm: number;
+  sex: Sex;
+  goal: Goal;
+  lbmKg: number;
+  bfmKg: number;
+  ffmi: number;
+  targetWeightKg: number;
+  targetBodyfatPct: number;
+  targetKcal: number;
+  macros: {
+    protein: number;
+    carbs: number;
+    fat: number;
+  };
+  note?: string;
 }
 
 export interface Prescription {
