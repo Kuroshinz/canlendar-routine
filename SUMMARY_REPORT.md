@@ -194,3 +194,17 @@ Theo yêu cầu chuyển đổi hệ thống thể hình về quyền sở hữu
 | **Tích hợp Tài khoản Google Chính chủ** | Thay thế bằng **Tab Hồ Sơ Của Tôi (`ProfileTab.tsx`)**: Tích hợp trực tiếp với tài khoản Google đang đăng nhập (`user` từ `App.tsx` gồm tên hiển thị, email, ảnh đại diện Google Avatar, huy hiệu xác thực "Đã liên kết Google Account chính chủ"). Nếu chưa đăng nhập, cung cấp nút đăng nhập Google 1 chạm. |
 | **Khắc phục Lỗi Bị Che / Cắt Đôi Thanh Tab (Fix Tab Clipping)** | Khắc phục triệt để hiện tượng các phân mục bị cắt ngang nửa chữ trên như trong ảnh chụp: <br>1. Chuyển thanh Sub-Tabs thành **thanh cố định dính (`sticky top-0 z-20`)** với lớp nền mờ `bg-gray-50/95 dark:bg-gray-900/95 backdrop-blur-md`, đảm bảo khi cuộn trang thanh tab luôn nổi trên cùng và không bao giờ bị trượt vào mép trên của khung nhìn.<br>2. Thiết lập chiều cao chuẩn `h-10` (40px) và căn giữa `inline-flex items-center` cùng khoảng đệm an toàn `py-1 px-0.5` và `leading-none`, loại bỏ hoàn toàn việc bị cắt gọt do tràn viền (`overflow-y: hidden`). |
 
+---
+
+## 13. Tối Giản Hóa Luồng Đồng Bộ & Đăng Nhập: Chỉ Giữ Google và Tài Khoản Mới (Bắt Đầu Dữ Liệu Sạch)
+
+Theo yêu cầu loại bỏ các thành phần rườm rà trong modal đồng bộ và chỉ giữ 2 cơ chế đăng nhập / tài khoản:
+
+| Hạng mục | Chi tiết triển khai |
+| --- | --- |
+| **Loại bỏ Hoàn toàn URL Bí mật & Tệp .ICS** | Gỡ bỏ 2 tab rườm rà "URL Bí Mật (Không Cần API)" và "Tệp Google .ICS" khỏi `CloudSyncModal.tsx`. Giao diện tinh gọn, không còn gây rối mắt hoặc nhầm lẫn cho người dùng. |
+| **Giao diện 2 Tab Tinh gọn, Rõ ràng** | 1. **Đăng Nhập Google (`google`)**: Xác thực 1-chạm thông qua Google Identity Services (GIS OAuth), hiển thị thông tin tài khoản đang kết nối (Avatar, Email, Tên), trạng thái đồng bộ và nút ngắt kết nối an toàn.<br>2. **Tài Khoản Mới (`new-account`)**: Form tạo nhanh hồ sơ cá nhân mới (Họ tên, Email) để bắt đầu sử dụng độc lập ngay lập tức. |
+| **Cơ chế Bắt đầu từ Số 0 (Clean Slate Option)** | Bổ sung hộp chọn *"Làm sạch dữ liệu và bắt đầu từ số 0 (Khuyên dùng)"*. Khi kích hoạt, hệ thống sẽ gọi phương thức `clearAll` được thiết kế mới trong `useProductivityStore`, dọn sạch toàn bộ các sự kiện lịch, task mẫu, nhật ký dinh dưỡng và bài tập mẫu ban đầu, giúp người dùng có một không gian làm việc trống hoàn toàn cho riêng mình. |
+| **Bảo lưu & Đồng bộ Trạng thái** | Dữ liệu tài khoản mới được đồng bộ hóa tức thì vào `localStorage` (`gcal_active_user`) và cập nhật toàn bộ thanh điều hướng ứng dụng mà không cần tải lại trang. |
+
+
