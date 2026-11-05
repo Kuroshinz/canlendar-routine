@@ -380,3 +380,4 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
     </div>
   );
 };
+

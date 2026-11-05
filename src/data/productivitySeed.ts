@@ -571,8 +571,6 @@ export const SEED_CTG_PROFILE: CtgProfile = {
   targetWeightKg: 65,
   targetBodyFatPct: 12,
   stepGoal: 8000,
-  branchId: 'q1',
-  trainerName: 'HLV Trần Minh',
 };
 
 export const DEFAULT_NUTRITION_SETTINGS: NutritionSettings = {

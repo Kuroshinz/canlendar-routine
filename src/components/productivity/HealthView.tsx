@@ -15,7 +15,7 @@ import {
   X,
   Activity,
   Utensils,
-  Building2,
+  User,
 } from 'lucide-react';
 import {
   BodyPoint,
@@ -61,7 +61,7 @@ import {
 import { InBodyTab } from './fitness/InBodyTab';
 import { TrainingTab } from './fitness/TrainingTab';
 import { NutritionTab } from './fitness/NutritionTab';
-import { BranchesTab } from './fitness/BranchesTab';
+import { ProfileTab } from './fitness/ProfileTab';
 
 export interface HealthViewProps {
   healthLogs: HealthDayLog[];
@@ -72,6 +72,9 @@ export interface HealthViewProps {
   onUpdateHealthProfile: (patch: Partial<HealthProfile>) => void;
   onAddWorkout: (w: Omit<WorkoutLog, 'id' | 'createdAt'>) => void;
   onDeleteWorkout: (id: string) => void;
+  // Google Account integration
+  currentUser?: { displayName?: string | null; email?: string | null; photoURL?: string | null } | null;
+  onGoogleSignIn?: () => Promise<void>;
   // CTG Fitness additions
   ctgProfile?: CtgProfile;
   onUpdateCtgProfile?: (patch: Partial<CtgProfile>) => void;
@@ -93,7 +96,7 @@ export interface HealthViewProps {
   onScheduleSessionToCalendar?: (title: string, date: string, color: string) => void;
 }
 
-type SubTab = 'overview' | 'inbody' | 'training' | 'nutrition' | 'branches';
+type SubTab = 'overview' | 'inbody' | 'training' | 'nutrition' | 'profile';
 
 const WORKOUT_TYPES: { id: WorkoutType; labelVi: string; labelEn: string; color: string }[] = [
   { id: 'strength', labelVi: 'Sức mạnh', labelEn: 'Strength', color: '#3F51B5' },
@@ -113,6 +116,8 @@ export const HealthView: React.FC<HealthViewProps> = ({
   onUpdateHealthProfile,
   onAddWorkout,
   onDeleteWorkout,
+  currentUser,
+  onGoogleSignIn,
   ctgProfile = SEED_CTG_PROFILE,
   onUpdateCtgProfile = () => {},
   bodyPoints = SEED_BODY_POINTS,
@@ -341,32 +346,35 @@ export const HealthView: React.FC<HealthViewProps> = ({
         </div>
       </div>
 
-      {/* Multitasking Sub-Tabs */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 mb-6 border-b border-gray-200 dark:border-gray-800">
-        {[
-          { id: 'overview', label: lang === 'vi' ? 'Tổng quan & Chỉ số' : 'Overview & Logs', icon: HeartPulse },
-          { id: 'inbody', label: lang === 'vi' ? 'InBody & Đo lường' : 'InBody & Composition', icon: Scale },
-          { id: 'training', label: lang === 'vi' ? 'Giáo án & Buổi tập' : 'Workouts & Mesocycle', icon: Dumbbell },
-          { id: 'nutrition', label: lang === 'vi' ? 'Dinh dưỡng & Bữa ăn' : 'Nutrition & Meals', icon: Utensils },
-          { id: 'branches', label: lang === 'vi' ? 'Chi nhánh CTG' : 'CTG Branches & Coach', icon: Building2 },
-        ].map((tab) => {
-          const Icon = tab.icon;
-          const isActive = activeSubTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => setActiveSubTab(tab.id as SubTab)}
-              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
-                isActive
-                  ? 'bg-rose-600 text-white shadow-xs'
-                  : 'bg-white dark:bg-[#1a1e24] text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 border border-gray-200 dark:border-gray-800'
-              }`}
-            >
-              <Icon className="w-3.5 h-3.5" />
-              <span>{tab.label}</span>
-            </button>
-          );
-        })}
+      {/* Multitasking Sub-Tabs Sticky Bar */}
+      <div className="sticky top-0 z-20 bg-gray-50/95 dark:bg-gray-900/95 backdrop-blur-md pt-2 pb-3 mb-6 border-b border-gray-200 dark:border-gray-800">
+        <div className="flex items-center gap-2 overflow-x-auto py-1 px-0.5">
+          {[
+            { id: 'overview', label: lang === 'vi' ? 'Tổng quan & Chỉ số' : 'Overview & Logs', icon: HeartPulse },
+            { id: 'inbody', label: lang === 'vi' ? 'InBody & Đo lường' : 'InBody & Composition', icon: Scale },
+            { id: 'training', label: lang === 'vi' ? 'Giáo án & Buổi tập' : 'Workouts & Mesocycle', icon: Dumbbell },
+            { id: 'nutrition', label: lang === 'vi' ? 'Dinh dưỡng & Bữa ăn' : 'Nutrition & Meals', icon: Utensils },
+            { id: 'profile', label: lang === 'vi' ? 'Hồ sơ của tôi' : 'My Profile', icon: User },
+          ].map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeSubTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveSubTab(tab.id as SubTab)}
+                className={`inline-flex items-center gap-2 h-10 px-4 rounded-xl text-xs font-bold leading-none transition-all cursor-pointer shrink-0 shadow-2xs ${
+                  isActive
+                    ? 'bg-rose-600 text-white shadow-xs ring-1 ring-rose-500'
+                    : 'bg-white dark:bg-[#1a1e24] text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 border border-gray-200 dark:border-gray-700/80'
+                }`}
+              >
+                <Icon className="w-4 h-4 shrink-0" />
+                <span className="whitespace-nowrap">{tab.label}</span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {activeSubTab === 'inbody' && (
@@ -407,9 +415,11 @@ export const HealthView: React.FC<HealthViewProps> = ({
         />
       )}
 
-      {activeSubTab === 'branches' && (
-        <BranchesTab
+      {activeSubTab === 'profile' && (
+        <ProfileTab
           profile={ctgProfile}
+          currentUser={currentUser}
+          onGoogleSignIn={onGoogleSignIn}
           lang={lang}
           onUpdateProfile={onUpdateCtgProfile}
         />

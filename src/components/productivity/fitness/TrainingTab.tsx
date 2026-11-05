@@ -110,7 +110,7 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
       startedAt: Date.now() - 60 * 60_000,
       finishedAt: Date.now(),
       sets,
-      note: 'Hoàn thành theo giáo án chuẩn CTG Fitness.',
+      note: 'Hoàn thành theo giáo án thể hình cá nhân.',
     });
 
     setScheduledBanner(`Đã ghi nhận hoàn thành buổi tập "${session.title}"!`);
@@ -148,7 +148,7 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
         <div>
           <div className="flex items-center gap-2">
             <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-blue-600 text-white">
-              Giáo Án Kháng Lực CTG
+              Giáo Án Kháng Lực Cá Nhân
             </span>
             <span className="text-xs text-gray-500 dark:text-gray-400">
               Phân chia Upper / Lower · 4 buổi/tuần
@@ -514,3 +514,4 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
     </div>
   );
 };
+

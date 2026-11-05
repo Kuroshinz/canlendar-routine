@@ -306,6 +306,9 @@ export const ACTIVITY_FACTOR: Record<ActivityLevel, number> = {
 
 export interface CtgProfile {
   name: string;
+  email?: string;
+  avatarUrl?: string;
+  isGoogleLinked?: boolean;
   sex: Sex;
   age: number;
   heightCm: number;
@@ -314,8 +317,8 @@ export interface CtgProfile {
   targetWeightKg: number;
   targetBodyFatPct: number;
   stepGoal: number;
-  branchId: string;
-  trainerName: string;
+  branchId?: string;
+  trainerName?: string;
 }
 
 export interface BodyPoint {

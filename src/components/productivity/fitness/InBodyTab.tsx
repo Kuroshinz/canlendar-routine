@@ -100,7 +100,7 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
               {GOAL_LABEL[profile.goal]}
             </span>
             <span className="text-xs text-gray-500 dark:text-gray-400">
-              HLV: <span className="font-semibold text-gray-700 dark:text-gray-200">{profile.trainerName}</span>
+              Sở hữu: <span className="font-semibold text-gray-700 dark:text-gray-200">{profile.name}</span>
             </span>
           </div>
           <h2 className="text-lg md:text-xl font-bold text-gray-900 dark:text-gray-100 mt-1">
@@ -447,3 +447,4 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
     </div>
   );
 };
+

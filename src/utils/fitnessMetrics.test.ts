@@ -26,8 +26,6 @@ const mockProfile: CtgProfile = {
   targetWeightKg: 65,
   targetBodyFatPct: 12,
   stepGoal: 8000,
-  branchId: 'q1',
-  trainerName: 'Coach',
 };
 
 const mockSettings: NutritionSettings = {
@@ -113,3 +111,4 @@ assert(parsed[0].recognised === true, 'Item 0 should be recognised');
 assert(parsed[0].item.protein > 50, '200g chicken breast should have > 50g protein');
 
 console.log('All fitness metrics tests passed successfully!');
+

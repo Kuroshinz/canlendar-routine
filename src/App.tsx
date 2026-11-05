@@ -958,6 +958,8 @@ export default function App() {
               onUpdateHealthProfile={productivity.updateHealthProfile}
               onAddWorkout={productivity.addWorkout}
               onDeleteWorkout={productivity.deleteWorkout}
+              currentUser={user}
+              onGoogleSignIn={handleGoogleSignIn}
               ctgProfile={productivity.ctgProfile}
               onUpdateCtgProfile={productivity.updateCtgProfile}
               bodyPoints={productivity.bodyPoints}
