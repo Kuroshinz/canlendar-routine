@@ -84,6 +84,9 @@ export const initAuth = (
  * session is never fabricated.
  */
 export const googleSignIn = async (): Promise<{ user: AppUser; accessToken: string }> => {
+  provider.setCustomParameters({
+    prompt: 'consent',
+  });
   const result = await signInWithPopup(auth, provider);
   const credential = GoogleAuthProvider.credentialFromResult(result);
   const accessToken = credential?.accessToken;
@@ -113,12 +116,25 @@ export const setAccessToken = (token: string) => {
   localStorage.setItem(REAL_TOKEN_KEY, token);
 };
 
+/** Clear cached token both from memory and localStorage without logging out user. */
+export const clearAccessToken = () => {
+  cachedAccessToken = null;
+  localStorage.removeItem(REAL_TOKEN_KEY);
+};
+
+/** Synchronously check for stored token */
+export const getStoredAccessTokenSync = (): string | null => {
+  if (cachedAccessToken) return cachedAccessToken;
+  if (typeof window !== 'undefined') {
+    const stored = localStorage.getItem(REAL_TOKEN_KEY);
+    cachedAccessToken = stored || null;
+  }
+  return cachedAccessToken;
+};
+
 /** Returns a real access token or null. Never returns a sentinel placeholder. */
 export const getAccessToken = async (): Promise<string | null> => {
-  if (cachedAccessToken) return cachedAccessToken;
-  const stored = localStorage.getItem(REAL_TOKEN_KEY);
-  cachedAccessToken = stored || null;
-  return cachedAccessToken;
+  return getStoredAccessTokenSync();
 };
 
 export const logout = async () => {

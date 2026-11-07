@@ -61,7 +61,13 @@ import {
 } from '../../utils/productivityUtils';
 import { calculateDailyHealthScore } from '../../utils/fitnessMetrics';
 import { formatDateString } from '../../utils/calendarUtils';
-import { getAccessToken, googleSignIn } from '../../services/auth';
+import {
+  clearAccessToken,
+  getAccessToken,
+  getStoredAccessTokenSync,
+  googleSignIn,
+  setAccessToken,
+} from '../../services/auth';
 import { requestRealGoogleOAuthToken } from '../../services/realGoogleAuth';
 import {
   GoogleHealthSyncResult,
@@ -195,6 +201,9 @@ export const HealthView: React.FC<HealthViewProps> = ({
   );
 
   const [showWorkoutForm, setShowWorkoutForm] = useState(false);
+  const [manualTokenInput, setManualTokenInput] = useState('');
+  const [showTokenSettings, setShowTokenSettings] = useState(false);
+  const [hasStoredToken, setHasStoredToken] = useState(() => Boolean(getStoredAccessTokenSync()));
   const [syncState, setSyncState] = useState<{
     running: boolean;
     result: GoogleHealthSyncResult | null;
@@ -285,76 +294,100 @@ export const HealthView: React.FC<HealthViewProps> = ({
       }
     }
 
-    setSyncState({ running: false, result });
+    setHasStoredToken(Boolean(getStoredAccessTokenSync()));
+    setSyncState({ running: false, result, message: undefined });
   };
 
-  const requestFreshRealGoogleToken = async (): Promise<string> => {
-    localStorage.removeItem('gcal_real_access_token');
-    let token: string | null = null;
+  /**
+   * Directly triggers Google OAuth Consent Popup.
+   * Triggered immediately on click (synchronous stack) so browser never blocks popup.
+   */
+  const handleDirectGoogleSignIn = async () => {
+    setSyncState({ running: true, result: null, message: undefined });
+    clearAccessToken();
+    setHasStoredToken(false);
 
-    // 1. Google Identity Services
-    if (typeof window !== 'undefined' && window.google?.accounts?.oauth2) {
-      try {
-        token = await requestRealGoogleOAuthToken();
-        localStorage.setItem('gcal_real_access_token', token);
-        return token;
-      } catch (err) {
-        console.warn('GIS requestRealGoogleOAuthToken failed, trying fallback:', err);
-      }
-    }
-
-    // 2. onGoogleSignIn callback
-    if (onGoogleSignIn) {
-      await onGoogleSignIn();
-      token = await getAccessToken();
-      if (token) return token;
-    }
-
-    // 3. Firebase popup
-    const authRes = await googleSignIn();
-    return authRes.accessToken;
-  };
-
-  const handleReauthAndSync = async () => {
-    setSyncState({ running: true, result: null });
     try {
-      const token = await requestFreshRealGoogleToken();
-      const result = await syncGoogleHealth({ date: selectedDate, accessToken: token });
-      if (result.error && (result.error.includes('401') || result.error.includes('403'))) {
-        localStorage.removeItem('gcal_real_access_token');
+      // 1. Firebase OAuth Popup with Fitness Scopes
+      const authRes = await googleSignIn();
+      const token = authRes.accessToken;
+      if (!token) {
+        throw new Error(lang === 'vi' ? 'Google không trả về Access Token.' : 'Google did not return an access token.');
       }
+      setAccessToken(token);
+      setHasStoredToken(true);
+
+      const result = await syncGoogleHealth({ date: selectedDate, accessToken: token });
       applySyncResult(result);
     } catch (err: any) {
+      console.warn('Firebase popup sign-in failed, trying GIS:', err);
+      // 2. Fallback to GIS Token Client
+      if (typeof window !== 'undefined' && window.google?.accounts?.oauth2) {
+        try {
+          const gisToken = await requestRealGoogleOAuthToken();
+          setAccessToken(gisToken);
+          setHasStoredToken(true);
+          const result = await syncGoogleHealth({ date: selectedDate, accessToken: gisToken });
+          applySyncResult(result);
+          return;
+        } catch (gisErr: any) {
+          console.warn('GIS fallback also failed:', gisErr);
+        }
+      }
+
       setSyncState({
         running: false,
         result: null,
-        message: err?.message || (lang === 'vi' ? 'Đăng nhập Google thất bại' : 'Google sign-in failed'),
+        message: err?.message || (lang === 'vi' ? 'Đăng nhập Google thất bại hoặc cửa sổ bị đóng.' : 'Google sign-in failed or cancelled.'),
       });
     }
   };
 
-  const handleSync = async () => {
-    setSyncState({ running: true, result: null });
+  const handleManualTokenSync = async () => {
+    const token = manualTokenInput.trim();
+    if (!token) return;
+    setSyncState({ running: true, result: null, message: undefined });
+    setAccessToken(token);
+    setHasStoredToken(true);
     try {
-      let token = await getAccessToken();
-      if (!token) {
-        token = await requestFreshRealGoogleToken();
+      const result = await syncGoogleHealth({ date: selectedDate, accessToken: token });
+      applySyncResult(result);
+      if (!result.error) {
+        setManualTokenInput('');
       }
+    } catch (err: any) {
+      setSyncState({
+        running: false,
+        result: null,
+        message: err?.message || (lang === 'vi' ? 'Đồng bộ bằng Access Token thất bại.' : 'Sync failed with this token.'),
+      });
+    }
+  };
 
-      let result = await syncGoogleHealth({ date: selectedDate, accessToken: token });
+  const handleClearToken = () => {
+    clearAccessToken();
+    setHasStoredToken(false);
+    setSyncState({
+      running: false,
+      result: null,
+      message: lang === 'vi' ? 'Đã xóa Access Token. Hãy bấm "Đăng nhập Google" để kết nối lại.' : 'Access token cleared.',
+    });
+  };
 
-      // If token failed with 403 (API newly enabled on Cloud) or 401:
-      // Clear the obsolete token and automatically launch Google consent to get a fresh authorized token!
+  const handleSync = async () => {
+    const token = getStoredAccessTokenSync();
+    if (!token) {
+      await handleDirectGoogleSignIn();
+      return;
+    }
+
+    setSyncState({ running: true, result: null, message: undefined });
+    try {
+      const result = await syncGoogleHealth({ date: selectedDate, accessToken: token });
       if (result.error && (result.error.includes('401') || result.error.includes('403'))) {
-        localStorage.removeItem('gcal_real_access_token');
-        try {
-          const freshToken = await requestFreshRealGoogleToken();
-          result = await syncGoogleHealth({ date: selectedDate, accessToken: freshToken });
-        } catch {
-          // If popup is closed by user, preserve the specific Google error
-        }
+        clearAccessToken();
+        setHasStoredToken(false);
       }
-
       applySyncResult(result);
     } catch (err: any) {
       setSyncState({
@@ -477,8 +510,111 @@ export const HealthView: React.FC<HealthViewProps> = ({
                   : 'Sync Google Health (1-Click)'}
             </span>
           </button>
+          <button
+            type="button"
+            onClick={() => setShowTokenSettings((v) => !v)}
+            className={`p-2 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
+              showTokenSettings || hasStoredToken
+                ? 'border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400'
+                : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
+            }`}
+            title={lang === 'vi' ? 'Quản lý Access Token / Đăng nhập Google' : 'Manage Access Token / Sign in'}
+          >
+            <Key className="w-4 h-4" />
+          </button>
         </div>
       </div>
+
+      {/* Optional Token Management Panel */}
+      {showTokenSettings && (
+        <div className="mb-5 p-4 rounded-2xl border border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/30 text-xs space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Key className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+              <span className="font-bold text-slate-800 dark:text-slate-100">
+                {lang === 'vi' ? 'Quản lý kết nối & Access Token Google Fit' : 'Google Fit Access Token'}
+              </span>
+              <span
+                className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                  hasStoredToken
+                    ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300'
+                    : 'bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300'
+                }`}
+              >
+                {hasStoredToken
+                  ? lang === 'vi'
+                    ? 'Đã có Token'
+                    : 'Token active'
+                  : lang === 'vi'
+                    ? 'Chưa có Token'
+                    : 'No token'}
+              </span>
+            </div>
+            <button
+              onClick={() => setShowTokenSettings(false)}
+              className="p-1 rounded-lg hover:bg-black/10 dark:hover:bg-white/10 cursor-pointer"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          <p className="text-[11px] text-slate-600 dark:text-slate-300">
+            {lang === 'vi'
+              ? 'Bạn có thể bấm "Đăng nhập Google trực tiếp" để cấp quyền mới, hoặc dán Access Token từ Google OAuth Playground để đồng bộ dữ liệu thật 100% ngay tức thì.'
+              : 'Sign in directly with Google or paste an Access Token from Google OAuth Playground to fetch real data.'}
+          </p>
+
+          <div className="flex flex-col sm:flex-row items-center gap-2">
+            <input
+              type="text"
+              placeholder={lang === 'vi' ? 'Dán Access Token (ya29...)' : 'Paste Access Token (ya29...)'}
+              value={manualTokenInput}
+              onChange={(e) => setManualTokenInput(e.target.value)}
+              className="w-full sm:flex-1 px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 font-mono text-[11px]"
+            />
+            <button
+              type="button"
+              disabled={!manualTokenInput.trim() || syncState.running}
+              onClick={handleManualTokenSync}
+              className="w-full sm:w-auto px-3.5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-xl font-bold cursor-pointer transition-colors shrink-0"
+            >
+              {lang === 'vi' ? 'Đồng bộ bằng Token này' : 'Sync with this Token'}
+            </button>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-blue-200/60 dark:border-blue-900/40">
+            <button
+              type="button"
+              disabled={syncState.running}
+              onClick={handleDirectGoogleSignIn}
+              className="px-3 py-1.5 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 rounded-lg text-[11px] font-semibold text-slate-700 dark:text-slate-200 cursor-pointer transition-colors inline-flex items-center gap-1.5"
+            >
+              <Key className="w-3 h-3 text-blue-500" />
+              <span>{lang === 'vi' ? 'Đăng nhập Google cấp quyền mới' : 'Sign in with Google'}</span>
+            </button>
+
+            {hasStoredToken && (
+              <button
+                type="button"
+                onClick={handleClearToken}
+                className="px-3 py-1.5 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/60 border border-rose-200 dark:border-rose-900 rounded-lg text-[11px] font-semibold text-rose-600 dark:text-rose-300 cursor-pointer transition-colors"
+              >
+                {lang === 'vi' ? 'Xóa Token đã lưu' : 'Clear Token'}
+              </button>
+            )}
+
+            <a
+              href="https://developers.google.com/oauthplayground"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[11px] text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1 ml-auto"
+            >
+              <ExternalLink className="w-3 h-3" />
+              <span>Google OAuth Playground</span>
+            </a>
+          </div>
+        </div>
+      )}
 
       {/* Multitasking Sub-Tabs Sticky Bar */}
       <div className="sticky top-0 z-20 bg-slate-50/95 dark:bg-[#0b101b]/95 backdrop-blur-md pt-2 pb-3 mb-6 border-b border-slate-200 dark:border-slate-800">
@@ -592,67 +728,88 @@ export const HealthView: React.FC<HealthViewProps> = ({
       {activeSubTab === 'overview' && (
         <>
           {/* Sync result banner */}
-      {(syncState.result || syncState.message) && (
-        <div
-          className={`rounded-2xl border p-3 mb-4 flex items-start gap-2 text-xs ${
-            syncState.message
-              ? 'border-rose-300 dark:border-rose-900 bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300'
-              : syncState.result?.source === 'google-fit'
-                ? 'border-emerald-300 dark:border-emerald-900 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300'
-                : 'border-amber-300 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300'
-          }`}
-        >
-          {syncState.message ? <Info className="w-4 h-4 mt-0.5 shrink-0" /> : <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0" />}
-          <div className="min-w-0">
-            {syncState.message ? (
-              <div>{syncState.message}</div>
-            ) : (
-              <>
-                <div className="font-semibold">
-                  {lang === 'vi' ? 'Đã đồng bộ: ' : 'Synced: '}
-                  {healthSourceLabel(syncState.result!.source, lang)}
-                </div>
-                <div className="opacity-80 mt-0.5">
-                  {syncState.result!.source === 'google-fit'
-                    ? lang === 'vi'
-                      ? (syncState.result!.metrics.steps || 0) === 0 && (syncState.result!.metrics.caloriesBurned || 0) === 0
-                        ? 'Kết nối Google Fit thành công nhưng tài khoản Google của bạn chưa có dữ liệu bước chân/calo cho ngày này. Hãy đảm bảo điện thoại hoặc đồng hồ đã đồng bộ dữ liệu vào Google Fit.'
-                        : `Số liệu thật lấy trực tiếp từ Google Fit API (${(syncState.result!.metrics.steps || 0).toLocaleString()} bước, ${syncState.result!.metrics.caloriesBurned || 0} kcal).`
-                      : 'Real metrics fetched directly from Google Fit API.'
-                    : lang === 'vi'
-                      ? 'Dữ liệu nhập tay.'
-                      : 'Manual data.'}
-                </div>
-                {syncState.result!.error && (
-                  <div className="mt-3 pt-3 border-t border-amber-200/80 dark:border-amber-900/60 space-y-2.5">
-                    <div className="flex items-start gap-2 text-amber-900 dark:text-amber-200 text-xs font-medium leading-relaxed">
-                      <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
-                      <div>
-                        <p className="font-bold">
-                          {syncState.result?.enableApiUrl
-                            ? (lang === 'vi'
-                                ? 'Cần làm mới Token để áp dụng Fitness API vừa bật (Dự án: 755336412189)'
-                                : 'Token refresh required for newly enabled Fitness API (Project: 755336412189)')
-                            : syncState.result!.error.includes('401')
-                              ? (lang === 'vi' ? 'Phiên đăng nhập Google đã hết hạn (401 Unauthorized).' : 'Google access token expired (401 Unauthorized).')
-                              : syncState.result!.error}
-                        </p>
-                        <p className="text-[11px] opacity-85 mt-0.5">
-                          {lang === 'vi'
-                            ? 'Vì bạn vừa bật Fitness API trên Google Cloud, Token cũ của phiên trước chưa mang quyền truy cập. Vui lòng bấm nút xanh bên dưới để Google cấp Token mới mang đủ quyền tải dữ liệu thật.'
-                            : 'Since you enabled Fitness API on Google Cloud, your prior token lacked permission. Please click below to get a fresh token with real data access.'}
-                        </p>
-                      </div>
+          {(syncState.result || syncState.message) && (
+            <div
+              className={`rounded-2xl border p-4 mb-5 flex items-start gap-3 text-xs shadow-xs ${
+                syncState.message || syncState.result?.error
+                  ? 'border-amber-300 dark:border-amber-900/80 bg-amber-50/90 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200'
+                  : 'border-emerald-300 dark:border-emerald-900/80 bg-emerald-50/90 dark:bg-emerald-950/40 text-emerald-900 dark:text-emerald-200'
+              }`}
+            >
+              {syncState.message || syncState.result?.error ? (
+                <AlertTriangle className="w-5 h-5 mt-0.5 text-amber-600 dark:text-amber-400 shrink-0" />
+              ) : (
+                <CheckCircle2 className="w-5 h-5 mt-0.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+              )}
+              <div className="flex-1 min-w-0">
+                {syncState.message ? (
+                  <div className="font-semibold">{syncState.message}</div>
+                ) : syncState.result?.error ? (
+                  <div className="space-y-2">
+                    <div className="font-bold text-sm text-amber-950 dark:text-amber-100">
+                      {syncState.result.error.includes('403')
+                        ? 'Google Fitness API chưa sẵn sàng hoặc tài khoản chưa có quyền (Lỗi 403)'
+                        : syncState.result.error.includes('401')
+                          ? 'Phiên đăng nhập Google đã hết hạn (Lỗi 401 Unauthorized)'
+                          : 'Lỗi kết nối Google Fit API'}
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-2 pt-1">
+                    <div className="text-[11px] leading-relaxed opacity-95 space-y-1.5 text-amber-900 dark:text-amber-200">
+                      {syncState.result.error.includes('403') && (
+                        <>
+                          <p>
+                            • <strong>Nếu bạn vừa bấm Bật (Enable) API trên Google Cloud:</strong> Google cần từ{' '}
+                            <strong>2 - 5 phút</strong> để phân phối quyền trên toàn bộ hệ thống máy chủ. Vui lòng chờ 2
+                            phút rồi bấm lại nút Đồng bộ.
+                          </p>
+                          <p>
+                            • <strong>Cần cấp Token mới:</strong> Token cũ được tạo trước khi bật API nên chưa có quyền
+                            Fitness. Bấm nút <strong>"Đăng nhập Google cấp quyền mới"</strong> bên dưới để Google mở cửa
+                            sổ cấp quyền.
+                          </p>
+                          <p>
+                            • <strong>Màn hình đồng ý OAuth (OAuth consent screen):</strong> Nếu dự án đang ở chế độ{' '}
+                            <em>Testing</em>, hãy vào Google Cloud Console &gt; <em>OAuth consent screen</em> &gt; thêm
+                            email của bạn vào danh sách <strong>Test users (Người dùng thử nghiệm)</strong>.
+                          </p>
+                          <p>
+                            • <strong>Dán Token trực tiếp:</strong> Bạn có thể bấm nút <strong>Token</strong> ở góc trên
+                            để dán Access Token từ Google OAuth Playground và lấy dữ liệu thật ngay tức thì.
+                          </p>
+                        </>
+                      )}
+                      {syncState.result.error.includes('401') && (
+                        <p>
+                          Phiên đăng nhập Google đã hết hạn. Vui lòng bấm nút <strong>"Đăng nhập Google cấp quyền mới"</strong>{' '}
+                          để làm mới phiên làm việc.
+                        </p>
+                      )}
+                      {!syncState.result.error.includes('403') && !syncState.result.error.includes('401') && (
+                        <p>{syncState.result.error}</p>
+                      )}
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-amber-200/70 dark:border-amber-900/50">
                       <button
                         type="button"
-                        onClick={handleReauthAndSync}
+                        onClick={handleDirectGoogleSignIn}
                         className="px-4 py-2 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white rounded-xl text-xs font-bold shadow-xs transition-all cursor-pointer inline-flex items-center gap-1.5"
                       >
                         <Key className="w-3.5 h-3.5" />
-                        <span>{lang === 'vi' ? 'Đăng nhập Google lấy Token mới & Nạp dữ liệu thật' : 'Re-authenticate with Google & Fetch Real Data'}</span>
+                        <span>
+                          {lang === 'vi'
+                            ? 'Đăng nhập Google cấp quyền mới (1-Nhấn)'
+                            : 'Re-authenticate with Google & Fetch Real Data'}
+                        </span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setShowTokenSettings(true)}
+                        className="px-3.5 py-2 bg-amber-200/60 hover:bg-amber-200 dark:bg-amber-900/60 dark:hover:bg-amber-900 text-amber-900 dark:text-amber-100 rounded-xl text-xs font-semibold transition-all cursor-pointer inline-flex items-center gap-1.5"
+                      >
+                        <Key className="w-3.5 h-3.5" />
+                        <span>{lang === 'vi' ? 'Dán Access Token thủ công' : 'Paste Access Token'}</span>
                       </button>
 
                       {syncState.result?.enableApiUrl && (
@@ -660,26 +817,47 @@ export const HealthView: React.FC<HealthViewProps> = ({
                           href={syncState.result.enableApiUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-semibold shadow-xs transition-all inline-flex items-center gap-1.5"
+                          className="px-3.5 py-2 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-semibold shadow-xs transition-all inline-flex items-center gap-1.5"
                         >
                           <ExternalLink className="w-3.5 h-3.5" />
-                          <span>{lang === 'vi' ? 'Kiểm tra trạng thái trên Google Cloud' : 'Check status on Google Cloud'}</span>
+                          <span>
+                            {lang === 'vi' ? 'Xem trạng thái API trên Google Cloud' : 'Check status on Google Cloud'}
+                          </span>
                         </a>
                       )}
                     </div>
                   </div>
+                ) : (
+                  <div>
+                    <div className="font-bold text-sm text-emerald-950 dark:text-emerald-100">
+                      {lang === 'vi'
+                        ? 'Đã đồng bộ thành công dữ liệu thật từ Google Fit!'
+                        : 'Successfully synced real Google Fit data!'}
+                    </div>
+                    <div className="text-xs opacity-90 mt-1">
+                      {(syncState.result!.metrics.steps || 0) === 0 &&
+                      (syncState.result!.metrics.caloriesBurned || 0) === 0 ? (
+                        lang === 'vi'
+                          ? `Kết nối Google Fit thành công nhưng tài khoản Google chưa có bản ghi bước chân/calo cho ngày ${selectedDate}. Hãy đảm bảo điện thoại hoặc đồng hồ thông minh đã đồng bộ hoạt động vào Google Fit.`
+                          : `Connected to Google Fit, but no activity recorded for ${selectedDate}.`
+                      ) : (
+                        lang === 'vi'
+                          ? `Số liệu thật ngày ${selectedDate}: ${(syncState.result!.metrics.steps || 0).toLocaleString()} bước chân • ${syncState.result!.metrics.caloriesBurned || 0} kcal tiêu thụ${syncState.result!.metrics.sleepHours ? ` • ${syncState.result!.metrics.sleepHours}h ngủ` : ''}${syncState.result!.metrics.weightKg ? ` • ${syncState.result!.metrics.weightKg} kg` : ''}.`
+                          : `Real data for ${selectedDate}: ${(syncState.result!.metrics.steps || 0).toLocaleString()} steps, ${syncState.result!.metrics.caloriesBurned || 0} kcal.`
+                      )}
+                    </div>
+                  </div>
                 )}
-              </>
-            )}
-          </div>
-          <button
-            onClick={() => setSyncState({ running: false, result: null })}
-            className="ml-auto p-1 rounded-lg hover:bg-black/10 dark:hover:bg-white/10 cursor-pointer"
-          >
-            <X className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      )}
+              </div>
+
+              <button
+                onClick={() => setSyncState({ running: false, result: null, message: undefined })}
+                className="ml-auto p-1 rounded-lg hover:bg-black/10 dark:hover:bg-white/10 cursor-pointer text-slate-500"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          )}
 
       {/* Daily Health Score Banner */}
       <div className="bg-white dark:bg-[#131b2e] p-4 md:p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs mb-6 flex flex-col md:flex-row md:items-center justify-between gap-5">

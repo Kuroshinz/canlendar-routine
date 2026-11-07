@@ -111,7 +111,15 @@ export function requestRealGoogleOAuthToken(customClientId?: string): Promise<st
           }
         },
         error_callback: (nonOAuthError: any) => {
-          reject(new Error(nonOAuthError?.message || 'Người dùng đã đóng cửa sổ đăng nhập Google'));
+          if (nonOAuthError?.type === 'popup_failed_to_open') {
+            reject(
+              new Error(
+                'Trình duyệt đang chặn cửa sổ đăng nhập Google (Pop-up blocked). Hãy bấm vào biểu tượng chặn cửa sổ bật lên trên thanh địa chỉ URL để Cho phép mở.'
+              )
+            );
+          } else {
+            reject(new Error(nonOAuthError?.message || 'Người dùng đã đóng cửa sổ đăng nhập Google'));
+          }
         },
       });
 

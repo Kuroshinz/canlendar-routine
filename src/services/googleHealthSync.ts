@@ -98,9 +98,9 @@ export async function fetchGoogleHealthMetrics(
     aggregateBy: [
       { dataTypeName: 'com.google.step_count.delta' },
       { dataTypeName: 'com.google.calories.expended' },
-      { dataTypeName: 'com.google.heart_rate.summary' },
+      { dataTypeName: 'com.google.heart_rate.bpm' },
       { dataTypeName: 'com.google.sleep.segment' },
-      { dataTypeName: 'com.google.weight.summary' },
+      { dataTypeName: 'com.google.weight' },
     ],
     bucketByTime: { durationMillis: Math.max(end - start, 60_000) },
     startTimeMillis: start,
