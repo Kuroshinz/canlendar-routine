@@ -830,15 +830,29 @@ export const HealthView: React.FC<HealthViewProps> = ({
                 ) : syncState.result?.error ? (
                   <div className="space-y-2">
                     <div className="font-bold text-sm text-amber-950 dark:text-amber-100">
-                      {syncState.result.error.includes('403')
-                        ? 'Google Fitness API chưa sẵn sàng hoặc tài khoản chưa có quyền (Lỗi 403)'
-                        : syncState.result.error.includes('401')
-                          ? 'Phiên đăng nhập Google đã hết hạn (Lỗi 401 Unauthorized)'
-                          : 'Lỗi kết nối Google Fit API'}
+                      {syncState.result.error.includes('Fitness API has not been used in project')
+                        ? 'Cần Bật Fitness API trên Google Cloud cho dự án 853617678894'
+                        : syncState.result.error.includes('403')
+                          ? 'Google Fitness API chưa sẵn sàng hoặc tài khoản chưa có quyền (Lỗi 403)'
+                          : syncState.result.error.includes('401')
+                            ? 'Phiên đăng nhập Google đã hết hạn (Lỗi 401 Unauthorized)'
+                            : 'Lỗi kết nối Google Fit API'}
                     </div>
 
                     <div className="text-[11px] leading-relaxed opacity-95 space-y-1.5 text-amber-900 dark:text-amber-200">
-                      {syncState.result.error.includes('403') && (
+                      {syncState.result.error.includes('Fitness API has not been used in project') ? (
+                        <>
+                          <p className="font-semibold text-rose-700 dark:text-rose-300">
+                            👉 Bạn đã bật API cho dự án cũ (755336412189), nhưng dự án Google Cloud chính thức của VortexCal là: <strong>853617678894</strong>!
+                          </p>
+                          <p>
+                            • <strong>Chỉ cần 1 bước duy nhất:</strong> Bấm nút màu xanh <strong>"Mở trang Bật Fitness API (Dự án 853617678894)"</strong> bên dưới &gt; Bấm nút <strong>BẬT (ENABLE)</strong> trên Google Cloud.
+                          </p>
+                          <p>
+                            • Sau khi bấm BẬT, quay lại web này bấm lại nút <strong>"Đồng bộ Google Health (1-Nhấn)"</strong> là dữ liệu thật sẽ tự động nạp vào ngay tức thì 100%!
+                          </p>
+                        </>
+                      ) : syncState.result.error.includes('403') ? (
                         <>
                           <p>
                             • <strong>Nếu bạn vừa bấm Bật (Enable) API trên Google Cloud:</strong> Google cần từ{' '}
@@ -846,27 +860,20 @@ export const HealthView: React.FC<HealthViewProps> = ({
                             phút rồi bấm lại nút Đồng bộ.
                           </p>
                           <p>
-                            • <strong>Cần cấp Token mới:</strong> Token cũ được tạo trước khi bật API nên chưa có quyền
-                            Fitness. Bấm nút <strong>"Đăng nhập Google cấp quyền mới"</strong> bên dưới để Google mở cửa
-                            sổ cấp quyền.
-                          </p>
-                          <p>
                             • <strong>Màn hình đồng ý OAuth (OAuth consent screen):</strong> Nếu dự án đang ở chế độ{' '}
                             <em>Testing</em>, hãy vào Google Cloud Console &gt; <em>OAuth consent screen</em> &gt; thêm
                             email của bạn vào danh sách <strong>Test users (Người dùng thử nghiệm)</strong>.
                           </p>
-                          <p>
-                            • <strong>Dán Token trực tiếp:</strong> Bạn có thể bấm nút <strong>Token</strong> ở góc trên
-                            để dán Access Token từ Google OAuth Playground và lấy dữ liệu thật ngay tức thì.
-                          </p>
                         </>
-                      )}
+                      ) : null}
+
                       {syncState.result.error.includes('401') && (
                         <p>
                           Phiên đăng nhập Google đã hết hạn. Vui lòng bấm nút <strong>"Đăng nhập Google cấp quyền mới"</strong>{' '}
                           để làm mới phiên làm việc.
                         </p>
                       )}
+
                       {syncState.result.error && (
                         <div className="p-2 rounded-lg bg-black/5 dark:bg-black/30 font-mono text-[10px] break-all border border-amber-300/40 dark:border-amber-800/40 text-amber-900 dark:text-amber-200">
                           {syncState.result.error}
@@ -875,6 +882,18 @@ export const HealthView: React.FC<HealthViewProps> = ({
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-amber-200/70 dark:border-amber-900/50">
+                      {syncState.result?.enableApiUrl ? (
+                        <a
+                          href={syncState.result.enableApiUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white rounded-xl text-xs font-bold shadow-xs transition-all inline-flex items-center gap-1.5"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5" />
+                          <span>Mở trang Bật Fitness API (Dự án 853617678894)</span>
+                        </a>
+                      ) : null}
+
                       <button
                         type="button"
                         onClick={handleDirectGoogleSignIn}
@@ -896,20 +915,6 @@ export const HealthView: React.FC<HealthViewProps> = ({
                         <Key className="w-3.5 h-3.5" />
                         <span>{lang === 'vi' ? 'Dán Access Token thủ công' : 'Paste Access Token'}</span>
                       </button>
-
-                      {syncState.result?.enableApiUrl && (
-                        <a
-                          href={syncState.result.enableApiUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="px-3.5 py-2 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-semibold shadow-xs transition-all inline-flex items-center gap-1.5"
-                        >
-                          <ExternalLink className="w-3.5 h-3.5" />
-                          <span>
-                            {lang === 'vi' ? 'Xem trạng thái API trên Google Cloud' : 'Check status on Google Cloud'}
-                          </span>
-                        </a>
-                      )}
                     </div>
                   </div>
                 ) : (
