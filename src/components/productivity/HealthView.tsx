@@ -69,6 +69,8 @@ import { TrainingTab } from './fitness/TrainingTab';
 import { NutritionTab } from './fitness/NutritionTab';
 import { ProfileTab } from './fitness/ProfileTab';
 import { RoadmapTab } from './fitness/RoadmapTab';
+import { AppleHealthModal } from './fitness/AppleHealthModal';
+import { AppleHealthDayData } from '../../services/appleHealthSync';
 
 export interface HealthViewProps {
   healthLogs: HealthDayLog[];
@@ -195,6 +197,7 @@ export const HealthView: React.FC<HealthViewProps> = ({
     result: GoogleHealthSyncResult | null;
     message?: string;
   }>({ running: false, result: null });
+  const [showAppleHealthModal, setShowAppleHealthModal] = useState(false);
 
   // --- Workout form state
   const [woName, setWoName] = useState('');
@@ -281,6 +284,41 @@ export const HealthView: React.FC<HealthViewProps> = ({
         message: err?.message || (lang === 'vi' ? 'Đồng bộ thất bại' : 'Sync failed'),
       });
     }
+  };
+
+  const handleApplyAppleHealthData = (dataList: AppleHealthDayData[]) => {
+    for (const data of dataList) {
+      const existingLog = healthLogs.find((l) => l.date === data.date) || {
+        date: data.date,
+        source: 'manual',
+      };
+      const updated: HealthDayLog = {
+        ...existingLog,
+        date: data.date,
+        source: 'manual',
+      };
+      if (data.steps !== undefined) updated.steps = data.steps;
+      if (data.activeEnergyKcal !== undefined) updated.caloriesBurned = data.activeEnergyKcal;
+      if (data.sleepHours !== undefined) updated.sleepHours = data.sleepHours;
+      if (data.waterMl !== undefined) updated.waterMl = data.waterMl;
+      if (data.weightKg !== undefined) updated.weightKg = data.weightKg;
+
+      onUpsertHealthLog(updated);
+
+      if (data.weightKg !== undefined && onAddBodyPoint) {
+        onAddBodyPoint({
+          date: data.date,
+          weightKg: data.weightKg,
+          bodyFatPct: data.bodyFatPct || ctgProfile.targetBodyFatPct,
+          note: 'Đồng bộ từ Apple Health',
+        });
+      }
+    }
+    setSyncState({
+      running: false,
+      result: null,
+      message: `Đã đồng bộ thành công ${dataList.length} ngày từ Apple Health!`,
+    });
   };
 
   const handleSubmitWorkout = (e: React.FormEvent) => {
@@ -378,6 +416,15 @@ export const HealthView: React.FC<HealthViewProps> = ({
             onChange={(e) => setSelectedDate(e.target.value)}
             className="text-xs px-2.5 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200"
           />
+          <button
+            type="button"
+            onClick={() => setShowAppleHealthModal(true)}
+            className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white rounded-xl text-xs font-semibold shadow-xs transition-colors cursor-pointer shrink-0"
+            title="Đồng bộ số bước chân, calo đốt, cân nặng và giấc ngủ từ iPhone Apple Health"
+          >
+            <span className="font-bold text-sm leading-none"></span>
+            <span>Apple Health</span>
+          </button>
           <button
             onClick={handleSync}
             disabled={syncState.running}
@@ -970,6 +1017,14 @@ export const HealthView: React.FC<HealthViewProps> = ({
       </div>
       </>
       )}
+
+      {/* Apple Health Modal */}
+      <AppleHealthModal
+        isOpen={showAppleHealthModal}
+        onClose={() => setShowAppleHealthModal(false)}
+        onApplyAppleHealthData={handleApplyAppleHealthData}
+        selectedDate={selectedDate}
+      />
     </div>
   );
 };

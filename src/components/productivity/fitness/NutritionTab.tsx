@@ -45,6 +45,8 @@ import {
   todayString,
 } from '../../../utils/fitnessMetrics';
 import { Donut, ProgressBar, StackedBar } from '../../charts/SimpleCharts';
+import { GeminiMacroModal } from './GeminiMacroModal';
+import { GeminiMacroItem } from '../../../services/geminiSync';
 
 interface NutritionTabProps {
   meals: MealLog[];
@@ -100,6 +102,38 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
   const [catalogMultiplier, setCatalogMultiplier] = useState(1);
   const [catalogTargetSlot, setCatalogTargetSlot] = useState<MealSlot>('lunch');
   const [comboToast, setComboToast] = useState<string | null>(null);
+  const [showGeminiModal, setShowGeminiModal] = useState(false);
+
+  const handleApplyGeminiMacros = (geminiItems: GeminiMacroItem[]) => {
+    const grouped: Partial<Record<MealSlot, FoodItem[]>> = {};
+    for (const it of geminiItems) {
+      if (!grouped[it.slot]) grouped[it.slot] = [];
+      grouped[it.slot]!.push({
+        name: it.name,
+        amount: it.amount,
+        unit: it.unit,
+        kcal: it.kcal,
+        protein: it.protein,
+        carbs: it.carbs,
+        fat: it.fat,
+      });
+    }
+
+    for (const [slotKey, items] of Object.entries(grouped)) {
+      if (!items || items.length === 0) continue;
+      const slot = slotKey as MealSlot;
+      const desc = items.map((i) => `${i.name} (${i.amount}${i.unit})`).join(' + ');
+      onAddMealLog({
+        date: selectedDate,
+        slot,
+        description: desc,
+        items,
+      });
+    }
+
+    setComboToast(`Đã đồng bộ ${geminiItems.length} món từ Gemini AI vào nhật ký ${selectedDate}!`);
+    setTimeout(() => setComboToast(null), 3500);
+  };
 
   // Filtered Catalog
   const filteredCatalog = useMemo(() => {
@@ -596,6 +630,16 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
             >
               <Flame className="w-3.5 h-3.5" />
               <span>{showCombosSection ? 'Ẩn Thực Đơn Mẫu' : 'Thực Đơn Mẫu (Combos)'}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setShowGeminiModal(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-bold cursor-pointer transition-all shadow-xs"
+              title="Nhận diện món ăn & tính toán Macro tự động qua Gemini AI (Ảnh hoặc Chat)"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+              <span>Gemini AI Track</span>
             </button>
 
             {/* Toggle between NLP and Manual mode */}
@@ -1207,6 +1251,15 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
           </div>
         </div>
       )}
+
+      {/* Gemini AI Macro Modal */}
+      <GeminiMacroModal
+        isOpen={showGeminiModal}
+        onClose={() => setShowGeminiModal(false)}
+        onApplyGeminiMacros={handleApplyGeminiMacros}
+        selectedDate={selectedDate}
+        defaultSlot={selectedSlot}
+      />
     </div>
   );
 };
