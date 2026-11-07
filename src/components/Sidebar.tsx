@@ -114,7 +114,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       icon: HeartPulse,
       labelVi: 'Sức khỏe & Macro',
       labelEn: 'Health & Macro',
-      badge: 'Apple / AI',
+      badge: 'Fitness AI',
     },
     {
       id: 'finance',
