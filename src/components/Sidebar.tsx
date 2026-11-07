@@ -301,8 +301,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
             <p className="text-[11px] leading-relaxed text-slate-600 dark:text-slate-300 mb-3 font-medium">
               {lang === 'vi'
-                ? 'Bóc tách Macro món Việt từ ảnh & đồng bộ Google Health tự động.'
-                : 'Auto parse Vietnamese food macros & sync Google Health.'}
+                ? 'Nhập Prompt Macro bữa ăn & đồng bộ Google Health tự động.'
+                : 'Structured meal macro prompt & Google Health sync.'}
             </p>
 
             <button
@@ -310,7 +310,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               className="w-full py-2 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-sm shadow-blue-500/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer hover:shadow-md"
             >
               <Sparkles className="w-3.5 h-3.5" />
-              <span>{lang === 'vi' ? 'Mở AI Studio' : 'Launch AI Studio'}</span>
+              <span>{lang === 'vi' ? 'Mở Prompt Macro' : 'Macro Prompt Studio'}</span>
             </button>
           </div>
         </div>

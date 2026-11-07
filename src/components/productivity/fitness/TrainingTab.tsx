@@ -539,7 +539,7 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
             </span>
           </div>
           <h2 className="text-lg md:text-xl font-bold text-gray-900 dark:text-gray-100 mt-1">
-            Lịch Tập & Giáo Án Huấn Luyện
+            Lịch Tập &amp; Giáo Án Kháng Lực
           </h2>
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
             Tích hợp trực tiếp với Google Calendar: Lên lịch buổi tập chỉ với 1 click.

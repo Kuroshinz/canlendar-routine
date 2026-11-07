@@ -32,13 +32,13 @@ export interface GeminiSyncResult {
 
 export const GEMINI_NUTRITION_PROMPT_TEMPLATE = `
 Bạn là chuyên gia dinh dưỡng và phân tích khẩu phần thể hình chuyên sâu cho người Việt Nam.
-Hãy phân tích bữa ăn sau đây (từ hình ảnh hoặc mô tả văn bản) và trả về duy nhất một khối mã JSON hợp lệ (không kèm lời chào hay giải thích ngoài JSON) theo cấu trúc chính xác sau:
+Hãy phân tích bữa ăn sau đây từ mô tả văn bản và trả về duy nhất một khối mã JSON hợp lệ (không kèm lời chào hay giải thích ngoài JSON) theo cấu trúc chính xác sau:
 
 \`\`\`json
 [
   {
     "slot": "breakfast",
-    "name": "Tên món ăn (vd: Phở bò tái gầu)",
+    "name": "Phở bò tái gầu",
     "amount": 550,
     "unit": "g",
     "kcal": 450,
@@ -51,11 +51,11 @@ Hãy phân tích bữa ăn sau đây (từ hình ảnh hoặc mô tả văn bả
 
 Quy ước:
 - "slot" chỉ được là một trong 4 giá trị: "breakfast" (bữa sáng), "lunch" (bữa trưa), "dinner" (bữa tối), "snack" (bữa phụ).
-- Ước lượng thực tế theo chuẩn ẩm thực Việt Nam (Cơm tấm, phở, bún, thịt nạc, cơm trắng, đồ uống...).
+- Ước lượng thực tế theo chuẩn ẩm thực Việt Nam (Cơm tấm, phở, bún, thịt nạc, cơm trắng, đồ uống, whey...).
 `;
 
 /**
- * Parses raw text from Gemini chat, markdown code blocks, or pure JSON into structured GeminiMacroItem array.
+ * Parses raw text from prompt, Gemini chat, markdown code blocks, tables, or natural syntax into structured GeminiMacroItem array.
  */
 export function parseGeminiMacroResponse(rawText: string, defaultSlot: MealSlot = 'lunch'): GeminiMacroItem[] {
   if (!rawText || !rawText.trim()) return [];
@@ -102,7 +102,7 @@ export function parseGeminiMacroResponse(rawText: string, defaultSlot: MealSlot 
             name,
             amount: Math.round(amount),
             unit,
-            kcal: Math.round(kcal),
+            kcal: Math.round(kcal || protein * 4 + carbs * 4 + fat * 9),
             protein: Math.round(protein * 10) / 10,
             carbs: Math.round(carbs * 10) / 10,
             fat: Math.round(fat * 10) / 10,
@@ -112,40 +112,67 @@ export function parseGeminiMacroResponse(rawText: string, defaultSlot: MealSlot 
 
       if (validItems.length > 0) return validItems;
     } catch {
-      // JSON parse failed, fall through to heuristic line-by-line parser
+      // JSON parse failed, fall through to line-by-line parser
     }
   }
 
-  // 2. Heuristic line-by-line parser:
-  // e.g. "Phở bò: 450 kcal, 35g protein, 55g carb, 8g fat"
+  // 2. Smart line-by-line & structured prompt parser:
+  // e.g. "Sáng: Phở bò: 450 kcal, 35g protein, 55g carb, 8g fat"
+  // e.g. "Trưa: Cơm tấm sườn bì chả 650 kcal (40P / 75C / 20F)"
   const lines = text.split('\n').map((l) => l.trim()).filter(Boolean);
   const heuristicItems: GeminiMacroItem[] = [];
 
   for (const line of lines) {
-    const cleanLine = line.replace(/^[-*•\d.]+\s*/, '');
+    // Ignore markdown table header separators like |---|---|
+    if (/^\|?[-:\s|]+\|?$/.test(line)) continue;
+
+    let cleanLine = line.replace(/^[-*•\d.]+\s*/, '').replace(/^\|\s*/, '').replace(/\s*\|$/, '');
+
+    // Check if line specifies a meal slot prefix (e.g., "Sáng:", "Bữa trưa:", "Dinner -")
+    let itemSlot = defaultSlot;
+    const slotPrefixMatch = /^(?:bữa\s+)?(sáng|trưa|tối|phụ|breakfast|lunch|dinner|snack)\s*[:\-–]\s*(.*)$/i.exec(cleanLine);
+    if (slotPrefixMatch) {
+      itemSlot = parseMealSlot(slotPrefixMatch[1]);
+      cleanLine = slotPrefixMatch[2].trim();
+    }
+
     const kcalMatch = /(\d+(?:\.\d+)?)\s*(?:kcal|calo|calories)/i.exec(cleanLine);
     const pMatch = /(\d+(?:\.\d+)?)\s*g?\s*(?:protein|đạm|p\b)/i.exec(cleanLine);
     const cMatch = /(\d+(?:\.\d+)?)\s*g?\s*(?:carbs|carb|tinh bột|c\b)/i.exec(cleanLine);
     const fMatch = /(\d+(?:\.\d+)?)\s*g?\s*(?:fat|chất béo|mỡ|béo|f\b)/i.exec(cleanLine);
 
-    if (kcalMatch || pMatch) {
-      const colonIdx = cleanLine.indexOf(':');
-      const name = colonIdx > 0 ? cleanLine.slice(0, colonIdx).trim() : cleanLine.split(/[,-]/)[0].trim();
+    if (kcalMatch || pMatch || cMatch || fMatch) {
+      // Extract clean name by stripping macro numbers and parentheses
+      let namePart = cleanLine
+        .replace(/\(.*?\)/g, '')
+        .replace(/\[.*?\]/g, '')
+        .split(/[:|]/)[0]
+        .replace(/(\d+(?:\.\d+)?)\s*(?:kcal|calo|calories|protein|đạm|p|carbs|carb|tinh bột|c|fat|chất béo|béo|f)\b.*/i, '')
+        .trim();
+
+      if (!namePart || namePart.length < 2) {
+        namePart = cleanLine.split(/[,-]/)[0].trim();
+      }
+
       const kcal = kcalMatch ? Number(kcalMatch[1]) : 0;
       const protein = pMatch ? Number(pMatch[1]) : 0;
       const carbs = cMatch ? Number(cMatch[1]) : 0;
       const fat = fMatch ? Number(fMatch[1]) : 0;
 
-      heuristicItems.push({
-        slot: defaultSlot,
-        name: name || 'Món ăn nhận diện',
-        amount: 150,
-        unit: 'g',
-        kcal: Math.round(kcal || protein * 4 + carbs * 4 + fat * 9),
-        protein: Math.round(protein * 10) / 10,
-        carbs: Math.round(carbs * 10) / 10,
-        fat: Math.round(fat * 10) / 10,
-      });
+      const calcKcal = kcal > 0 ? kcal : Math.round(protein * 4 + carbs * 4 + fat * 9);
+
+      if (namePart && (calcKcal > 0 || protein > 0 || carbs > 0 || fat > 0)) {
+        heuristicItems.push({
+          slot: itemSlot,
+          name: namePart.replace(/^[-*•:\s]+/, '').trim() || 'Món ăn',
+          amount: 150,
+          unit: 'g',
+          kcal: calcKcal,
+          protein: Math.round(protein * 10) / 10,
+          carbs: Math.round(carbs * 10) / 10,
+          fat: Math.round(fat * 10) / 10,
+        });
+      }
     }
   }
 
@@ -161,17 +188,15 @@ function parseMealSlot(val: string): MealSlot {
 }
 
 /**
- * Direct Gemini 1.5 Flash API call supporting text and food image.
+ * Direct text-only prompt Gemini 1.5 Flash API call.
  */
 export async function callGeminiMacroApi(
   prompt: string,
   apiKey: string,
-  imageBase64?: string,
-  mimeType: string = 'image/jpeg',
   slot: MealSlot = 'lunch'
 ): Promise<GeminiSyncResult> {
   if (!apiKey || !apiKey.trim()) {
-    throw new Error('Vui lòng nhập Gemini API Key để thực hiện phân tích trực tiếp.');
+    throw new Error('Vui lòng nhập Gemini API Key để thực hiện phân tích prompt trực tiếp.');
   }
 
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey.trim()}`;
@@ -179,19 +204,9 @@ export async function callGeminiMacroApi(
   const contents: any[] = [];
   const parts: any[] = [];
 
-  if (imageBase64) {
-    const cleanBase64 = imageBase64.replace(/^data:[^;]+;base64,/, '');
-    parts.push({
-      inlineData: {
-        mimeType,
-        data: cleanBase64,
-      },
-    });
-  }
-
-  const userQuery = prompt.trim() || 'Hãy phân tích các món ăn trong hình này và tính toán chi tiết Calo, Protein, Carbs, Fat.';
+  const userQuery = prompt.trim() || 'Hãy phân tích các món ăn sau đây và tính toán chi tiết Calo, Protein, Carbs, Fat.';
   parts.push({
-    text: `${GEMINI_NUTRITION_PROMPT_TEMPLATE}\n\nYêu cầu của người dùng:\n${userQuery}`,
+    text: `${GEMINI_NUTRITION_PROMPT_TEMPLATE}\n\nYêu cầu phân tích bữa ăn:\n${userQuery}`,
   });
 
   contents.push({ parts });

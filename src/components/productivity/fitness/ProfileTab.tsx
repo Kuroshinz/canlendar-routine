@@ -301,17 +301,17 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
         )}
       </div>
 
-      {/* Smart Fitness Coach / Huấn Luyện Viên Thông Minh */}
+      {/* Smart Fitness Strategy */}
       <div className="bg-gradient-to-br from-indigo-500/10 via-purple-500/10 to-pink-500/10 dark:from-indigo-950/30 dark:via-purple-950/20 dark:to-pink-950/10 p-5 rounded-2xl border border-indigo-200 dark:border-indigo-900/50 shadow-xs space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-indigo-500" />
             <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100">
-              Chiến Lược Huấn Luyện & Dinh Dưỡng Cho Bạn ({GOAL_LABEL[profile.goal]})
+              Chiến Lược Thể Hình &amp; Dinh Dưỡng Cho Bạn ({GOAL_LABEL[profile.goal]})
             </h3>
           </div>
           <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-600 text-white">
-            Huấn Luyện Viên Cá Nhân
+            Cá Nhân Hóa
           </span>
         </div>
 

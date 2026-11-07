@@ -635,11 +635,11 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
             <button
               type="button"
               onClick={() => setShowGeminiModal(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-bold cursor-pointer transition-all shadow-xs"
-              title="Nhận diện món ăn & tính toán Macro tự động qua Gemini AI (Ảnh hoặc Chat)"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-orange-600 via-amber-600 to-yellow-600 hover:from-orange-700 hover:to-amber-700 text-white text-xs font-bold cursor-pointer transition-all shadow-xs"
+              title="Nhập cấu trúc bữa ăn & tính toán Macro tự động qua Prompt"
             >
-              <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-              <span>Gemini AI Track</span>
+              <Sparkles className="w-3.5 h-3.5 text-amber-200" />
+              <span>Prompt Macro AI</span>
             </button>
 
             {/* Toggle between NLP and Manual mode */}
