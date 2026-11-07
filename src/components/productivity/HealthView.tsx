@@ -324,6 +324,9 @@ export const HealthView: React.FC<HealthViewProps> = ({
       }
 
       const result = await syncGoogleHealth({ date: selectedDate, accessToken: token });
+      if (result.error && (result.error.includes('401') || result.error.includes('403'))) {
+        localStorage.removeItem('gcal_real_access_token');
+      }
       applySyncResult(result);
     } catch (err: any) {
       setSyncState({
@@ -345,8 +348,8 @@ export const HealthView: React.FC<HealthViewProps> = ({
 
       const result = await syncGoogleHealth({ date: selectedDate, accessToken: token });
 
-      // If token expired (401), clean stale token from storage immediately
-      if (result.error && result.error.includes('401')) {
+      // If token expired (401) or rejected by permission/disabled API (403), clean stale token immediately
+      if (result.error && (result.error.includes('401') || result.error.includes('403'))) {
         localStorage.removeItem('gcal_real_access_token');
       }
 
