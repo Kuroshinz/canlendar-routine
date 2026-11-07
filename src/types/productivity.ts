@@ -158,7 +158,7 @@ export interface BudgetStatus {
 // Health
 // ---------------------------------------------------------------------------
 
-export type HealthSource = 'manual' | 'google-fit' | 'mock';
+export type HealthSource = 'manual' | 'google-fit' | 'mock' | 'apple_health' | 'apple-health';
 
 export interface HealthDayLog {
   date: string; // YYYY-MM-DD

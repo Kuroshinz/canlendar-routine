@@ -2,31 +2,27 @@ import React, { useState } from 'react';
 import { CalendarViewType, SyncState } from '../types/calendar';
 import {
   Menu,
-  ChevronLeft,
-  ChevronRight,
-  ChevronDown,
   Search,
-  HelpCircle,
   Sun,
   Moon,
-  Sparkles,
-  Download,
-  Calendar as CalIcon,
+  Plus,
+  Bell,
   Globe,
-  Layers,
-  RefreshCw,
-  Check,
-  Activity,
+  Sparkles,
+  Smartphone,
+  CheckCircle2,
+  AlertCircle,
+  HelpCircle,
+  FileSpreadsheet,
   Cloud,
-  Undo,
-  Redo,
+  LogOut,
+  RefreshCw,
+  FolderSync,
+  FileText,
 } from 'lucide-react';
 
 interface HeaderProps {
   currentDate: Date;
-  onPrev: () => void;
-  onNext: () => void;
-  onToday: () => void;
   view: CalendarViewType;
   onViewChange: (view: CalendarViewType) => void;
   onToggleSidebar: () => void;
@@ -35,10 +31,13 @@ interface HeaderProps {
   onOpenExportImport: () => void;
   onOpenCloudSync?: () => void;
   onGoogleSignIn?: () => Promise<void>;
-  onOpenMultiHub?: () => void;
+  onOpenAppleHealth?: () => void;
+  onOpenGeminiMacro?: () => void;
+  onToggleRightDrawer?: () => void;
   searchQuery: string;
   onSearchChange: (query: string) => void;
   userEmail?: string;
+  userName?: string;
   darkMode: boolean;
   onToggleDarkMode: () => void;
   lang: 'vi' | 'en';
@@ -46,17 +45,11 @@ interface HeaderProps {
   isLoggedInGoogle?: boolean;
   isSyncing?: boolean;
   syncState?: SyncState;
-  canUndo?: boolean;
-  canRedo?: boolean;
-  onUndo?: () => void;
-  onRedo?: () => void;
+  pendingTasksCount?: number;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   currentDate,
-  onPrev,
-  onNext,
-  onToday,
   view,
   onViewChange,
   onToggleSidebar,
@@ -65,10 +58,13 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenExportImport,
   onOpenCloudSync,
   onGoogleSignIn,
-  onOpenMultiHub,
+  onOpenAppleHealth,
+  onOpenGeminiMacro,
+  onToggleRightDrawer,
   searchQuery,
   onSearchChange,
-  userEmail = 'user@example.com',
+  userEmail = 'Admin',
+  userName,
   darkMode,
   onToggleDarkMode,
   lang,
@@ -76,247 +72,176 @@ export const Header: React.FC<HeaderProps> = ({
   isLoggedInGoogle = false,
   isSyncing = false,
   syncState = 'offline',
-  canUndo = false,
-  canRedo = false,
-  onUndo,
-  onRedo,
+  pendingTasksCount = 3,
 }) => {
-  const [showViewDropdown, setShowViewDropdown] = useState(false);
+  const [showNotificationPopup, setShowNotificationPopup] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
 
-  // Month & Year display formatting
-  const monthNamesVi = [
-    'Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6',
-    'Tháng 7', 'Tháng 8', 'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12',
-  ];
-  const monthNamesEn = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December',
-  ];
+  // Derive friendly greeting based on current time
+  const hour = new Date().getHours();
+  const timeGreetingVi =
+    hour < 12 ? 'Chào buổi sáng' : hour < 18 ? 'Chào buổi chiều' : 'Chào buổi tối';
+  const timeGreetingEn =
+    hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
 
-  const currentMonthName =
-    lang === 'vi'
-      ? monthNamesVi[currentDate.getMonth()]
-      : monthNamesEn[currentDate.getMonth()];
-  const currentYear = currentDate.getFullYear();
-
-  const viewOptions: { id: CalendarViewType; labelVi: string; labelEn: string; shortcut: string }[] = [
-    { id: 'month', labelVi: 'Tháng', labelEn: 'Month', shortcut: 'M' },
-    { id: 'week', labelVi: 'Tuần', labelEn: 'Week', shortcut: 'W' },
-    { id: 'day', labelVi: 'Ngày', labelEn: 'Day', shortcut: 'D' },
-    { id: 'fourDay', labelVi: '4 ngày', labelEn: '4 days', shortcut: 'X' },
-    { id: 'year', labelVi: 'Năm', labelEn: 'Year', shortcut: 'Y' },
-    { id: 'schedule', labelVi: 'Lịch biểu', labelEn: 'Schedule', shortcut: 'A' },
-    { id: 'analytics', labelVi: 'Phân tích năng suất', labelEn: 'Analytics', shortcut: 'P' },
-    { id: 'dashboard', labelVi: 'Tổng quan', labelEn: 'Dashboard', shortcut: '1' },
-    { id: 'tasks', labelVi: 'Công việc & Mục tiêu', labelEn: 'Tasks & Goals', shortcut: '2' },
-    { id: 'focus', labelVi: 'Đồng hồ học tập', labelEn: 'Study clock', shortcut: '3' },
-    { id: 'finance', labelVi: 'Tài chính', labelEn: 'Finance', shortcut: '4' },
-    { id: 'health', labelVi: 'Sức khỏe', labelEn: 'Health', shortcut: '5' },
-  ];
-
-  const currentViewObj = viewOptions.find((v) => v.id === view) || viewOptions[0];
+  const displayName = userName || (userEmail ? userEmail.split('@')[0] : 'Admin');
 
   return (
-    <header className="h-16 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-3 sm:px-6 flex items-center justify-between gap-2 sm:gap-4 shrink-0 select-none z-30 transition-colors">
-      {/* Left: Hamburger, Brand, Navigation buttons */}
-      <div className="flex items-center gap-1 sm:gap-3">
+    <header className="h-18 px-4 sm:px-6 lg:px-8 border-b border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-[#111726]/90 backdrop-blur-md flex items-center justify-between gap-3 sm:gap-6 shrink-0 select-none z-30 transition-colors">
+      {/* Left: Hamburger & Greeting (ShipNexus style: Hello, Admin) */}
+      <div className="flex items-center gap-3">
         <button
           onClick={onToggleSidebar}
-          title={lang === 'vi' ? 'Ẩn/hiện thanh bên' : 'Main menu'}
-          className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 transition-colors cursor-pointer"
+          title={lang === 'vi' ? 'Ẩn/hiện thanh bên' : 'Toggle sidebar'}
+          className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors cursor-pointer"
         >
           <Menu className="w-5 h-5" />
         </button>
 
-        {/* Brand Logo & Name */}
-        <div
-          onClick={() => onViewChange('month')}
-          className="flex items-center gap-2 cursor-pointer group select-none mr-1 sm:mr-3"
-        >
-          <div className="w-9 h-9 rounded-xl bg-linear-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-sm group-hover:scale-105 transition-transform">
-            <CalIcon className="w-5 h-5" />
-          </div>
-          <div className="hidden md:flex flex-col">
-            <span className="font-semibold text-base leading-tight tracking-tight text-gray-800 dark:text-gray-100 font-sans">
-              Vortex<span className="font-bold text-blue-600 dark:text-blue-400">Cal</span>
+        <div className="flex flex-col">
+          <h1 className="text-base sm:text-xl font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
+            <span>
+              {lang === 'vi' ? `${timeGreetingVi}, ` : `${timeGreetingEn}, `}
+              <span className="text-blue-600 dark:text-blue-400 capitalize">{displayName}</span>
             </span>
-            <span className="text-[10px] text-gray-400 font-medium tracking-wide">
-              {lang === 'vi' ? 'Lịch Thông Minh & Thói Quen' : 'Smart Calendar & Routine'}
-            </span>
-          </div>
+          </h1>
+          <span className="text-[11px] font-medium text-slate-400 hidden sm:inline">
+            {lang === 'vi'
+              ? 'Hệ thống quản lý lịch & năng suất VortexCal'
+              : 'VortexCal Smart Routine & Executive Workspace'}
+          </span>
         </div>
-
-        {/* Today button */}
-        <button
-          onClick={onToday}
-          className="px-3.5 py-1.5 border border-gray-300 dark:border-gray-700 rounded-md text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer"
-        >
-          {lang === 'vi' ? 'Hôm nay' : 'Today'}
-        </button>
-
-        {/* Prev / Next buttons */}
-        <div className="flex items-center">
-          <button
-            onClick={onPrev}
-            title={lang === 'vi' ? 'Thời gian trước' : 'Previous'}
-            className="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 transition-colors cursor-pointer"
-          >
-            <ChevronLeft className="w-5 h-5" />
-          </button>
-          <button
-            onClick={onNext}
-            title={lang === 'vi' ? 'Thời gian tới' : 'Next'}
-            className="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 transition-colors cursor-pointer"
-          >
-            <ChevronRight className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* Undo / Redo for Drag & Drop */}
-        {canUndo && (
-          <button
-            onClick={onUndo}
-            title={lang === 'vi' ? 'Hoàn tác kéo thả (Ctrl+Z)' : 'Undo (Ctrl+Z)'}
-            className="p-1.5 rounded-full bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100 text-blue-600 dark:text-blue-400 transition-colors cursor-pointer"
-          >
-            <Undo className="w-4 h-4" />
-          </button>
-        )}
-        {canRedo && (
-          <button
-            onClick={onRedo}
-            title={lang === 'vi' ? 'Làm lại (Ctrl+Shift+Z)' : 'Redo (Ctrl+Shift+Z)'}
-            className="p-1.5 rounded-full bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100 text-blue-600 dark:text-blue-400 transition-colors cursor-pointer"
-          >
-            <Redo className="w-4 h-4" />
-          </button>
-        )}
-
-        {/* Month & Year Title */}
-        <h2 className="text-base sm:text-lg font-medium text-gray-800 dark:text-gray-100 ml-1 sm:ml-2 font-sans truncate">
-          {currentMonthName} {currentYear}
-        </h2>
       </div>
 
-      {/* Center: Search Bar */}
-      <div className="hidden md:flex items-center flex-1 max-w-xs lg:max-w-md mx-2">
+      {/* Center: Search pill bar with shortcut badge */}
+      <div className="flex-1 max-w-xs md:max-w-md lg:max-w-lg mx-2 hidden sm:block">
         <div className="relative w-full">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+          <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
             <Search className="w-4 h-4" />
           </div>
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
-            placeholder={lang === 'vi' ? 'Tìm kiếm sự kiện, công việc...' : 'Search events, tasks...'}
-            className="w-full pl-9 pr-4 py-1.5 bg-gray-100 dark:bg-gray-800 text-sm text-gray-800 dark:text-gray-100 rounded-full border-none focus:outline-hidden focus:ring-2 focus:ring-blue-500 placeholder-gray-400 transition-all"
+            placeholder={
+              lang === 'vi'
+                ? 'Tìm kiếm sự kiện, công việc, dinh dưỡng, chi tiêu...'
+                : 'Search events, tasks, macros, transactions...'
+            }
+            className="w-full pl-10 pr-12 py-2 bg-slate-100 dark:bg-slate-800/80 text-sm text-slate-800 dark:text-slate-100 rounded-full border border-slate-200 dark:border-slate-700/60 focus:outline-hidden focus:ring-2 focus:ring-blue-500 placeholder-slate-400 transition-all shadow-2xs"
           />
+          <kbd className="absolute right-3 top-1/2 -translate-y-1/2 hidden md:inline-flex items-center px-1.5 py-0.5 text-[10px] font-semibold text-slate-400 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded">
+            Ctrl+K
+          </kbd>
         </div>
       </div>
 
-      {/* Right: Actions, Analytics, Sync, View dropdown, User Avatar */}
-      <div className="flex items-center gap-1.5 sm:gap-2">
-        {/* Productivity Analytics Button */}
+      {/* Right: Quick actions, Sync, Notification, Theme, Profile */}
+      <div className="flex items-center gap-2 sm:gap-3">
+        {/* + Tạo mới pill button */}
         <button
-          onClick={() => onViewChange('analytics')}
-          title={lang === 'vi' ? 'Phân tích thời gian & năng suất' : 'Productivity Analytics'}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all border cursor-pointer ${
-            view === 'analytics'
-              ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
-              : 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 border-indigo-200 dark:border-indigo-800'
-          }`}
+          onClick={onOpenQuickAdd}
+          title={lang === 'vi' ? 'Tạo nhanh bằng câu lệnh tự nhiên' : 'Quick add'}
+          className="flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-full text-xs font-bold shadow-sm shadow-blue-500/20 transition-all cursor-pointer"
         >
-          <Activity className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline">{lang === 'vi' ? 'Phân tích' : 'Analytics'}</span>
+          <Plus className="w-3.5 h-3.5" />
+          <span className="hidden md:inline">{lang === 'vi' ? 'Tạo mới' : 'Create'}</span>
         </button>
 
-        {/* Google Authentication & Sync Button */}
-        {isLoggedInGoogle ? (
+        {/* Apple Health & Gemini Sync button */}
+        {onOpenAppleHealth && (
           <button
-            onClick={onOpenCloudSync || onOpenExportImport}
-            title={lang === 'vi' ? 'Tài khoản Google đã kết nối • Bấm để đồng bộ' : 'Google Connected • Click to sync'}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-700/60 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-all cursor-pointer shadow-2xs"
+            onClick={onOpenAppleHealth}
+            title={lang === 'vi' ? 'Đồng bộ Apple Health' : 'Sync Apple Health'}
+            className="p-2 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer hidden sm:flex items-center justify-center relative"
           >
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-            <span className="hidden md:inline font-mono text-[11px] font-semibold truncate max-w-[150px]">
-              {userEmail}
-            </span>
-            <span className="md:hidden font-bold text-[11px]">
-              {lang === 'vi' ? 'Đã đồng bộ' : 'Synced'}
-            </span>
-            <RefreshCw className={`w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0 ${isSyncing ? 'animate-spin' : ''}`} />
-          </button>
-        ) : (
-          <button
-            onClick={onGoogleSignIn || onOpenCloudSync}
-            title={
-              lang === 'vi'
-                ? 'Kết nối Google Calendar thật (OAuth, Access Token hoặc URL iCal)'
-                : 'Connect real Google Calendar (OAuth, access token, or iCal URL)'
-            }
-            className="flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 shadow-xs cursor-pointer hover:shadow-sm transition-all"
-          >
-            {/* Google official 4-color G icon */}
-            <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24">
-              <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"/>
-              <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24z"/>
-              <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.98 0 12s.45 3.82 1.25 5.42l4.03-3.15z"/>
-              <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
-            </svg>
-            <span className="hidden sm:inline font-sans">{lang === 'vi' ? 'Kết nối Google' : 'Connect Google'}</span>
-            <span className="sm:hidden font-sans">Google</span>
+            <Smartphone className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+            <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-500" />
           </button>
         )}
 
-        {/* Quick Add with Natural Language */}
-        <button
-          onClick={onOpenQuickAdd}
-          title={lang === 'vi' ? 'Tạo nhanh bằng câu lệnh tự nhiên' : 'Quick create event'}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/60 rounded-full text-xs font-medium border border-blue-200 dark:border-blue-800 cursor-pointer transition-colors"
-        >
-          <Sparkles className="w-3.5 h-3.5 text-blue-500" />
-          <span className="hidden xl:inline">{lang === 'vi' ? 'Tạo nhanh' : 'Quick Add'}</span>
-        </button>
+        {/* Gemini AI Macro Studio quick button */}
+        {onOpenGeminiMacro && (
+          <button
+            onClick={onOpenGeminiMacro}
+            title={lang === 'vi' ? 'Vortex Gemini AI Studio' : 'Gemini AI Studio'}
+            className="p-2 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-blue-600 dark:text-blue-400 transition-colors cursor-pointer hidden sm:flex items-center justify-center"
+          >
+            <Sparkles className="w-4 h-4" />
+          </button>
+        )}
 
-        {/* View Switcher Dropdown */}
+        {/* Right drawer notes toggle */}
+        {onToggleRightDrawer && (
+          <button
+            onClick={onToggleRightDrawer}
+            title={lang === 'vi' ? 'Ghi chú & Công việc nhanh' : 'Quick Notes & Tasks'}
+            className="p-2 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer hidden lg:flex items-center justify-center"
+          >
+            <FileText className="w-4 h-4" />
+          </button>
+        )}
+
+        {/* Notification Bell with Badge */}
         <div className="relative">
           <button
-            onClick={() => setShowViewDropdown(!showViewDropdown)}
-            className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 dark:border-gray-700 rounded-md text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer"
+            onClick={() => setShowNotificationPopup(!showNotificationPopup)}
+            title={lang === 'vi' ? 'Thông báo & Nhắc nhở' : 'Notifications'}
+            className="p-2 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer relative"
           >
-            <span>{lang === 'vi' ? currentViewObj.labelVi : currentViewObj.labelEn}</span>
-            <ChevronDown className="w-4 h-4 text-gray-500" />
+            <Bell className="w-4 h-4" />
+            {pendingTasksCount > 0 && (
+              <span className="absolute top-0 right-0 min-w-4 h-4 px-1 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center leading-none">
+                {pendingTasksCount}
+              </span>
+            )}
           </button>
 
-          {showViewDropdown && (
+          {showNotificationPopup && (
             <>
               <div
-                className="fixed inset-0 z-30"
-                onClick={() => setShowViewDropdown(false)}
-              ></div>
-              <div className="absolute right-0 mt-1 w-60 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg py-1.5 z-40 max-h-[70vh] overflow-y-auto">
-                {viewOptions.map((opt) => (
-                  <React.Fragment key={opt.id}>
-                    {opt.id === 'dashboard' && (
-                      <div className="my-1 border-t border-gray-100 dark:border-gray-700" />
-                    )}
-                    <button
-                      onClick={() => {
-                        onViewChange(opt.id);
-                        setShowViewDropdown(false);
-                      }}
-                      className={`w-full flex items-center justify-between px-3.5 py-2 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer ${
-                        view === opt.id
-                          ? 'text-blue-600 dark:text-blue-400 font-semibold bg-blue-50/50 dark:bg-blue-900/20'
-                          : 'text-gray-700 dark:text-gray-200'
-                      }`}
-                    >
-                      <span>{lang === 'vi' ? opt.labelVi : opt.labelEn}</span>
-                      <span className="text-xs text-gray-400 font-mono">{opt.shortcut}</span>
-                    </button>
-                  </React.Fragment>
-                ))}
+                className="fixed inset-0 z-40"
+                onClick={() => setShowNotificationPopup(false)}
+              />
+              <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-xl p-4 z-50">
+                <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-700">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                    {lang === 'vi' ? 'Thông báo hệ thống' : 'Notifications'}
+                  </h3>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400">
+                    {pendingTasksCount} mới
+                  </span>
+                </div>
+
+                <div className="mt-3 space-y-2.5">
+                  <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800 text-xs flex items-start gap-2.5">
+                    <AlertCircle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-semibold text-slate-800 dark:text-slate-200">
+                        {lang === 'vi' ? 'Mục tiêu dinh dưỡng' : 'Nutrition Target'}
+                      </p>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                        {lang === 'vi'
+                          ? 'Bạn còn thiếu 540 kcal & 35g protein cho ngày hôm nay.'
+                          : 'You need 540 kcal & 35g protein remaining today.'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800 text-xs flex items-start gap-2.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-semibold text-slate-800 dark:text-slate-200">
+                        {lang === 'vi' ? 'Đồng bộ Apple Health' : 'Apple Health Synced'}
+                      </p>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                        {lang === 'vi'
+                          ? 'Đã tải 6.345 bước chân & 8.1 giờ ngủ từ thiết bị.'
+                          : 'Loaded 6,345 steps & 8.1 hrs sleep from device.'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
               </div>
             </>
           )}
@@ -326,37 +251,128 @@ export const Header: React.FC<HeaderProps> = ({
         <button
           onClick={onToggleLang}
           title={lang === 'vi' ? 'Đổi sang English' : 'Chuyển sang Tiếng Việt'}
-          className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 transition-colors cursor-pointer font-bold text-xs flex items-center gap-0.5"
+          className="p-2 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer font-bold text-xs flex items-center gap-1"
         >
           <Globe className="w-3.5 h-3.5" />
           <span>{lang === 'vi' ? 'VI' : 'EN'}</span>
         </button>
 
-        {/* Dark Mode toggle */}
+        {/* Theme Dark / Light toggle */}
         <button
           onClick={onToggleDarkMode}
-          title={darkMode ? 'Chuyển chế độ sáng' : 'Chuyển chế độ tối'}
-          className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 transition-colors cursor-pointer"
+          title={darkMode ? 'Chuyển giao diện sáng' : 'Chuyển giao diện tối'}
+          className="p-2 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
         >
-          {darkMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-gray-600" />}
+          {darkMode ? (
+            <Sun className="w-4 h-4 text-amber-400" />
+          ) : (
+            <Moon className="w-4 h-4 text-slate-600" />
+          )}
         </button>
 
-        {/* Shortcuts Modal trigger */}
-        <button
-          onClick={onOpenShortcuts}
-          title={lang === 'vi' ? 'Phím tắt' : 'Keyboard shortcuts'}
-          className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 transition-colors cursor-pointer hidden sm:block"
-        >
-          <HelpCircle className="w-4 h-4" />
-        </button>
+        {/* User Profile Avatar with dropdown (ShipNexus style) */}
+        <div className="relative ml-1">
+          <button
+            onClick={() => setShowProfileMenu(!showProfileMenu)}
+            className="flex items-center gap-2 p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-all cursor-pointer group"
+          >
+            <div className="relative">
+              <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 text-white font-bold text-xs flex items-center justify-center ring-2 ring-slate-200 dark:ring-slate-700 group-hover:ring-blue-400 transition-all shadow-xs">
+                {(displayName && displayName.length > 0 ? displayName[0] : 'A').toUpperCase()}
+              </div>
+              <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-[#111726]" />
+            </div>
+          </button>
 
-        {/* User Profile */}
-        <button
-          onClick={() => setShowProfileMenu(!showProfileMenu)}
-          className="w-8 h-8 rounded-full bg-linear-to-tr from-blue-600 to-indigo-600 text-white font-medium text-xs flex items-center justify-center ring-2 ring-transparent hover:ring-blue-300 transition-all cursor-pointer shadow-xs ml-1"
-        >
-          {(userEmail && userEmail.length > 0 ? userEmail[0] : 'G').toUpperCase()}
-        </button>
+          {showProfileMenu && (
+            <>
+              <div className="fixed inset-0 z-40" onClick={() => setShowProfileMenu(false)} />
+              <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-xl p-3 z-50">
+                <div className="px-3 py-2 border-b border-slate-100 dark:border-slate-700/60 mb-2">
+                  <p className="font-bold text-sm text-slate-900 dark:text-white capitalize">
+                    {displayName}
+                  </p>
+                  <p className="text-xs text-slate-400 truncate">
+                    {userEmail || 'admin@vortexcal.io'}
+                  </p>
+                  <div className="mt-1.5 flex items-center gap-1.5">
+                    <span
+                      className={`w-2 h-2 rounded-full ${
+                        isLoggedInGoogle ? 'bg-emerald-500' : 'bg-slate-400'
+                      }`}
+                    />
+                    <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                      {isLoggedInGoogle ? 'Google Synced' : 'Offline First Mode'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  {onOpenCloudSync && (
+                    <button
+                      onClick={() => {
+                        setShowProfileMenu(false);
+                        onOpenCloudSync();
+                      }}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors text-left cursor-pointer"
+                    >
+                      <Cloud className="w-4 h-4 text-blue-500" />
+                      <span>{lang === 'vi' ? 'Đồng bộ đám mây' : 'Cloud Sync'}</span>
+                    </button>
+                  )}
+
+                  <button
+                    onClick={() => {
+                      setShowProfileMenu(false);
+                      onOpenExportImport();
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors text-left cursor-pointer"
+                  >
+                    <FileSpreadsheet className="w-4 h-4 text-emerald-500" />
+                    <span>{lang === 'vi' ? 'Xuất / Nhập dữ liệu (iCal)' : 'Export / Import (iCal)'}</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setShowProfileMenu(false);
+                      onOpenShortcuts();
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors text-left cursor-pointer"
+                  >
+                    <HelpCircle className="w-4 h-4 text-indigo-500" />
+                    <span>{lang === 'vi' ? 'Phím tắt bàn phím' : 'Keyboard Shortcuts'}</span>
+                  </button>
+
+                  <div className="pt-2 mt-2 border-t border-slate-100 dark:border-slate-700/60">
+                    {isLoggedInGoogle ? (
+                      <button
+                        onClick={() => {
+                          setShowProfileMenu(false);
+                          if (onOpenCloudSync) onOpenCloudSync();
+                        }}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors text-left cursor-pointer"
+                      >
+                        <LogOut className="w-4 h-4" />
+                        <span>{lang === 'vi' ? 'Quản lý tài khoản' : 'Manage Account'}</span>
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          setShowProfileMenu(false);
+                          if (onGoogleSignIn) onGoogleSignIn();
+                        }}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/30 transition-colors text-left cursor-pointer"
+                      >
+                        <FolderSync className="w-4 h-4" />
+                        <span>{lang === 'vi' ? 'Đăng nhập Google' : 'Sign in Google'}</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </header>
   );

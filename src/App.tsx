@@ -52,7 +52,12 @@ import {
   saveEventToFirestore,
   deleteEventFromFirestore,
 } from './services/firestoreSync';
-import { Bell } from 'lucide-react';
+import { Bell, FileText } from 'lucide-react';
+import { CalendarActionBar } from './components/CalendarActionBar';
+import { AppleHealthModal } from './components/productivity/fitness/AppleHealthModal';
+import { GeminiMacroModal } from './components/productivity/fitness/GeminiMacroModal';
+import { AppleHealthDayData } from './services/appleHealthSync';
+import { GeminiMacroItem } from './services/geminiSync';
 
 export default function App() {
   // 1. Language state
@@ -203,6 +208,53 @@ export default function App() {
   const [isExportImportOpen, setIsExportImportOpen] = useState(false);
   const [isCloudSyncOpen, setIsCloudSyncOpen] = useState(false);
   const [isMultiHubOpen, setIsMultiHubOpen] = useState(false);
+  const [isAppleHealthOpen, setIsAppleHealthOpen] = useState(false);
+  const [isGeminiMacroOpen, setIsGeminiMacroOpen] = useState(false);
+  const [isRightDrawerOpen, setIsRightDrawerOpen] = useState(false);
+
+  const handleApplyAppleHealthData = useCallback(
+    (data: AppleHealthDayData[]) => {
+      data.forEach((item) => {
+        const existing = productivity.healthLogs.find((l) => l.date === item.date) || { date: item.date };
+        productivity.upsertHealthLog({
+          ...existing,
+          steps: item.steps ?? existing.steps,
+          waterMl: item.waterMl ?? existing.waterMl,
+          sleepHours: item.sleepHours ?? existing.sleepHours,
+          caloriesBurned: item.activeEnergyKcal ?? existing.caloriesBurned,
+          weightKg: item.weightKg ?? existing.weightKg,
+          source: 'apple_health',
+        });
+      });
+      setIsAppleHealthOpen(false);
+    },
+    [productivity.healthLogs, productivity.upsertHealthLog]
+  );
+
+  const handleApplyGeminiMacros = useCallback(
+    (items: GeminiMacroItem[]) => {
+      items.forEach((item) => {
+        productivity.addMealLog({
+          date: todayString(),
+          slot: item.slot || 'lunch',
+          description: item.name,
+          items: [
+            {
+              name: item.name,
+              amount: item.amount || 100,
+              unit: item.unit || 'g',
+              kcal: item.kcal,
+              protein: item.protein,
+              carbs: item.carbs,
+              fat: item.fat,
+            },
+          ],
+        });
+      });
+      setIsGeminiMacroOpen(false);
+    },
+    [productivity.addMealLog]
+  );
 
   // Mini Inline Event Popover state
   const [miniPopover, setMiniPopover] = useState<{
@@ -724,352 +776,404 @@ export default function App() {
   };
 
   return (
-    <div className="flex flex-col h-screen w-screen overflow-hidden bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-sans antialiased">
+    <div className="flex h-screen w-screen overflow-hidden bg-slate-50 dark:bg-[#0b101b] text-slate-800 dark:text-slate-100 font-sans antialiased">
       {/* Reminder Banner Toast */}
       {activeAlert && (
-        <div className="bg-blue-600 text-white px-4 py-2.5 text-xs flex items-center justify-between shadow-md z-50 animate-in slide-in-from-top">
-          <div className="flex items-center gap-2">
-            <Bell className="w-4 h-4 animate-bounce" />
-            <span className="font-semibold">
-              {lang === 'vi' ? 'Nhắc nhở sự kiện sắp tới:' : 'Upcoming event reminder:'}
-            </span>
+        <div className="fixed top-4 right-4 bg-blue-600 text-white px-4 py-2.5 rounded-2xl shadow-xl z-50 flex items-center gap-3 animate-in slide-in-from-top">
+          <Bell className="w-4 h-4 animate-bounce" />
+          <div className="text-xs">
+            <span className="font-bold">{lang === 'vi' ? 'Nhắc nhở: ' : 'Reminder: '}</span>
             <span>
               {activeAlert.title} ({activeAlert.time})
             </span>
           </div>
           <button
             onClick={() => setActiveAlert(null)}
-            className="px-2 py-0.5 bg-blue-700 hover:bg-blue-800 rounded font-bold cursor-pointer"
+            className="p-1 hover:bg-blue-700 rounded-lg text-white font-bold cursor-pointer"
           >
             ✕
           </button>
         </div>
       )}
 
-      {/* Main Google Calendar Header */}
-      <Header
+      {/* Modern Executive Sidebar Dock */}
+      <Sidebar
         currentDate={currentDate}
-        view={view}
-        onViewChange={handleViewChange}
-        onPrev={handleNavigatePrev}
-        onNext={handleNavigateNext}
-        onToday={handleNavigateToday}
-        onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-        onOpenQuickAdd={() => setIsQuickAddOpen(true)}
-        onOpenShortcuts={() => setIsShortcutsOpen(true)}
-        onOpenExportImport={() => setIsExportImportOpen(true)}
-        onOpenCloudSync={() => setIsCloudSyncOpen(true)}
-        onOpenMultiHub={() => setIsMultiHubOpen(true)}
+        onSelectDate={(d) => {
+          setCurrentDate(d);
+          if (window.innerWidth < 1024) {
+            setIsSidebarOpen(false);
+          }
+        }}
+        isOpen={isSidebarOpen}
+        onCloseMobile={() => setIsSidebarOpen(false)}
+        categories={categories}
+        onToggleCategory={handleToggleCategory}
+        onAddCategory={handleAddCategory}
+        onDeleteCategory={handleDeleteCategory}
+        onOpenCreateModal={(type) => openCreateModal(type)}
         lang={lang}
-        onToggleLang={toggleLang}
-        darkMode={darkMode}
-        onToggleDarkMode={toggleDarkMode}
-        userEmail={user?.email || 'Google'}
+        onViewChange={handleViewChange}
+        currentView={view}
+        onOpenGeminiMacro={() => setIsGeminiMacroOpen(true)}
+        onOpenAppleHealth={() => setIsAppleHealthOpen(true)}
+        onOpenSettings={() => setIsShortcutsOpen(true)}
+        onOpenCloudSync={() => setIsCloudSyncOpen(true)}
         onGoogleSignIn={handleGoogleSignIn}
+        userEmail={user?.email || undefined}
         isLoggedInGoogle={Boolean(user)}
-        isSyncing={isSyncing}
-        syncState={syncState}
-        canUndo={canUndo}
-        canRedo={canRedo}
-        onUndo={undo}
-        onRedo={redo}
       />
 
-      {/* Main Body Area: Sidebar + Active View + Right Utility Dock */}
-      <div className="flex-1 flex overflow-hidden relative">
-        <Sidebar
+      {/* Main Content Workspace */}
+      <div className="flex-1 flex flex-col h-full overflow-hidden min-w-0">
+        {/* Top Modern Header Bar */}
+        <Header
           currentDate={currentDate}
-          onSelectDate={(d) => {
-            setCurrentDate(d);
-            if (window.innerWidth < 1024) {
-              setIsSidebarOpen(false);
-            }
-          }}
-          isOpen={isSidebarOpen}
-          onCloseMobile={() => setIsSidebarOpen(false)}
-          categories={categories}
-          onToggleCategory={handleToggleCategory}
-          onAddCategory={handleAddCategory}
-          onDeleteCategory={handleDeleteCategory}
-          onOpenCreateModal={(type) => openCreateModal(type)}
-          lang={lang}
+          view={view}
           onViewChange={handleViewChange}
-          currentView={view}
+          onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          onOpenQuickAdd={() => setIsQuickAddOpen(true)}
+          onOpenShortcuts={() => setIsShortcutsOpen(true)}
+          onOpenExportImport={() => setIsExportImportOpen(true)}
+          onOpenCloudSync={() => setIsCloudSyncOpen(true)}
+          onGoogleSignIn={handleGoogleSignIn}
+          onOpenAppleHealth={() => setIsAppleHealthOpen(true)}
+          onOpenGeminiMacro={() => setIsGeminiMacroOpen(true)}
+          onToggleRightDrawer={() => setIsRightDrawerOpen((prev) => !prev)}
+          userEmail={user?.email || 'admin@vortexcal.io'}
+          userName={user?.displayName || undefined}
+          darkMode={darkMode}
+          onToggleDarkMode={toggleDarkMode}
+          lang={lang}
+          onToggleLang={toggleLang}
+          isLoggedInGoogle={Boolean(user)}
+          isSyncing={isSyncing}
+          syncState={syncState}
+          pendingTasksCount={productivity.tasks.filter((t) => t.status !== 'completed').length}
         />
 
-        {/* View Grid Switcher */}
-        <main className="flex-1 flex flex-col h-full overflow-hidden bg-white dark:bg-gray-900 relative">
-          {view === 'month' && (
-            <MonthView
-              currentDate={currentDate}
-              events={allEvents}
-              visibleCategoryIds={visibleCategoryIds}
-              onSelectEvent={(ev) => setSelectedEventForDetail(ev)}
-              onCellClick={(dateStr, clientX, clientY) => {
-                handleOpenInlineQuickAdd(dateStr, '09:00', '10:00', clientX, clientY);
-              }}
-              onOpenDayPlanner={(dateStr) => {
-                setDayPlanner({ isOpen: true, dateStr });
-              }}
-              onMoveEvent={handleMoveEvent}
-              lang={lang}
-            />
-          )}
+        {/* Viewport Content */}
+        <main className="flex-1 overflow-y-auto p-3 sm:p-5 lg:p-6 min-w-0">
+          {view === 'month' ||
+          view === 'week' ||
+          view === 'day' ||
+          view === 'fourDay' ||
+          view === 'year' ||
+          view === 'schedule' ? (
+            <div className="flex flex-col h-full bg-white dark:bg-[#131b2e] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xs overflow-hidden">
+              <CalendarActionBar
+                currentDate={currentDate}
+                onPrev={handleNavigatePrev}
+                onNext={handleNavigateNext}
+                onToday={handleNavigateToday}
+                view={view}
+                onViewChange={handleViewChange}
+                lang={lang}
+                categories={categories}
+                onToggleCategory={handleToggleCategory}
+                onAddCategory={handleAddCategory}
+                canUndo={canUndo}
+                canRedo={canRedo}
+                onUndo={undo}
+                onRedo={redo}
+                onOpenCreateModal={(type) => openCreateModal(type)}
+              />
 
-          {(view === 'week' || view === 'day' || view === 'fourDay') && (
-            <TimeGridView
-              currentDate={currentDate}
-              viewType={view}
-              events={allEvents}
-              visibleCategoryIds={visibleCategoryIds}
-              onSelectEvent={(ev) => setSelectedEventForDetail(ev)}
-              onSlotClick={(dateStr, timeStr, clientX, clientY) => {
-                const parts = timeStr.split(':');
-                const nextH = Math.min(23, parseInt(parts[0], 10) + 1);
-                const nextTime = `${String(nextH).padStart(2, '0')}:${parts[1]}`;
-                handleOpenInlineQuickAdd(dateStr, timeStr, nextTime, clientX, clientY);
-              }}
-              onSlotRangeSelect={(dateStr, startTime, endTime, clientX, clientY) => {
-                handleOpenInlineQuickAdd(dateStr, startTime, endTime, clientX, clientY);
-              }}
-              lang={lang}
-              dndState={dndState}
-              onStartDrag={startDrag}
-              onStartResize={startResize}
-              onPointerMove={updatePointerMove}
-              onFinishDnD={finishDnD}
-              onCancelDnD={cancelDnD}
-            />
-          )}
+              <div className="flex-1 overflow-hidden relative">
+                {view === 'month' && (
+                  <MonthView
+                    currentDate={currentDate}
+                    events={allEvents}
+                    visibleCategoryIds={visibleCategoryIds}
+                    onSelectEvent={(ev) => setSelectedEventForDetail(ev)}
+                    onCellClick={(dateStr, clientX, clientY) => {
+                      handleOpenInlineQuickAdd(dateStr, '09:00', '10:00', clientX, clientY);
+                    }}
+                    onOpenDayPlanner={(dateStr) => {
+                      setDayPlanner({ isOpen: true, dateStr });
+                    }}
+                    onMoveEvent={handleMoveEvent}
+                    lang={lang}
+                  />
+                )}
 
-          {view === 'analytics' && (
-            <TimeAnalyticsView
-              events={allEvents}
-              categories={categories}
-              currentDate={currentDate}
-              lang={lang}
-            />
-          )}
+                {(view === 'week' || view === 'day' || view === 'fourDay') && (
+                  <TimeGridView
+                    currentDate={currentDate}
+                    viewType={view}
+                    events={allEvents}
+                    visibleCategoryIds={visibleCategoryIds}
+                    onSelectEvent={(ev) => setSelectedEventForDetail(ev)}
+                    onSlotClick={(dateStr, timeStr, clientX, clientY) => {
+                      const parts = timeStr.split(':');
+                      const nextH = Math.min(23, parseInt(parts[0], 10) + 1);
+                      const nextTime = `${String(nextH).padStart(2, '0')}:${parts[1]}`;
+                      handleOpenInlineQuickAdd(dateStr, timeStr, nextTime, clientX, clientY);
+                    }}
+                    onSlotRangeSelect={(dateStr, startTime, endTime, clientX, clientY) => {
+                      handleOpenInlineQuickAdd(dateStr, startTime, endTime, clientX, clientY);
+                    }}
+                    lang={lang}
+                    dndState={dndState}
+                    onStartDrag={startDrag}
+                    onStartResize={startResize}
+                    onPointerMove={updatePointerMove}
+                    onFinishDnD={finishDnD}
+                    onCancelDnD={cancelDnD}
+                  />
+                )}
 
-          {view === 'year' && (
-            <YearView
-              currentDate={currentDate}
-              events={allEvents}
-              visibleCategoryIds={visibleCategoryIds}
-              onSelectDate={(d) => {
-                setCurrentDate(d);
-                setView('day');
-              }}
-              lang={lang}
-            />
-          )}
+                {view === 'year' && (
+                  <YearView
+                    currentDate={currentDate}
+                    events={allEvents}
+                    visibleCategoryIds={visibleCategoryIds}
+                    onSelectDate={(d) => {
+                      setCurrentDate(d);
+                      setView('day');
+                    }}
+                    lang={lang}
+                  />
+                )}
 
-          {view === 'schedule' && (
-            <ScheduleView
-              currentDate={currentDate}
-              events={allEvents}
-              visibleCategoryIds={visibleCategoryIds}
-              searchQuery={searchQuery}
-              onSelectEvent={(ev) => setSelectedEventForDetail(ev)}
-              onToggleCompleteTask={handleToggleCompleteTask}
-              onJoinMeet={(ev) => setActiveMeetEvent(ev)}
-              lang={lang}
-            />
-          )}
+                {view === 'schedule' && (
+                  <ScheduleView
+                    currentDate={currentDate}
+                    events={allEvents}
+                    visibleCategoryIds={visibleCategoryIds}
+                    searchQuery={searchQuery}
+                    onSelectEvent={(ev) => setSelectedEventForDetail(ev)}
+                    onToggleCompleteTask={handleToggleCompleteTask}
+                    onJoinMeet={(ev) => setActiveMeetEvent(ev)}
+                    lang={lang}
+                  />
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="h-full">
+              {view === 'analytics' && (
+                <TimeAnalyticsView
+                  events={allEvents}
+                  categories={categories}
+                  currentDate={currentDate}
+                  lang={lang}
+                />
+              )}
 
-          {view === 'dashboard' && (
-            <ProductivityDashboard
+              {view === 'dashboard' && (
+                <ProductivityDashboard
+                  events={allEvents}
+                  tasks={productivity.tasks}
+                  goals={productivity.goals}
+                  goalProgress={productivity.goalProgress}
+                  sessions={productivity.sessions}
+                  transactions={productivity.transactions}
+                  budget={productivity.budget}
+                  healthLogs={productivity.healthLogs}
+                  healthProfile={productivity.healthProfile}
+                  lang={lang}
+                  onNavigate={handleViewChange}
+                  onSetTaskStatus={productivity.setTaskStatus}
+                  onOpenEvent={(ev) => setSelectedEventForDetail(ev)}
+                  onAddTask={(title) =>
+                    productivity.addTask({
+                      title,
+                      status: 'todo',
+                      priority: 'medium',
+                      categoryId: 'tasks',
+                      dueDate: todayString(),
+                    })
+                  }
+                  habits={productivity.habits}
+                  onToggleHabit={productivity.toggleHabitDate}
+                  onScheduleTask={(taskId, dateStr, startTime, endTime) => {
+                    productivity.updateTask(taskId, { dueDate: dateStr, startTime, endTime });
+                  }}
+                  currentUser={user}
+                />
+              )}
+
+              {view === 'tasks' && (
+                <TasksGoalsView
+                  tasks={productivity.tasks}
+                  goals={productivity.goals}
+                  goalProgress={productivity.goalProgress}
+                  categories={categories}
+                  lang={lang}
+                  onAddTask={productivity.addTask}
+                  onUpdateTask={productivity.updateTask}
+                  onDeleteTask={productivity.deleteTask}
+                  onSetTaskStatus={productivity.setTaskStatus}
+                  onToggleSubtask={productivity.toggleSubtask}
+                  onAddSubtask={productivity.addSubtask}
+                  onRemoveSubtask={productivity.removeSubtask}
+                  onAddGoal={productivity.addGoal}
+                  onDeleteGoal={productivity.deleteGoal}
+                  onOpenTaskOnCalendar={(dateStr) => {
+                    setCurrentDate(parseDateString(dateStr));
+                    handleViewChange('day');
+                  }}
+                  onStartFocus={(taskId) => {
+                    try {
+                      const raw = localStorage.getItem('gcal_focus_timer');
+                      if (raw) {
+                        const parsed = JSON.parse(raw);
+                        parsed.linkedTaskId = taskId;
+                        parsed.mode = 'pomodoro';
+                        localStorage.setItem('gcal_focus_timer', JSON.stringify(parsed));
+                      }
+                    } catch {}
+                    handleViewChange('focus');
+                  }}
+                  habits={productivity.habits}
+                  onAddHabit={productivity.addHabit}
+                  onToggleHabit={productivity.toggleHabitDate}
+                  onDeleteHabit={productivity.deleteHabit}
+                />
+              )}
+
+              {view === 'focus' && (
+                <StudyFocusView
+                  tasks={productivity.tasks}
+                  goals={productivity.goals}
+                  sessions={productivity.sessions}
+                  lang={lang}
+                  onAddSession={productivity.addSession}
+                  onDeleteSession={productivity.deleteSession}
+                  onStartTask={(taskId) => productivity.setTaskStatus(taskId, 'in_progress')}
+                  onOpenTask={(taskId) => {
+                    const task = productivity.tasks.find((t) => t.id === taskId);
+                    if (task?.dueDate) {
+                      setCurrentDate(parseDateString(task.dueDate));
+                      handleViewChange('day');
+                    } else {
+                      handleViewChange('tasks');
+                    }
+                  }}
+                />
+              )}
+
+              {view === 'finance' && (
+                <FinanceView
+                  transactions={productivity.transactions}
+                  budget={productivity.budget}
+                  lang={lang}
+                  onAddTransaction={productivity.addTransaction}
+                  onDeleteTransaction={productivity.deleteTransaction}
+                  onUpdateBudget={productivity.updateBudget}
+                />
+              )}
+
+              {view === 'health' && (
+                <HealthView
+                  healthLogs={productivity.healthLogs}
+                  healthProfile={productivity.healthProfile}
+                  workouts={productivity.workouts}
+                  lang={lang}
+                  onUpsertHealthLog={productivity.upsertHealthLog}
+                  onUpdateHealthProfile={productivity.updateHealthProfile}
+                  onAddWorkout={productivity.addWorkout}
+                  onDeleteWorkout={productivity.deleteWorkout}
+                  currentUser={user}
+                  onGoogleSignIn={handleGoogleSignIn}
+                  ctgProfile={productivity.ctgProfile}
+                  onUpdateCtgProfile={productivity.updateCtgProfile}
+                  bodyPoints={productivity.bodyPoints}
+                  onAddBodyPoint={productivity.addBodyPoint}
+                  onUpdateBodyPoint={productivity.updateBodyPoint}
+                  onDeleteBodyPoint={productivity.deleteBodyPoint}
+                  bodyPhotos={productivity.bodyPhotos}
+                  onAddBodyPhoto={productivity.addBodyPhoto}
+                  onDeleteBodyPhoto={productivity.deleteBodyPhoto}
+                  savedRoadmaps={productivity.savedRoadmaps}
+                  onAddSavedRoadmap={productivity.addSavedRoadmap}
+                  onDeleteSavedRoadmap={productivity.deleteSavedRoadmap}
+                  customExercises={productivity.customExercises}
+                  onAddCustomExercise={productivity.addCustomExercise}
+                  onDeleteCustomExercise={productivity.deleteCustomExercise}
+                  onApplySplitTemplate={productivity.applySplitTemplate}
+                  plannedSessions={productivity.plannedSessions}
+                  onAddPlannedSession={productivity.addPlannedSession}
+                  onUpdatePlannedSession={productivity.updatePlannedSession}
+                  onDeletePlannedSession={productivity.deletePlannedSession}
+                  workoutSessions={productivity.workoutSessions}
+                  onLogWorkoutSession={productivity.logWorkoutSession}
+                  onUpdateWorkoutSession={productivity.updateWorkoutSession}
+                  onDeleteWorkoutSession={productivity.deleteWorkoutSession}
+                  sportSessions={productivity.sportSessions}
+                  onAddSportSession={productivity.addSportSession}
+                  onDeleteSportSession={productivity.deleteSportSession}
+                  meals={productivity.meals}
+                  onAddMealLog={productivity.addMealLog}
+                  onUpdateMealLog={productivity.updateMealLog}
+                  onDeleteMealLog={productivity.deleteMealLog}
+                  nutritionSettings={productivity.nutritionSettings}
+                  onUpdateNutritionSettings={productivity.updateNutritionSettings}
+                  onScheduleSessionToCalendar={(title, date, color) => {
+                    const newEv: CalendarEvent = {
+                      id: `scheduled-wo-${Date.now()}`,
+                      title: `💪 ${title}`,
+                      startDate: date,
+                      startTime: '17:30',
+                      endDate: date,
+                      endTime: '18:45',
+                      allDay: false,
+                      calendarId: 'health',
+                      color,
+                      type: 'event',
+                      isCompleted: false,
+                      createdAt: Date.now(),
+                    };
+                    setEvents((prev) => [...prev, newEv]);
+                  }}
+                />
+              )}
+            </div>
+          )}
+        </main>
+      </div>
+
+      {/* Slide-over Right Drawer for Notes & Tasks */}
+      {isRightDrawerOpen && (
+        <div className="fixed inset-y-0 right-0 z-50 w-80 sm:w-96 bg-white dark:bg-[#111726] border-l border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col animate-in slide-in-from-right">
+          <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-800">
+            <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+              <FileText className="w-4 h-4 text-blue-600" />
+              <span>{lang === 'vi' ? 'Ghi chú & Tác vụ nhanh' : 'Quick Notes & Tasks'}</span>
+            </h3>
+            <button
+              onClick={() => setIsRightDrawerOpen(false)}
+              className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+            >
+              ✕
+            </button>
+          </div>
+          <div className="flex-1 overflow-hidden">
+            <RightSidebar
+              lang={lang}
               events={allEvents}
               tasks={productivity.tasks}
-              goals={productivity.goals}
-              goalProgress={productivity.goalProgress}
-              sessions={productivity.sessions}
-              transactions={productivity.transactions}
-              budget={productivity.budget}
-              healthLogs={productivity.healthLogs}
-              healthProfile={productivity.healthProfile}
-              lang={lang}
-              onNavigate={handleViewChange}
-              onSetTaskStatus={productivity.setTaskStatus}
-              onOpenEvent={(ev) => setSelectedEventForDetail(ev)}
-              onAddTask={(title) =>
+              onAddTask={(title: string) =>
                 productivity.addTask({
                   title,
                   status: 'todo',
                   priority: 'medium',
-                  categoryId: 'tasks',
-                  dueDate: todayString(),
+                  categoryId: categories[0]?.id || 'personal',
+                  dueDate: formatDateString(new Date()),
                 })
               }
-              habits={productivity.habits}
-              onToggleHabit={productivity.toggleHabitDate}
-              onScheduleTask={(taskId, dateStr, startTime, endTime) => {
-                productivity.updateTask(taskId, { dueDate: dateStr, startTime, endTime });
-              }}
-              currentUser={user}
-            />
-          )}
-
-          {view === 'tasks' && (
-            <TasksGoalsView
-              tasks={productivity.tasks}
-              goals={productivity.goals}
-              goalProgress={productivity.goalProgress}
-              categories={categories}
-              lang={lang}
-              onAddTask={productivity.addTask}
-              onUpdateTask={productivity.updateTask}
-              onDeleteTask={productivity.deleteTask}
-              onSetTaskStatus={productivity.setTaskStatus}
-              onToggleSubtask={productivity.toggleSubtask}
-              onAddSubtask={productivity.addSubtask}
-              onRemoveSubtask={productivity.removeSubtask}
-              onAddGoal={productivity.addGoal}
-              onDeleteGoal={productivity.deleteGoal}
-              onOpenTaskOnCalendar={(dateStr) => {
-                setCurrentDate(parseDateString(dateStr));
-                handleViewChange('day');
-              }}
-              onStartFocus={(taskId) => {
-                try {
-                  const raw = localStorage.getItem('gcal_focus_timer');
-                  if (raw) {
-                    const parsed = JSON.parse(raw);
-                    parsed.linkedTaskId = taskId;
-                    parsed.mode = 'pomodoro';
-                    localStorage.setItem('gcal_focus_timer', JSON.stringify(parsed));
-                  }
-                } catch {}
-                handleViewChange('focus');
-              }}
-              habits={productivity.habits}
-              onAddHabit={productivity.addHabit}
-              onToggleHabit={productivity.toggleHabitDate}
-              onDeleteHabit={productivity.deleteHabit}
-            />
-          )}
-
-          {view === 'focus' && (
-            <StudyFocusView
-              tasks={productivity.tasks}
-              goals={productivity.goals}
-              sessions={productivity.sessions}
-              lang={lang}
-              onAddSession={productivity.addSession}
-              onDeleteSession={productivity.deleteSession}
-              onStartTask={(taskId) => productivity.setTaskStatus(taskId, 'in_progress')}
-              onOpenTask={(taskId) => {
+              onToggleTask={(taskId: string) => {
                 const task = productivity.tasks.find((t) => t.id === taskId);
-                if (task?.dueDate) {
-                  setCurrentDate(parseDateString(task.dueDate));
-                  handleViewChange('day');
-                } else {
-                  handleViewChange('tasks');
-                }
+                productivity.setTaskStatus(taskId, task?.status === 'completed' ? 'todo' : 'completed');
               }}
+              onDeleteTask={(taskId: string) => productivity.deleteTask(taskId)}
             />
-          )}
-
-          {view === 'finance' && (
-            <FinanceView
-              transactions={productivity.transactions}
-              budget={productivity.budget}
-              lang={lang}
-              onAddTransaction={productivity.addTransaction}
-              onDeleteTransaction={productivity.deleteTransaction}
-              onUpdateBudget={productivity.updateBudget}
-            />
-          )}
-
-          {view === 'health' && (
-            <HealthView
-              healthLogs={productivity.healthLogs}
-              healthProfile={productivity.healthProfile}
-              workouts={productivity.workouts}
-              lang={lang}
-              onUpsertHealthLog={productivity.upsertHealthLog}
-              onUpdateHealthProfile={productivity.updateHealthProfile}
-              onAddWorkout={productivity.addWorkout}
-              onDeleteWorkout={productivity.deleteWorkout}
-              currentUser={user}
-              onGoogleSignIn={handleGoogleSignIn}
-              ctgProfile={productivity.ctgProfile}
-              onUpdateCtgProfile={productivity.updateCtgProfile}
-              bodyPoints={productivity.bodyPoints}
-              onAddBodyPoint={productivity.addBodyPoint}
-              onUpdateBodyPoint={productivity.updateBodyPoint}
-              onDeleteBodyPoint={productivity.deleteBodyPoint}
-              bodyPhotos={productivity.bodyPhotos}
-              onAddBodyPhoto={productivity.addBodyPhoto}
-              onDeleteBodyPhoto={productivity.deleteBodyPhoto}
-              savedRoadmaps={productivity.savedRoadmaps}
-              onAddSavedRoadmap={productivity.addSavedRoadmap}
-              onDeleteSavedRoadmap={productivity.deleteSavedRoadmap}
-              customExercises={productivity.customExercises}
-              onAddCustomExercise={productivity.addCustomExercise}
-              onDeleteCustomExercise={productivity.deleteCustomExercise}
-              onApplySplitTemplate={productivity.applySplitTemplate}
-              plannedSessions={productivity.plannedSessions}
-              onAddPlannedSession={productivity.addPlannedSession}
-              onUpdatePlannedSession={productivity.updatePlannedSession}
-              onDeletePlannedSession={productivity.deletePlannedSession}
-              workoutSessions={productivity.workoutSessions}
-              onLogWorkoutSession={productivity.logWorkoutSession}
-              onUpdateWorkoutSession={productivity.updateWorkoutSession}
-              onDeleteWorkoutSession={productivity.deleteWorkoutSession}
-              sportSessions={productivity.sportSessions}
-              onAddSportSession={productivity.addSportSession}
-              onDeleteSportSession={productivity.deleteSportSession}
-              meals={productivity.meals}
-              onAddMealLog={productivity.addMealLog}
-              onUpdateMealLog={productivity.updateMealLog}
-              onDeleteMealLog={productivity.deleteMealLog}
-              nutritionSettings={productivity.nutritionSettings}
-              onUpdateNutritionSettings={productivity.updateNutritionSettings}
-              onScheduleSessionToCalendar={(title, date, color) => {
-                const newEv: CalendarEvent = {
-                  id: `scheduled-wo-${Date.now()}`,
-                  title: `💪 ${title}`,
-                  startDate: date,
-                  startTime: '17:30',
-                  endDate: date,
-                  endTime: '18:45',
-                  allDay: false,
-                  calendarId: 'health',
-                  color,
-                  type: 'event',
-                  isCompleted: false,
-                  createdAt: Date.now(),
-                };
-                setEvents((prev) => [...prev, newEv]);
-              }}
-            />
-          )}
-        </main>
-
-        {/* Right Google Workspace Utility Dock (Keep, Tasks, Contacts, Maps) */}
-        <RightSidebar
-          lang={lang}
-          events={allEvents}
-          tasks={productivity.tasks}
-          onAddTask={(title: string) =>
-            productivity.addTask({
-              title,
-              status: 'todo',
-              priority: 'medium',
-              categoryId: categories[0]?.id || 'personal',
-              dueDate: formatDateString(new Date()),
-            })
-          }
-          onToggleTask={(taskId: string) => {
-            const task = productivity.tasks.find((t) => t.id === taskId);
-            productivity.setTaskStatus(taskId, task?.status === 'completed' ? 'todo' : 'completed');
-          }}
-          onDeleteTask={(taskId: string) => productivity.deleteTask(taskId)}
-        />
-      </div>
+          </div>
+        </div>
+      )}
 
       {/* Mini Inline Event Creation Popover */}
       <MiniEventPopover
@@ -1235,6 +1339,22 @@ export default function App() {
         onNavigate={handleViewChange}
         store={productivity}
         categories={categories}
+      />
+
+      {/* Global Apple Health Sync Modal */}
+      <AppleHealthModal
+        isOpen={isAppleHealthOpen}
+        onClose={() => setIsAppleHealthOpen(false)}
+        onApplyAppleHealthData={handleApplyAppleHealthData}
+        selectedDate={formatDateString(currentDate)}
+      />
+
+      {/* Global Gemini AI Macro Studio Modal */}
+      <GeminiMacroModal
+        isOpen={isGeminiMacroOpen}
+        onClose={() => setIsGeminiMacroOpen(false)}
+        onApplyGeminiMacros={handleApplyGeminiMacros}
+        selectedDate={formatDateString(currentDate)}
       />
     </div>
   );

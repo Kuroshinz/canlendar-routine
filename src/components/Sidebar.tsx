@@ -1,19 +1,23 @@
 import React, { useState } from 'react';
 import {
-  Plus,
-  ChevronLeft,
-  ChevronRight,
-  ChevronDown,
-  Check,
+  LayoutDashboard,
   Calendar as CalendarIcon,
   CheckSquare,
-  Bell,
-  Trash2,
-  LayoutDashboard,
-  ListChecks,
   Timer,
-  Wallet,
   HeartPulse,
+  Wallet,
+  BarChart3,
+  Sparkles,
+  Settings,
+  LogOut,
+  LogIn,
+  ChevronDown,
+  ChevronRight,
+  Plus,
+  X,
+  Check,
+  CalendarCheck2,
+  Apple,
 } from 'lucide-react';
 import { CalendarCategory, CalendarViewType, EventType } from '../types/calendar';
 import { formatDateString, getMonthDays } from '../utils/calendarUtils';
@@ -29,9 +33,15 @@ interface SidebarProps {
   onDeleteCategory: (id: string) => void;
   onOpenCreateModal: (type?: EventType) => void;
   lang: 'vi' | 'en';
-  /** Switches the main view; used by the productivity module launcher. */
   onViewChange?: (view: CalendarViewType) => void;
   currentView?: CalendarViewType;
+  onOpenGeminiMacro?: () => void;
+  onOpenAppleHealth?: () => void;
+  onOpenSettings?: () => void;
+  onOpenCloudSync?: () => void;
+  onGoogleSignIn?: () => Promise<void>;
+  userEmail?: string;
+  isLoggedInGoogle?: boolean;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -46,16 +56,80 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onOpenCreateModal,
   lang,
   onViewChange,
-  currentView,
+  currentView = 'dashboard',
+  onOpenGeminiMacro,
+  onOpenAppleHealth,
+  onOpenSettings,
+  onOpenCloudSync,
+  onGoogleSignIn,
+  userEmail,
+  isLoggedInGoogle = false,
 }) => {
+  const [showCalendarCategories, setShowCalendarCategories] = useState(true);
+  const [showMiniCalendar, setShowMiniCalendar] = useState(false);
   const [miniYear, setMiniYear] = useState<number>(currentDate.getFullYear());
   const [miniMonth, setMiniMonth] = useState<number>(currentDate.getMonth());
-  const [showCreateDropdown, setShowCreateDropdown] = useState(false);
-  const [showAddCalendarInput, setShowAddCalendarInput] = useState(false);
-  const [newCalName, setNewCalName] = useState('');
-  const [newCalColor, setNewCalColor] = useState('#039BE5');
 
-  // Mini calendar navigation
+  const isCalendarActive =
+    currentView === 'month' ||
+    currentView === 'week' ||
+    currentView === 'day' ||
+    currentView === 'fourDay' ||
+    currentView === 'year' ||
+    currentView === 'schedule';
+
+  const navItems: {
+    id: CalendarViewType;
+    icon: React.ElementType;
+    labelVi: string;
+    labelEn: string;
+    badge?: string;
+  }[] = [
+    {
+      id: 'dashboard',
+      icon: LayoutDashboard,
+      labelVi: 'Tổng quan',
+      labelEn: 'Dashboard',
+    },
+    {
+      id: 'month',
+      icon: CalendarIcon,
+      labelVi: 'Lịch trình',
+      labelEn: 'Calendar',
+    },
+    {
+      id: 'tasks',
+      icon: CheckSquare,
+      labelVi: 'Công việc & Mục tiêu',
+      labelEn: 'Tasks & Goals',
+    },
+    {
+      id: 'focus',
+      icon: Timer,
+      labelVi: 'Đồng hồ tập trung',
+      labelEn: 'Focus & Timer',
+    },
+    {
+      id: 'health',
+      icon: HeartPulse,
+      labelVi: 'Sức khỏe & Macro',
+      labelEn: 'Health & Macro',
+      badge: 'Apple / AI',
+    },
+    {
+      id: 'finance',
+      icon: Wallet,
+      labelVi: 'Quản lý Tài chính',
+      labelEn: 'Finance',
+    },
+    {
+      id: 'analytics',
+      icon: BarChart3,
+      labelVi: 'Báo cáo & Phân tích',
+      labelEn: 'Analytics',
+    },
+  ];
+
   const handlePrevMiniMonth = () => {
     if (miniMonth === 0) {
       setMiniMonth(11);
@@ -75,7 +149,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   };
 
   const miniMonthDays = getMonthDays(miniYear, miniMonth, false);
-  const todayStr = formatDateString(new Date());
   const selectedDateStr = formatDateString(currentDate);
 
   const monthNamesVi = [
@@ -87,283 +160,193 @@ export const Sidebar: React.FC<SidebarProps> = ({
     'July', 'August', 'September', 'October', 'November', 'December'
   ];
 
-  const weekdayInitials = lang === 'vi'
-    ? ['C', 'H', 'B', 'T', 'N', 'S', 'B'] // CN, T2, T3, T4, T5, T6, T7
-    : ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
-
-  const handleCreateNewCalendar = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newCalName.trim()) return;
-    onAddCategory(newCalName.trim(), newCalColor);
-    setNewCalName('');
-    setShowAddCalendarInput(false);
-  };
-
   if (!isOpen) return null;
 
   return (
     <>
       {/* Mobile backdrop */}
       <div
-        className="fixed inset-0 bg-black/40 z-30 lg:hidden"
+        className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-40 lg:hidden"
         onClick={onCloseMobile}
         aria-hidden="true"
       />
 
-      <aside className="fixed lg:static top-16 bottom-0 left-0 w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 z-30 flex flex-col p-3 overflow-y-auto shrink-0 select-none shadow-lg lg:shadow-none transition-transform">
-        {/* + Create Pill Button with Google 4-color plus */}
-        <div className="relative mb-5">
-          <button
-            onClick={() => setShowCreateDropdown(!showCreateDropdown)}
-            className="flex items-center gap-3 px-5 py-3 rounded-full bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-[#242931] text-gray-700 dark:text-gray-100 font-medium text-sm border border-gray-200 dark:border-gray-700 shadow-md hover:shadow-lg transition-all cursor-pointer group"
-          >
-            {/* Google colored plus icon */}
-            <svg className="w-8 h-8" viewBox="0 0 36 36">
-              <path fill="#4285F4" d="M16 16v14h4V16h14v-4H20V2h-4v10H2v4h14z" />
-              <path fill="#34A853" d="M30 16H20l-4-4h14v4z" opacity="0.9" />
-              <path fill="#FBBC05" d="M16 30V20l4-4v14h-4z" opacity="0.9" />
-              <path fill="#EA4335" d="M20 16v14h-4V16H2v-4h14V2h4v14z" opacity="0.2" />
-            </svg>
-            <span className="text-base tracking-wide font-sans">
-              {lang === 'vi' ? 'Tạo mới' : 'Create'}
-            </span>
-            <ChevronDown className="w-4 h-4 ml-1 text-gray-400 group-hover:text-gray-600 transition-colors" />
-          </button>
-
-          {showCreateDropdown && (
-            <>
-              <div
-                className="fixed inset-0 z-40"
-                onClick={() => setShowCreateDropdown(false)}
-              />
-              <div className="absolute left-0 mt-2 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl py-1.5 z-50 animate-in fade-in zoom-in-95 duration-100">
-                <button
-                  onClick={() => {
-                    onOpenCreateModal('event');
-                    setShowCreateDropdown(false);
-                  }}
-                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-left text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
-                >
-                  <CalendarIcon className="w-4 h-4 text-blue-500" />
-                  <span>{lang === 'vi' ? 'Sự kiện' : 'Event'}</span>
-                </button>
-                <button
-                  onClick={() => {
-                    onOpenCreateModal('task');
-                    setShowCreateDropdown(false);
-                  }}
-                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-left text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
-                >
-                  <CheckSquare className="w-4 h-4 text-purple-500" />
-                  <span>{lang === 'vi' ? 'Tác vụ' : 'Task'}</span>
-                </button>
-                <button
-                  onClick={() => {
-                    onOpenCreateModal('reminder');
-                    setShowCreateDropdown(false);
-                  }}
-                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-left text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
-                >
-                  <Bell className="w-4 h-4 text-emerald-500" />
-                  <span>{lang === 'vi' ? 'Nhắc nhở' : 'Reminder'}</span>
-                </button>
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* Mini Calendar */}
-        <div className="mb-6 px-1">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">
-              {lang === 'vi' ? monthNamesVi[miniMonth] : monthNamesEn[miniMonth]} {miniYear}
-            </span>
-            <div className="flex items-center gap-1">
-              <button
-                onClick={handlePrevMiniMonth}
-                aria-label="Tháng trước"
-                className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400 cursor-pointer"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              <button
-                onClick={handleNextMiniMonth}
-                aria-label="Tháng sau"
-                className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400 cursor-pointer"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-
-          {/* Weekday headers */}
-          <div className="grid grid-cols-7 text-center text-xs text-gray-400 dark:text-gray-500 font-medium mb-1">
-            {weekdayInitials.map((w, idx) => (
-              <span key={idx} className="h-6 flex items-center justify-center">
-                {w}
-              </span>
-            ))}
-          </div>
-
-          {/* Days Grid */}
-          <div className="grid grid-cols-7 text-center text-xs">
-            {miniMonthDays.map((item, idx) => {
-              const isSelected = item.dateString === selectedDateStr;
-              return (
-                <button
-                  key={idx}
-                  onClick={() => onSelectDate(item.date)}
-                  className={`h-7 w-7 mx-auto rounded-full flex items-center justify-center transition-colors cursor-pointer text-xs ${
-                    isSelected
-                      ? 'bg-blue-600 text-white font-semibold shadow-xs'
-                      : item.isToday
-                      ? 'bg-blue-100 dark:bg-blue-950 text-blue-600 dark:text-blue-400 font-bold'
-                      : item.isCurrentMonth
-                      ? 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800'
-                      : 'text-gray-400 dark:text-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800/40'
-                  }`}
-                >
-                  {item.dayNumber}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Productivity modules launcher */}
-        {onViewChange && (
-          <div className="mb-5 px-1">
-            <span className="block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
-              {lang === 'vi' ? 'Không gian làm việc' : 'Workspace'}
-            </span>
-            <div className="space-y-0.5">
-              {[
-                { id: 'dashboard' as CalendarViewType, icon: LayoutDashboard, vi: 'Tổng quan', en: 'Dashboard', color: 'text-blue-500' },
-                { id: 'tasks' as CalendarViewType, icon: ListChecks, vi: 'Công việc & Mục tiêu', en: 'Tasks & Goals', color: 'text-indigo-500' },
-                { id: 'focus' as CalendarViewType, icon: Timer, vi: 'Đồng hồ học tập', en: 'Study clock', color: 'text-violet-500' },
-                { id: 'finance' as CalendarViewType, icon: Wallet, vi: 'Tài chính', en: 'Finance', color: 'text-emerald-500' },
-                { id: 'health' as CalendarViewType, icon: HeartPulse, vi: 'Sức khỏe', en: 'Health', color: 'text-rose-500' },
-              ].map((item) => {
-                const Icon = item.icon;
-                const isActive = currentView === item.id;
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => {
-                      onViewChange(item.id);
-                      if (window.innerWidth < 1024) onCloseMobile();
-                    }}
-                    className={`w-full flex items-center gap-2.5 px-2 py-1.5 rounded-md text-xs transition-colors cursor-pointer ${
-                      isActive
-                        ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 font-semibold'
-                        : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800'
-                    }`}
-                  >
-                    <Icon className={`w-4 h-4 shrink-0 ${isActive ? '' : item.color}`} />
-                    <span className="truncate">{lang === 'vi' ? item.vi : item.en}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* My Calendars Section */}
-        <div className="pt-2 border-t border-gray-100 dark:border-gray-800 flex-1">
-          <div className="flex items-center justify-between mb-2 px-1">
-            <span className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-              {lang === 'vi' ? 'Lịch của tôi' : 'My calendars'}
-            </span>
-            <button
-              onClick={() => setShowAddCalendarInput(!showAddCalendarInput)}
-              title={lang === 'vi' ? 'Thêm lịch mới' : 'Add other calendar'}
-              className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400 cursor-pointer"
+      <aside className="fixed lg:static top-0 bottom-0 left-0 w-72 bg-white dark:bg-[#111726] border-r border-slate-200/90 dark:border-slate-800/90 z-40 flex flex-col justify-between p-4 sm:p-5 shrink-0 select-none shadow-xl lg:shadow-none transition-all overflow-y-auto">
+        {/* Top: Brand Header & Primary Navigation */}
+        <div className="space-y-6">
+          {/* Brand header */}
+          <div className="flex items-center justify-between px-1">
+            <div
+              onClick={() => onViewChange && onViewChange('dashboard')}
+              className="flex items-center gap-3 cursor-pointer group"
             >
-              <Plus className="w-3.5 h-3.5" />
+              <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-blue-500/20 group-hover:scale-105 transition-transform">
+                <CalendarCheck2 className="w-5 h-5" />
+              </div>
+              <div className="flex flex-col">
+                <span className="font-extrabold text-xl leading-tight tracking-tight text-slate-900 dark:text-white">
+                  Vortex<span className="text-blue-600 dark:text-blue-400">Cal</span>
+                </span>
+                <span className="text-[11px] font-medium text-slate-400">
+                  {lang === 'vi' ? 'Executive Workspace' : 'Smart Executive Suite'}
+                </span>
+              </div>
+            </div>
+
+            <button
+              onClick={onCloseMobile}
+              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 lg:hidden cursor-pointer"
+            >
+              <X className="w-5 h-5" />
             </button>
           </div>
 
-          {showAddCalendarInput && (
-            <form onSubmit={handleCreateNewCalendar} className="mb-3 p-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
-              <input
-                type="text"
-                placeholder={lang === 'vi' ? 'Tên lịch mới...' : 'Calendar name...'}
-                value={newCalName}
-                onChange={(e) => setNewCalName(e.target.value)}
-                autoFocus
-                className="w-full text-xs px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 mb-2 focus:outline-blue-500"
-              />
-              <div className="flex items-center justify-between">
-                <input
-                  type="color"
-                  value={newCalColor}
-                  onChange={(e) => setNewCalColor(e.target.value)}
-                  className="w-6 h-6 rounded border-0 cursor-pointer p-0"
-                />
-                <div className="flex gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => setShowAddCalendarInput(false)}
-                    className="text-xs px-2 py-1 text-gray-500 hover:text-gray-700"
-                  >
-                    {lang === 'vi' ? 'Hủy' : 'Cancel'}
-                  </button>
-                  <button
-                    type="submit"
-                    className="text-xs px-2 py-1 bg-blue-600 text-white rounded font-medium hover:bg-blue-700"
-                  >
-                    {lang === 'vi' ? 'Lưu' : 'Save'}
-                  </button>
-                </div>
-              </div>
-            </form>
-          )}
+          {/* Primary Navigation List */}
+          <nav className="space-y-1.5">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              const isActive =
+                item.id === 'month' ? isCalendarActive : currentView === item.id;
 
-          <div className="space-y-1">
-            {categories.map((cat) => (
-              <div
-                key={cat.id}
-                className="group flex items-center justify-between px-2 py-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer"
-                onClick={() => onToggleCategory(cat.id)}
-              >
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <div
-                    className="w-4 h-4 rounded flex items-center justify-center transition-colors"
-                    style={{
-                      backgroundColor: cat.visible ? cat.color : 'transparent',
-                      border: `2px solid ${cat.color}`,
-                    }}
-                  >
-                    {cat.visible && <Check className="w-3 h-3 text-white stroke-[3]" />}
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => {
+                    if (onViewChange) {
+                      onViewChange(item.id);
+                    }
+                    if (window.innerWidth < 1024) {
+                      onCloseMobile();
+                    }
+                  }}
+                  className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer group ${
+                    isActive
+                      ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 shadow-xs'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800/50'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <Icon
+                      className={`w-4 h-4 transition-transform group-hover:scale-110 ${
+                        isActive
+                          ? 'text-blue-600 dark:text-blue-400'
+                          : 'text-slate-400 dark:text-slate-500 group-hover:text-slate-700 dark:group-hover:text-slate-300'
+                      }`}
+                    />
+                    <span className="truncate">{lang === 'vi' ? item.labelVi : item.labelEn}</span>
                   </div>
-                  <span className="text-xs text-gray-700 dark:text-gray-200 truncate">
-                    {lang === 'vi' ? cat.nameVi : cat.name}
-                  </span>
-                </div>
 
-                {cat.isCustom && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onDeleteCategory(cat.id);
-                    }}
-                    title={lang === 'vi' ? 'Xóa lịch' : 'Delete calendar'}
-                    className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-red-500 transition-opacity cursor-pointer"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+                  {item.badge && (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/60">
+                      {item.badge}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </nav>
+
+          {/* Calendar Categories Sub-list when calendar view is active */}
+          {isCalendarActive && (
+            <div className="pt-2 border-t border-slate-100 dark:border-slate-800/60 space-y-2">
+              <div
+                onClick={() => setShowCalendarCategories(!showCalendarCategories)}
+                className="flex items-center justify-between px-2 text-xs font-bold uppercase tracking-wider text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-pointer"
+              >
+                <span>{lang === 'vi' ? 'Lịch của tôi' : 'My Calendars'}</span>
+                {showCalendarCategories ? (
+                  <ChevronDown className="w-3.5 h-3.5" />
+                ) : (
+                  <ChevronRight className="w-3.5 h-3.5" />
                 )}
               </div>
-            ))}
+
+              {showCalendarCategories && (
+                <div className="space-y-1 max-h-36 overflow-y-auto px-1">
+                  {categories.map((c) => (
+                    <button
+                      key={c.id}
+                      onClick={() => onToggleCategory(c.id)}
+                      className="w-full flex items-center gap-2 px-2 py-1 rounded-lg text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors text-left cursor-pointer"
+                    >
+                      <div
+                        className="w-3.5 h-3.5 rounded flex items-center justify-center transition-colors border"
+                        style={{
+                          backgroundColor: c.visible ? c.color : 'transparent',
+                          borderColor: c.color,
+                        }}
+                      >
+                        {c.visible && <Check className="w-2.5 h-2.5 text-white stroke-[3]" />}
+                      </div>
+                      <span className="truncate">{lang === 'vi' ? c.nameVi : c.name}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Middle: Floating Gemini AI Promo Card (ShipNexus Try AI card style) */}
+        <div className="my-5">
+          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-50/90 via-indigo-50/70 to-blue-50/90 dark:from-blue-950/40 dark:via-indigo-950/30 dark:to-blue-950/40 border border-blue-200/80 dark:border-blue-900/60 p-4 shadow-xs">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center text-white shadow-xs">
+                <Sparkles className="w-4 h-4" />
+              </div>
+              <span className="text-xs font-bold text-slate-800 dark:text-slate-100">
+                Vortex Gemini AI
+              </span>
+            </div>
+
+            <p className="text-[11px] leading-relaxed text-slate-600 dark:text-slate-300 mb-3 font-medium">
+              {lang === 'vi'
+                ? 'Bóc tách Macro món Việt từ ảnh & đồng bộ Apple Health tự động.'
+                : 'Auto parse Vietnamese food macros & sync Apple Health.'}
+            </p>
+
+            <button
+              onClick={() => onOpenGeminiMacro && onOpenGeminiMacro()}
+              className="w-full py-2 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-sm shadow-blue-500/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer hover:shadow-md"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>{lang === 'vi' ? 'Mở AI Studio' : 'Launch AI Studio'}</span>
+            </button>
           </div>
         </div>
 
-        {/* Footer info: Google standard notice */}
-        <div className="pt-3 border-t border-gray-100 dark:border-gray-800 text-[11px] text-gray-400 dark:text-gray-500 px-1">
-          <p>{lang === 'vi' ? 'Điều khoản & Quyền riêng tư' : 'Terms & Privacy'}</p>
+        {/* Bottom: Settings & Account / Logout */}
+        <div className="space-y-1.5 pt-3 border-t border-slate-200/80 dark:border-slate-800/80">
+          <button
+            onClick={() => onOpenSettings && onOpenSettings()}
+            className="w-full flex items-center gap-3 px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors cursor-pointer"
+          >
+            <Settings className="w-4 h-4 text-slate-400" />
+            <span>{lang === 'vi' ? 'Cài đặt & Phím tắt' : 'Settings & Shortcuts'}</span>
+          </button>
+
+          {isLoggedInGoogle ? (
+            <button
+              onClick={() => onOpenCloudSync && onOpenCloudSync()}
+              className="w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 transition-colors cursor-pointer"
+            >
+              <div className="flex items-center gap-2 truncate">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                <span className="truncate font-mono">{userEmail || 'Google Synced'}</span>
+              </div>
+              <LogOut className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+            </button>
+          ) : (
+            <button
+              onClick={() => onGoogleSignIn && onGoogleSignIn()}
+              className="w-full flex items-center gap-3 px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors cursor-pointer"
+            >
+              <LogIn className="w-4 h-4 text-slate-400" />
+              <span>{lang === 'vi' ? 'Kết nối Google' : 'Connect Google'}</span>
+            </button>
+          )}
         </div>
       </aside>
     </>
   );
 };
-
