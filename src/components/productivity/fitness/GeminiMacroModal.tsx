@@ -135,10 +135,10 @@ export const GeminiMacroModal: React.FC<GeminiMacroModalProps> = ({
   const totalFat = Math.round(parsedItems.reduce((sum, it) => sum + it.fat, 0) * 10) / 10;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
-      <div className="bg-white dark:bg-[#1a1e24] w-full max-w-2xl max-h-[90vh] rounded-2xl border border-gray-200 dark:border-gray-800 shadow-2xl overflow-hidden flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+      <div className="bg-white dark:bg-[#131b2e] w-full max-w-2xl max-h-[90vh] rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between p-4.5 border-b border-gray-100 dark:border-gray-800 bg-linear-to-r from-blue-600/10 via-indigo-600/10 to-transparent">
+        <div className="flex items-center justify-between p-4.5 border-b border-gray-100 dark:border-slate-800 bg-linear-to-r from-blue-600/10 via-indigo-600/10 to-transparent">
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white flex items-center justify-center font-bold text-lg shadow-sm">
               <Sparkles className="w-5 h-5 text-amber-300" />
@@ -162,14 +162,14 @@ export const GeminiMacroModal: React.FC<GeminiMacroModalProps> = ({
         </div>
 
         {/* Tab switch */}
-        <div className="p-3 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/30 flex items-center gap-2">
+        <div className="p-3 border-b border-gray-100 dark:border-slate-800 bg-gray-50/50 dark:bg-gray-900/30 flex items-center gap-2">
           <button
             type="button"
             onClick={() => setActiveTab('ingest')}
             className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
               activeTab === 'ingest'
                 ? 'bg-blue-600 text-white shadow-xs'
-                : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 border border-gray-200 dark:border-gray-700'
+                : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 border border-slate-200 dark:border-gray-700'
             }`}
           >
             <Copy className="w-4 h-4" />
@@ -182,7 +182,7 @@ export const GeminiMacroModal: React.FC<GeminiMacroModalProps> = ({
             className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
               activeTab === 'api'
                 ? 'bg-blue-600 text-white shadow-xs'
-                : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 border border-gray-200 dark:border-gray-700'
+                : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 border border-slate-200 dark:border-gray-700'
             }`}
           >
             <Camera className="w-4 h-4" />
@@ -193,7 +193,7 @@ export const GeminiMacroModal: React.FC<GeminiMacroModalProps> = ({
         {/* Body */}
         <div className="p-5 flex-1 overflow-y-auto space-y-4">
           {/* Target meal slot selector */}
-          <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-900/40 p-2.5 rounded-xl border border-gray-200 dark:border-gray-800">
+          <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-900/40 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800">
             <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">
               Nạp vào bữa ăn ngày <strong className="text-blue-600 dark:text-blue-400 font-mono">{selectedDate}</strong>:
             </span>
@@ -286,12 +286,12 @@ export const GeminiMacroModal: React.FC<GeminiMacroModalProps> = ({
               </div>
 
               {imagePreview && (
-                <div className="relative w-full h-32 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 bg-black">
+                <div className="relative w-full h-32 rounded-xl overflow-hidden border border-slate-200 dark:border-gray-700 bg-black">
                   <img src={imagePreview} alt="Meal preview" className="w-full h-full object-contain" />
                   <button
                     type="button"
                     onClick={() => setImagePreview(null)}
-                    className="absolute top-2 right-2 p-1 rounded-full bg-black/60 text-white hover:bg-black/80"
+                    className="absolute top-2 right-2 p-1 rounded-full bg-slate-900/60 text-white hover:bg-black/80"
                   >
                     <X className="w-4 h-4" />
                   </button>
@@ -376,7 +376,7 @@ export const GeminiMacroModal: React.FC<GeminiMacroModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50 flex items-center justify-between">
+        <div className="p-4 border-t border-gray-100 dark:border-slate-800 bg-gray-50 dark:bg-gray-900/50 flex items-center justify-between">
           <span className="text-xs text-gray-500">
             {parsedItems.length > 0 ? `Sẵn sàng nạp ${parsedItems.length} món vào nhật ký` : 'Chưa có món ăn nào'}
           </span>

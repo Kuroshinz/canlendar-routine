@@ -387,7 +387,7 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
     });
 
     if (autoScheduleOnFinish && onScheduleSessionToCalendar) {
-      onScheduleSessionToCalendar(activeSession.planned.title, today, '#ff6025');
+      onScheduleSessionToCalendar(activeSession.planned.title, today, '#2563EB');
     }
 
     setActiveSession(null);
@@ -421,7 +421,7 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
     return raw.map((r, i) => ({
       label: `T${i + 1} (${r.weekStart.slice(5)})`,
       value: r.volume,
-      color: i === raw.length - 1 ? '#ff6025' : '#2f86e8',
+      color: i === raw.length - 1 ? '#2563EB' : '#2f86e8',
     }));
   }, [workoutSessions]);
 
@@ -432,7 +432,7 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
   const handleSchedule = (session: PlannedSession) => {
     const today = todayString();
     if (onScheduleSessionToCalendar) {
-      onScheduleSessionToCalendar(session.title, today, '#ff6025');
+      onScheduleSessionToCalendar(session.title, today, '#2563EB');
     }
     setScheduledBanner(`Đã lên lịch "${session.title}" vào Google Calendar hôm nay (${today})!`);
     setTimeout(() => setScheduledBanner(null), 4000);
@@ -450,7 +450,7 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
       const dayOffset = session.dayIndex !== undefined ? session.dayIndex : idx;
       sessionDate.setDate(monday.getDate() + dayOffset);
       const dateStr = sessionDate.toISOString().slice(0, 10);
-      onScheduleSessionToCalendar(session.title, dateStr, '#ff6025');
+      onScheduleSessionToCalendar(session.title, dateStr, '#2563EB');
     });
 
     setScheduledBanner(`Đã đồng bộ toàn bộ ${plannedSessions.length} buổi tập tuần này lên Lịch tuần!`);
@@ -582,8 +582,8 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
       )}
 
       {/* Routine Split Selector & Week Synchronizer */}
-      <div className="bg-white dark:bg-[#1a1e24] rounded-2xl border border-gray-200 dark:border-gray-800 p-4 shadow-xs space-y-3">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border-b border-gray-100 dark:border-gray-800 pb-3">
+      <div className="bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200 dark:border-slate-800 p-4 shadow-xs space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border-b border-gray-100 dark:border-slate-800 pb-3">
           <div>
             <div className="flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-orange-500" />
@@ -639,7 +639,7 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
               className={`px-3 py-2 rounded-xl text-xs font-semibold border transition-all cursor-pointer shrink-0 text-left ${
                 currentSplit === s.id
                   ? 'bg-orange-500 text-white border-orange-500 shadow-xs'
-                  : 'bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700/60'
+                  : 'bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-slate-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700/60'
               }`}
             >
               <div className="font-bold">{s.label}</div>
@@ -678,7 +678,7 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
           {plannedSessions.map((session) => (
             <div
               key={session.id}
-              className="bg-white dark:bg-[#1a1e24] rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs p-4 flex flex-col justify-between"
+              className="bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs p-4 flex flex-col justify-between"
             >
               <div>
                 <div className="flex items-center justify-between mb-2">
@@ -718,12 +718,12 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
                   {session.prescriptions.map((pres, idx) => {
                     const ex = getExercise(pres.exerciseId);
                     const muscleLabel = ex ? MUSCLE_LABEL[ex.muscle as MuscleGroup] : 'Toàn thân';
-                    const muscleColor = ex ? MUSCLE_COLOR[ex.muscle as MuscleGroup] : '#ff6025';
+                    const muscleColor = ex ? MUSCLE_COLOR[ex.muscle as MuscleGroup] : '#2563EB';
 
                     return (
                       <div
                         key={idx}
-                        className="p-2.5 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800/80 flex items-center justify-between text-xs"
+                        className="p-2.5 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-slate-800/80 flex items-center justify-between text-xs"
                       >
                         <div className="min-w-0 pr-2">
                           <div className="flex items-center gap-1.5 font-semibold text-gray-800 dark:text-gray-200">
@@ -761,7 +761,7 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
                 </div>
               </div>
 
-              <div className="pt-2 border-t border-gray-100 dark:border-gray-800 flex flex-wrap items-center gap-2">
+              <div className="pt-2 border-t border-gray-100 dark:border-slate-800 flex flex-wrap items-center gap-2">
                 <button
                   type="button"
                   onClick={() => handleStartActiveSession(session)}
@@ -782,7 +782,7 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
                 <button
                   type="button"
                   onClick={() => handleQuickLog(session)}
-                  className="flex items-center justify-center gap-1 py-2 px-2.5 rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 text-xs font-semibold cursor-pointer transition-colors"
+                  className="flex items-center justify-center gap-1 py-2 px-2.5 rounded-xl border border-slate-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 text-xs font-semibold cursor-pointer transition-colors"
                   title="Ghi nhận nhanh (mẫu)"
                 >
                   <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
@@ -796,7 +796,7 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
       {/* Weekly Training Volume (Progressive Overload) & Muscle Sets Distribution */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Weekly Volume Bar Chart */}
-        <div className="bg-white dark:bg-[#1a1e24] rounded-2xl border border-gray-200 dark:border-gray-800 p-4 shadow-xs flex flex-col justify-between">
+        <div className="bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200 dark:border-slate-800 p-4 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between mb-2">
             <div>
               <h3 className="text-xs font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
@@ -812,7 +812,7 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
           <BarChart
             data={volumeData}
             height={150}
-            color="#ff6025"
+            color="#2563EB"
             emptyLabel="Chưa có dữ liệu buổi tập nào."
             formatValue={(v) => `${(v / 1000).toFixed(1)} tấn`}
             highlightLast={1}
@@ -820,7 +820,7 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
         </div>
 
         {/* Muscle Balance Card */}
-        <div className="bg-white dark:bg-[#1a1e24] rounded-2xl border border-gray-200 dark:border-gray-800 p-4 shadow-xs">
+        <div className="bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200 dark:border-slate-800 p-4 shadow-xs">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-xs font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
               <Dumbbell className="w-4 h-4 text-indigo-500" />
@@ -833,7 +833,7 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
 
           <div className="space-y-2.5">
             {[
-              { id: 'chest', label: 'Ngực', color: '#ff6025' },
+              { id: 'chest', label: 'Ngực', color: '#2563EB' },
               { id: 'back', label: 'Lưng', color: '#2f86e8' },
               { id: 'legs', label: 'Chân', color: '#10b981' },
               { id: 'shoulders', label: 'Vai', color: '#c084fc' },
@@ -866,7 +866,7 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
       </div>
 
       {/* Workout Sessions History Card */}
-      <div className="bg-white dark:bg-[#1a1e24] rounded-2xl border border-gray-200 dark:border-gray-800 p-4 shadow-xs">
+      <div className="bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200 dark:border-slate-800 p-4 shadow-xs">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <History className="w-4 h-4 text-orange-500" />
@@ -880,7 +880,7 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
         </div>
 
         {workoutSessions.length === 0 ? (
-          <div className="text-center py-6 text-gray-400 border border-dashed border-gray-200 dark:border-gray-800 rounded-xl">
+          <div className="text-center py-6 text-gray-400 border border-dashed border-slate-200 dark:border-slate-800 rounded-xl">
             <Dumbbell className="w-8 h-8 mx-auto mb-2 opacity-30 text-orange-500" />
             <p className="text-xs">Chưa có buổi tập kháng lực nào được ghi nhận.</p>
             <p className="text-[11px] text-gray-400 mt-1">
@@ -909,7 +909,7 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
               return (
                 <div
                   key={session.id}
-                  className="rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50/60 dark:bg-gray-850/60 transition-all overflow-hidden"
+                  className="rounded-xl border border-slate-200 dark:border-slate-800 bg-gray-50/60 dark:bg-gray-850/60 transition-all overflow-hidden"
                 >
                   <div className="p-3.5 flex flex-wrap items-center justify-between gap-3">
                     <div className="min-w-0">
@@ -960,7 +960,7 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
                         <button
                           type="button"
                           onClick={() => setExpandedWorkoutId(isExpanded ? null : session.id)}
-                          className="p-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer flex items-center gap-1 text-xs"
+                          className="p-1.5 rounded-lg border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer flex items-center gap-1 text-xs"
                           title="Xem chi tiết các hiệp"
                         >
                           <span className="text-[11px] font-semibold hidden sm:inline">
@@ -986,18 +986,18 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
 
                   {/* Expanded Accordion: List of Sets by Exercise */}
                   {isExpanded && (
-                    <div className="border-t border-gray-200 dark:border-gray-800 p-3.5 bg-white dark:bg-gray-900/70 space-y-3 animate-fadeIn">
+                    <div className="border-t border-slate-200 dark:border-slate-800 p-3.5 bg-white dark:bg-gray-900/70 space-y-3 animate-fadeIn">
                       <div className="text-[11px] font-bold uppercase text-gray-400 tracking-wider">
                         Danh sách bài tập và thông số các hiệp:
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         {Object.entries(setsByEx).map(([exId, setList]) => {
                           const ex = getExercise(exId);
-                          const color = ex ? MUSCLE_COLOR[ex.muscle as MuscleGroup] : '#ff6025';
+                          const color = ex ? MUSCLE_COLOR[ex.muscle as MuscleGroup] : '#2563EB';
                           return (
                             <div
                               key={exId}
-                              className="p-2.5 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/40"
+                              className="p-2.5 rounded-xl border border-gray-100 dark:border-slate-800 bg-gray-50 dark:bg-gray-800/40"
                             >
                               <div className="flex items-center justify-between mb-2">
                                 <div className="flex items-center gap-1.5 font-bold text-xs text-gray-800 dark:text-gray-200">
@@ -1046,7 +1046,7 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
       {/* Bottom Grid: Personal Records + Sports Log */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Personal Records Table */}
-        <div className="bg-white dark:bg-[#1a1e24] rounded-2xl border border-gray-200 dark:border-gray-800 p-4 shadow-xs">
+        <div className="bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200 dark:border-slate-800 p-4 shadow-xs">
           <h3 className="text-xs font-bold text-gray-900 dark:text-gray-100 uppercase tracking-wider mb-3 flex items-center gap-2">
             <Award className="w-4 h-4 text-amber-500" />
             Kỷ Lục Cá Nhân (PR - Personal Records)
@@ -1082,7 +1082,7 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
         </div>
 
         {/* Sports Tracker Card */}
-        <div className="bg-white dark:bg-[#1a1e24] rounded-2xl border border-gray-200 dark:border-gray-800 p-4 shadow-xs">
+        <div className="bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200 dark:border-slate-800 p-4 shadow-xs">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-xs font-bold text-gray-900 dark:text-gray-100 uppercase tracking-wider flex items-center gap-2">
               <Flame className="w-4 h-4 text-rose-500" />
@@ -1134,8 +1134,8 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
 
       {/* Add Sport Modal */}
       {showSportModal && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-[#1a1e24] rounded-2xl border border-gray-200 dark:border-gray-800 max-w-md w-full p-5 space-y-4 shadow-xl">
+        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200 dark:border-slate-800 max-w-md w-full p-5 space-y-4 shadow-xl">
             <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
               <Flame className="w-4 h-4 text-rose-500" />
               Thêm Buổi Tập Thể Thao (MET)
@@ -1223,9 +1223,9 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
 
       {/* Exercise Library Modal */}
       {showLibraryModal && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-[#1a1e24] rounded-2xl border border-gray-200 dark:border-gray-800 max-w-lg w-full p-5 space-y-4 shadow-xl max-h-[85vh] flex flex-col">
-            <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3">
+        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200 dark:border-slate-800 max-w-lg w-full p-5 space-y-4 shadow-xl max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between border-b border-gray-100 dark:border-slate-800 pb-3">
               <div className="flex items-center gap-2">
                 <BookOpen className="w-4 h-4 text-blue-500" />
                 <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100">
@@ -1310,10 +1310,10 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
 
       {/* Active Workout Player Modal / Sheet */}
       {activeSession && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
-          <div className="bg-white dark:bg-[#161a20] rounded-3xl border border-gray-200 dark:border-gray-800 max-w-2xl w-full p-4 sm:p-6 shadow-2xl max-h-[92vh] flex flex-col animate-fadeIn">
+        <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-white dark:bg-[#161a20] rounded-3xl border border-slate-200 dark:border-slate-800 max-w-2xl w-full p-4 sm:p-6 shadow-2xl max-h-[92vh] flex flex-col animate-fadeIn">
             {/* Player Header */}
-            <div className="flex items-start justify-between border-b border-gray-100 dark:border-gray-800 pb-3.5">
+            <div className="flex items-start justify-between border-b border-gray-100 dark:border-slate-800 pb-3.5">
               <div>
                 <div className="flex items-center gap-2">
                   <span className="w-2.5 h-2.5 rounded-full bg-orange-500 animate-pulse" />
@@ -1351,7 +1351,7 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
             </div>
 
             {/* Live Stats Row */}
-            <div className="grid grid-cols-3 gap-2 py-3 border-b border-gray-100 dark:border-gray-800 text-center">
+            <div className="grid grid-cols-3 gap-2 py-3 border-b border-gray-100 dark:border-slate-800 text-center">
               <div className="p-2 rounded-xl bg-orange-50/60 dark:bg-orange-950/20">
                 <div className="text-[10px] text-gray-500 uppercase font-semibold">Tải trọng</div>
                 <div className="text-sm sm:text-base font-bold text-orange-600 dark:text-orange-400 font-mono">
@@ -1431,13 +1431,13 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
             <div className="flex-1 overflow-y-auto space-y-4 pr-1 my-1">
               {activeSession.prescriptions.map((pres) => {
                 const ex = getExercise(pres.exerciseId);
-                const color = ex ? MUSCLE_COLOR[ex.muscle as MuscleGroup] : '#ff6025';
+                const color = ex ? MUSCLE_COLOR[ex.muscle as MuscleGroup] : '#2563EB';
                 const curPr = prs[pres.exerciseId];
 
                 return (
                   <div
                     key={pres.exerciseId}
-                    className="p-3.5 rounded-2xl border border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-850 space-y-2.5"
+                    className="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-gray-50/50 dark:bg-gray-850 space-y-2.5"
                   >
                     <div className="flex items-center justify-between">
                       <div>
@@ -1488,7 +1488,7 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
                             className={`p-2 rounded-xl flex items-center justify-between gap-2 border transition-colors ${
                               setItem.completed
                                 ? 'bg-emerald-50/90 dark:bg-emerald-950/30 border-emerald-300 dark:border-emerald-800'
-                                : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700'
+                                : 'bg-white dark:bg-gray-800 border-slate-200 dark:border-gray-700'
                             }`}
                           >
                             <span className="text-xs font-bold text-gray-500 w-12 shrink-0">
@@ -1621,7 +1621,7 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
             </div>
 
             {/* Bottom Actions */}
-            <div className="pt-3 border-t border-gray-100 dark:border-gray-800 space-y-2">
+            <div className="pt-3 border-t border-gray-100 dark:border-slate-800 space-y-2">
               <label className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300 cursor-pointer">
                 <input
                   type="checkbox"
@@ -1647,9 +1647,9 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
 
       {/* Create Custom Planned Session Modal */}
       {showAddPlanModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
-          <div className="bg-white dark:bg-[#1a1e24] rounded-3xl border border-gray-200 dark:border-gray-800 max-w-xl w-full p-5 space-y-4 shadow-2xl max-h-[90vh] flex flex-col animate-fadeIn">
-            <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3">
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-white dark:bg-[#131b2e] rounded-3xl border border-slate-200 dark:border-slate-800 max-w-xl w-full p-5 space-y-4 shadow-2xl max-h-[90vh] flex flex-col animate-fadeIn">
+            <div className="flex items-center justify-between border-b border-gray-100 dark:border-slate-800 pb-3">
               <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
                 <Dumbbell className="w-4 h-4 text-orange-500" />
                 Tạo Giáo Án Kháng Lực Mới (Mesocycle Plan)
@@ -1734,7 +1734,7 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
                 {planPrescriptions.map((p, idx) => (
                   <div
                     key={idx}
-                    className="p-3 rounded-2xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/40 space-y-2"
+                    className="p-3 rounded-2xl border border-slate-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/40 space-y-2"
                   >
                     <div className="flex items-center justify-between gap-2">
                       <select
@@ -1831,7 +1831,7 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
                 ))}
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-gray-100 dark:border-gray-800">
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-gray-100 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={() => setShowAddPlanModal(false)}
@@ -1853,9 +1853,9 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
 
       {/* Add Custom Exercise Modal ("Thêm Bài Ngoài") */}
       {showAddExerciseModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-white dark:bg-[#1a1e24] rounded-2xl border border-gray-200 dark:border-gray-800 max-w-md w-full p-5 space-y-4 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3">
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200 dark:border-slate-800 max-w-md w-full p-5 space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-gray-100 dark:border-slate-800 pb-3">
               <div className="flex items-center gap-2">
                 <Dumbbell className="w-5 h-5 text-emerald-500" />
                 <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100">
@@ -1933,7 +1933,7 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-gray-100 dark:border-gray-800">
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-gray-100 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={() => setShowAddExerciseModal(false)}
@@ -1955,10 +1955,10 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
 
       {/* 1RM & Barbell Plate Calculator Modal */}
       {showCalculatorModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
-          <div className="bg-white dark:bg-[#1a1e24] w-full max-w-2xl max-h-[85vh] rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xl overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-150">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
+          <div className="bg-white dark:bg-[#131b2e] w-full max-w-2xl max-h-[85vh] rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-150">
             {/* Header */}
-            <div className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-800 bg-linear-to-r from-orange-500/10 to-transparent">
+            <div className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-slate-800 bg-linear-to-r from-orange-500/10 to-transparent">
               <div className="flex items-center gap-2">
                 <div className="p-2 rounded-xl bg-orange-500/10 text-orange-600 dark:text-orange-400">
                   <Calculator className="w-5 h-5" />
@@ -1982,14 +1982,14 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
             </div>
 
             {/* Sub-tabs */}
-            <div className="p-3 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/30 flex items-center gap-2">
+            <div className="p-3 border-b border-gray-100 dark:border-slate-800 bg-gray-50/50 dark:bg-gray-900/30 flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => setCalcTab('1rm')}
                 className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                   calcTab === '1rm'
                     ? 'bg-orange-500 text-white shadow-xs'
-                    : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 border border-gray-200 dark:border-gray-700'
+                    : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 border border-slate-200 dark:border-gray-700'
                 }`}
               >
                 Tính 1RM &amp; Tải Trọng Tập
@@ -2000,7 +2000,7 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
                 className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                   calcTab === 'plates'
                     ? 'bg-orange-500 text-white shadow-xs'
-                    : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 border border-gray-200 dark:border-gray-700'
+                    : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 border border-slate-200 dark:border-gray-700'
                 }`}
               >
                 Xếp Bánh Tạ (Plate Math)
@@ -2059,7 +2059,7 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
                   <h4 className="text-[11px] font-bold text-gray-800 dark:text-gray-200 uppercase tracking-wider">
                     Bảng Tải Trọng Tập Luyện Theo Mục Tiêu:
                   </h4>
-                  <div className="border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden divide-y divide-gray-100 dark:divide-gray-800">
+                  <div className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden divide-y divide-gray-100 dark:divide-gray-800">
                     {oneRmResult.percentages.map((row) => (
                       <div
                         key={row.pct}
@@ -2120,7 +2120,7 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
 
                 {/* Visual Barbell Display */}
                 <div className="bg-gray-900 text-white rounded-2xl p-5 shadow-inner space-y-4">
-                  <div className="flex items-center justify-between text-xs text-gray-400 border-b border-gray-800 pb-2">
+                  <div className="flex items-center justify-between text-xs text-gray-400 border-b border-slate-800 pb-2">
                     <span>
                       Đòn: <strong className="text-white">{plateResult.barWeightKg}kg</strong>
                     </span>
@@ -2206,7 +2206,7 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
             )}
 
             {/* Footer */}
-            <div className="p-3 border-t border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50 flex justify-end">
+            <div className="p-3 border-t border-gray-100 dark:border-slate-800 bg-gray-50 dark:bg-gray-900/50 flex justify-end">
               <button
                 type="button"
                 onClick={() => setShowCalculatorModal(false)}

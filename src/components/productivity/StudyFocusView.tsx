@@ -316,8 +316,8 @@ export const StudyFocusView: React.FC<StudyFocusViewProps> = ({
     <div
       className={`rounded-3xl border shadow-sm p-6 flex flex-col items-center transition-colors ${
         zen
-          ? 'bg-[#12151a] border-gray-800 text-gray-100'
-          : 'bg-white dark:bg-[#1a1e24] border-gray-200 dark:border-gray-800'
+          ? 'bg-[#12151a] border-slate-800 text-gray-100'
+          : 'bg-white dark:bg-[#131b2e] border-slate-200 dark:border-slate-800'
       }`}
     >
       {/* Mode tabs */}
@@ -351,7 +351,7 @@ export const StudyFocusView: React.FC<StudyFocusViewProps> = ({
               className={`text-[10px] px-2.5 py-1 rounded-full font-semibold border transition-all cursor-pointer ${
                 phase === p
                   ? 'text-white border-transparent'
-                  : 'text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-700'
+                  : 'text-gray-500 dark:text-gray-400 border-slate-200 dark:border-gray-700'
               }`}
               style={phase === p ? { backgroundColor: PHASE_META[p].color } : undefined}
             >
@@ -371,7 +371,7 @@ export const StudyFocusView: React.FC<StudyFocusViewProps> = ({
               className={`text-[10px] px-2.5 py-1 rounded-full font-semibold border cursor-pointer ${
                 countdownMinutes === min
                   ? 'bg-blue-600 text-white border-transparent'
-                  : 'text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-700'
+                  : 'text-gray-500 dark:text-gray-400 border-slate-200 dark:border-gray-700'
               }`}
             >
               {min}m
@@ -435,7 +435,7 @@ export const StudyFocusView: React.FC<StudyFocusViewProps> = ({
         <select
           value={linkedTaskId}
           onChange={(e) => setLinkedTaskId(e.target.value)}
-          className="w-full text-xs px-2.5 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
+          className="w-full text-xs px-2.5 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-slate-900 text-gray-900 dark:text-gray-100"
         >
           <option value="">{lang === 'vi' ? '— Không gắn —' : '— None —'}</option>
           {openTasks.map((t) => (
@@ -511,7 +511,7 @@ export const StudyFocusView: React.FC<StudyFocusViewProps> = ({
       </div>
 
       {/* Ambient Sound Bar */}
-      <div className="w-full max-w-sm mt-5 pt-4 border-t border-gray-100 dark:border-gray-800">
+      <div className="w-full max-w-sm mt-5 pt-4 border-t border-gray-100 dark:border-slate-800">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-1.5 text-xs font-semibold text-gray-700 dark:text-gray-300">
             <Headphones className={`w-3.5 h-3.5 ${ambientPlaying ? 'text-violet-500 animate-pulse' : 'text-gray-400'}`} />
@@ -638,7 +638,7 @@ export const StudyFocusView: React.FC<StudyFocusViewProps> = ({
   }
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-y-auto bg-gray-50/50 dark:bg-gray-900 p-4 md:p-6 lg:p-8 select-none">
+    <div className="flex-1 flex flex-col h-full overflow-y-auto bg-gray-50/50 dark:bg-slate-900 p-4 md:p-6 lg:p-8 select-none">
       <div className="mb-6">
         <div className="flex items-center gap-2">
           <Timer className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
@@ -659,7 +659,7 @@ export const StudyFocusView: React.FC<StudyFocusViewProps> = ({
         <div className="lg:col-span-5 space-y-4">
           {/* Stats */}
           <div className="grid grid-cols-2 gap-3">
-            <div className="bg-white dark:bg-[#1a1e24] p-3.5 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs">
+            <div className="bg-white dark:bg-[#131b2e] p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
               <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
                 {lang === 'vi' ? 'Hôm nay' : 'Today'}
               </div>
@@ -667,7 +667,7 @@ export const StudyFocusView: React.FC<StudyFocusViewProps> = ({
                 {formatDuration(todayMinutes * 60)}
               </div>
             </div>
-            <div className="bg-white dark:bg-[#1a1e24] p-3.5 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs">
+            <div className="bg-white dark:bg-[#131b2e] p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
               <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
                 {lang === 'vi' ? 'Tổng đã ghi' : 'All recorded'}
               </div>
@@ -678,7 +678,7 @@ export const StudyFocusView: React.FC<StudyFocusViewProps> = ({
           </div>
 
           {/* Weekly chart */}
-          <div className="bg-white dark:bg-[#1a1e24] p-4 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs">
+          <div className="bg-white dark:bg-[#131b2e] p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-xs font-bold text-gray-900 dark:text-gray-100 flex items-center gap-1.5">
                 <BarChart3 className="w-3.5 h-3.5 text-blue-500" />
@@ -698,7 +698,7 @@ export const StudyFocusView: React.FC<StudyFocusViewProps> = ({
           </div>
 
           {/* History */}
-          <div className="bg-white dark:bg-[#1a1e24] p-4 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs">
+          <div className="bg-white dark:bg-[#131b2e] p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
             <h3 className="text-xs font-bold text-gray-900 dark:text-gray-100 mb-2.5">
               {lang === 'vi' ? 'Lịch sử phiên học' : 'Session history'}
             </h3>
@@ -740,7 +740,7 @@ export const StudyFocusView: React.FC<StudyFocusViewProps> = ({
 
           {/* Open tasks shortcut */}
           {openTasks.length > 0 && (
-            <div className="bg-white dark:bg-[#1a1e24] p-4 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs">
+            <div className="bg-white dark:bg-[#131b2e] p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
               <h3 className="text-xs font-bold text-gray-900 dark:text-gray-100 mb-2">
                 {lang === 'vi' ? 'Việc đang mở' : 'Open tasks'}
               </h3>

@@ -332,7 +332,7 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
       {/* Headline Macro Cards with Iconic Donut Chart */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Macro Donut Ring Chart */}
-        <div className="bg-white dark:bg-[#1a1e24] p-4 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs flex items-center justify-between gap-4">
+        <div className="bg-white dark:bg-[#131b2e] p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex items-center justify-between gap-4">
           <div className="flex-1">
             <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
               Năng Lượng Ngày ({selectedDate})
@@ -367,8 +367,8 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
         </div>
 
         {/* 3 Macro Target Progress Cards */}
-        <div className="bg-white dark:bg-[#1a1e24] p-4 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs space-y-3 lg:col-span-2 flex flex-col justify-between">
-          <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-2">
+        <div className="bg-white dark:bg-[#131b2e] p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-3 lg:col-span-2 flex flex-col justify-between">
+          <div className="flex items-center justify-between border-b border-gray-100 dark:border-slate-800 pb-2">
             <h3 className="text-xs font-bold text-gray-900 dark:text-gray-100">
               Tiến Độ Đa Lượng (Macros Breakdown)
             </h3>
@@ -435,7 +435,7 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
       {/* Quick Water Tracker & TDEE Offset Adjuster */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Quick Water Tracker */}
-        <div className="bg-white dark:bg-[#1a1e24] p-4 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs flex flex-col justify-between">
+        <div className="bg-white dark:bg-[#131b2e] p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-xs font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
               <Droplets className="w-4 h-4 text-cyan-500" />
@@ -489,7 +489,7 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
         </div>
 
         {/* Quick TDEE Offset */}
-        <div className="bg-white dark:bg-[#1a1e24] p-4 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs flex flex-col justify-between">
+        <div className="bg-white dark:bg-[#131b2e] p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-xs font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
               <Sliders className="w-4 h-4 text-emerald-500" />
@@ -512,7 +512,7 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
                 onClick={() => onUpdateNutritionSettings({ tdeeOffset: offset })}
                 className={`py-1.5 px-1 rounded-xl text-xs font-semibold transition-colors cursor-pointer text-center ${
                   nutritionSettings.tdeeOffset === offset
-                    ? 'bg-[#ff6025] text-white font-bold'
+                    ? 'bg-[#2563EB] text-white font-bold'
                     : 'bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300'
                 }`}
               >
@@ -533,8 +533,8 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
 
       {/* Balanced Meal Combos Section */}
       {showCombosSection && (
-        <div className="bg-white dark:bg-[#1a1e24] p-4 md:p-5 rounded-2xl border border-orange-200 dark:border-orange-900/50 shadow-xs space-y-3">
-          <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-2.5">
+        <div className="bg-white dark:bg-[#131b2e] p-4 md:p-5 rounded-2xl border border-orange-200 dark:border-orange-900/50 shadow-xs space-y-3">
+          <div className="flex items-center justify-between border-b border-gray-100 dark:border-slate-800 pb-2.5">
             <div>
               <h3 className="text-xs font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
                 <Flame className="w-4 h-4 text-orange-500" />
@@ -557,7 +557,7 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
             {BALANCED_MEAL_COMBOS.map((combo) => (
               <div
                 key={combo.id}
-                className="p-3.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/30 flex flex-col justify-between gap-3 hover:border-orange-300 dark:hover:border-orange-800 transition-colors"
+                className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-gray-50/50 dark:bg-gray-900/30 flex flex-col justify-between gap-3 hover:border-orange-300 dark:hover:border-orange-800 transition-colors"
               >
                 <div>
                   <div className="flex items-start justify-between gap-2">
@@ -575,7 +575,7 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
                     {combo.items.map((it, idx) => (
                       <span
                         key={idx}
-                        className="text-[10px] px-2 py-0.5 rounded-md bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300"
+                        className="text-[10px] px-2 py-0.5 rounded-md bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 text-gray-700 dark:text-gray-300"
                       >
                         {it.name} ({it.amount}{it.unit})
                       </span>
@@ -583,7 +583,7 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-gray-800/60">
+                <div className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-slate-800/60">
                   <div className="text-[11px] font-mono text-gray-600 dark:text-gray-300">
                     <span className="font-bold text-orange-600 dark:text-orange-400">{combo.totalKcal} kcal</span> · P:{' '}
                     {combo.totalProtein}g · C: {combo.totalCarbs}g · F: {combo.totalFat}g
@@ -591,7 +591,7 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
                   <button
                     type="button"
                     onClick={() => handleApplyCombo(combo)}
-                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#ff6025] hover:bg-[#ff4400] text-white text-[11px] font-bold cursor-pointer transition-colors shadow-2xs"
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-[11px] font-bold cursor-pointer transition-colors shadow-2xs"
                   >
                     <Plus className="w-3.5 h-3.5" />
                     <span>Nạp Combo</span>
@@ -604,8 +604,8 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
       )}
 
       {/* Food Input Box: Tabs for NLP vs Manual Input */}
-      <div className="bg-white dark:bg-[#1a1e24] p-4 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs space-y-3.5">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-100 dark:border-gray-800 pb-3">
+      <div className="bg-white dark:bg-[#131b2e] p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-3.5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-100 dark:border-slate-800 pb-3">
           <div className="flex items-center gap-2">
             <h3 className="text-xs font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-emerald-500" />
@@ -679,7 +679,7 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
               onClick={() => setSelectedSlot(slot)}
               className={`px-3 py-1.5 rounded-xl text-xs font-semibold cursor-pointer transition-colors ${
                 selectedSlot === slot
-                  ? 'bg-[#ff6025] text-white shadow-xs'
+                  ? 'bg-[#2563EB] text-white shadow-xs'
                   : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200'
               }`}
             >
@@ -702,7 +702,7 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
               <button
                 type="submit"
                 disabled={parsedPreview.length === 0}
-                className="px-4 py-2.5 rounded-xl bg-[#ff6025] hover:bg-[#ff4400] disabled:opacity-50 text-white text-xs font-bold cursor-pointer shrink-0 transition-colors shadow-xs"
+                className="px-4 py-2.5 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] disabled:opacity-50 text-white text-xs font-bold cursor-pointer shrink-0 transition-colors shadow-xs"
               >
                 + Ghi nhận ({MEAL_LABEL[selectedSlot]})
               </button>
@@ -825,7 +825,7 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
               <button
                 type="submit"
                 disabled={!manualName.trim() || Number(manualKcal) <= 0}
-                className="px-4 py-2 rounded-xl bg-[#ff6025] hover:bg-[#ff4400] disabled:opacity-50 text-white text-xs font-bold cursor-pointer transition-colors shadow-xs"
+                className="px-4 py-2 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] disabled:opacity-50 text-white text-xs font-bold cursor-pointer transition-colors shadow-xs"
               >
                 + Thêm Món Vào ({MEAL_LABEL[selectedSlot]})
               </button>
@@ -849,10 +849,10 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
             return (
               <div
                 key={slot}
-                className="bg-white dark:bg-[#1a1e24] p-4 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs flex flex-col justify-between"
+                className="bg-white dark:bg-[#131b2e] p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between"
               >
                 <div>
-                  <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-2 mb-3">
+                  <div className="flex items-center justify-between border-b border-gray-100 dark:border-slate-800 pb-2 mb-3">
                     <span className="font-bold text-xs text-gray-900 dark:text-gray-100">
                       {MEAL_LABEL[slot]}
                     </span>
@@ -870,7 +870,7 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
                         return (
                           <div
                             key={meal.id}
-                            className="p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800/80 space-y-2 text-xs"
+                            className="p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-slate-800/80 space-y-2 text-xs"
                           >
                             <div className="flex items-start justify-between">
                               <div className="min-w-0 pr-2">
@@ -893,7 +893,7 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
 
                             {/* Detailed breakdown of items inside this meal */}
                             {meal.items && meal.items.length > 0 && (
-                              <div className="divide-y divide-gray-200/60 dark:divide-gray-700/60 pt-1 border-t border-gray-200/60 dark:border-gray-700/60">
+                              <div className="divide-y divide-gray-200/60 dark:divide-gray-700/60 pt-1 border-t border-slate-200/60 dark:border-gray-700/60">
                                 {meal.items.map((item, iIdx) => (
                                   <div key={iIdx} className="py-1.5 flex items-center justify-between text-[11px]">
                                     <div className="truncate pr-2">
@@ -935,9 +935,9 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
 
       {/* Real Macro Override Modal */}
       {showOverrideModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-white dark:bg-[#1a1e24] rounded-2xl border border-gray-200 dark:border-gray-800 max-w-md w-full p-5 space-y-4 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3">
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200 dark:border-slate-800 max-w-md w-full p-5 space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-gray-100 dark:border-slate-800 pb-3">
               <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
                 <Sliders className="w-4 h-4 text-emerald-600" />
                 Tùy Chỉnh Mục Tiêu Calo & Đa Lượng ({GOAL_LABEL[profile.goal]})
@@ -1015,7 +1015,7 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
               </p>
             </div>
 
-            <div className="flex items-center justify-between pt-3 border-t border-gray-100 dark:border-gray-800">
+            <div className="flex items-center justify-between pt-3 border-t border-gray-100 dark:border-slate-800">
               <button
                 type="button"
                 onClick={() => {
@@ -1051,7 +1051,7 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
                   onUpdateNutritionSettings({ overrides: updatedOverrides });
                   setShowOverrideModal(false);
                 }}
-                className="px-4 py-2 rounded-xl bg-[#ff6025] hover:bg-[#ff4400] text-white text-xs font-bold cursor-pointer shadow-xs"
+                className="px-4 py-2 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-xs font-bold cursor-pointer shadow-xs"
               >
                 Lưu Tùy Chỉnh
               </button>
@@ -1062,10 +1062,10 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
 
       {/* Vietnamese Food Catalog & Multiplier Modal */}
       {showFoodCatalogModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
-          <div className="bg-white dark:bg-[#1a1e24] w-full max-w-3xl max-h-[85vh] rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xl overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-150">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
+          <div className="bg-white dark:bg-[#131b2e] w-full max-w-3xl max-h-[85vh] rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-150">
             {/* Header */}
-            <div className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-800 bg-linear-to-r from-emerald-500/10 to-transparent">
+            <div className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-slate-800 bg-linear-to-r from-emerald-500/10 to-transparent">
               <div className="flex items-center gap-2">
                 <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
                   <BookOpen className="w-5 h-5" />
@@ -1092,7 +1092,7 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
             </div>
 
             {/* Controls: Search, Category Filter & Slot Selector */}
-            <div className="p-4 border-b border-gray-100 dark:border-gray-800 space-y-3 bg-gray-50/50 dark:bg-gray-900/30">
+            <div className="p-4 border-b border-gray-100 dark:border-slate-800 space-y-3 bg-gray-50/50 dark:bg-gray-900/30">
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
                 <div className="relative flex-1">
                   <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -1129,7 +1129,7 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
                   className={`px-3 py-1 rounded-lg whitespace-nowrap font-semibold cursor-pointer transition-colors ${
                     catalogCategory === 'all'
                       ? 'bg-emerald-600 text-white shadow-2xs'
-                      : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 border border-gray-200 dark:border-gray-700'
+                      : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 border border-slate-200 dark:border-gray-700'
                   }`}
                 >
                   Tất cả ({VIETNAMESE_FOOD_CATALOG.length})
@@ -1152,7 +1152,7 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
                     className={`px-3 py-1 rounded-lg whitespace-nowrap font-semibold cursor-pointer transition-colors ${
                       catalogCategory === cat
                         ? 'bg-emerald-600 text-white shadow-2xs'
-                        : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 border border-gray-200 dark:border-gray-700'
+                        : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 border border-slate-200 dark:border-gray-700'
                     }`}
                   >
                     {FOOD_CATEGORY_LABEL[cat]}
@@ -1172,7 +1172,7 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
                   {filteredCatalog.map((item) => (
                     <div
                       key={item.id}
-                      className="p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/40 hover:border-emerald-300 dark:hover:border-emerald-800 transition-all flex flex-col justify-between gap-2.5 shadow-2xs"
+                      className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-gray-900/40 hover:border-emerald-300 dark:hover:border-emerald-800 transition-all flex flex-col justify-between gap-2.5 shadow-2xs"
                     >
                       <div>
                         <div className="flex items-start justify-between gap-2">
@@ -1207,7 +1207,7 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
                         </div>
                       </div>
 
-                      <div className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-gray-800">
+                      <div className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-slate-800">
                         <div className="flex items-center gap-1">
                           {[0.5, 1, 1.5, 2].map((mult) => (
                             <button
@@ -1238,7 +1238,7 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
             </div>
 
             {/* Footer */}
-            <div className="p-3 border-t border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50 flex items-center justify-between text-xs text-gray-500">
+            <div className="p-3 border-t border-gray-100 dark:border-slate-800 bg-gray-50 dark:bg-gray-900/50 flex items-center justify-between text-xs text-gray-500">
               <span>Đang chọn nạp vào: <strong className="text-gray-800 dark:text-gray-200">{MEAL_LABEL[catalogTargetSlot]}</strong></span>
               <button
                 type="button"

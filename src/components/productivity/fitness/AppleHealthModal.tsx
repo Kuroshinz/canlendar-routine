@@ -116,10 +116,10 @@ export const AppleHealthModal: React.FC<AppleHealthModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
-      <div className="bg-white dark:bg-[#1a1e24] w-full max-w-2xl max-h-[88vh] rounded-2xl border border-gray-200 dark:border-gray-800 shadow-2xl overflow-hidden flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+      <div className="bg-white dark:bg-[#131b2e] w-full max-w-2xl max-h-[88vh] rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between p-4.5 border-b border-gray-100 dark:border-gray-800 bg-linear-to-r from-red-500/10 via-rose-500/10 to-transparent">
+        <div className="flex items-center justify-between p-4.5 border-b border-gray-100 dark:border-slate-800 bg-linear-to-r from-red-500/10 via-rose-500/10 to-transparent">
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-red-500 to-rose-600 text-white flex items-center justify-center font-bold text-lg shadow-sm">
               
@@ -143,14 +143,14 @@ export const AppleHealthModal: React.FC<AppleHealthModalProps> = ({
         </div>
 
         {/* Tab Switcher */}
-        <div className="p-3 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/30 flex items-center gap-2">
+        <div className="p-3 border-b border-gray-100 dark:border-slate-800 bg-gray-50/50 dark:bg-gray-900/30 flex items-center gap-2">
           <button
             type="button"
             onClick={() => setActiveTab('shortcut')}
             className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
               activeTab === 'shortcut'
                 ? 'bg-rose-500 text-white shadow-xs'
-                : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 border border-gray-200 dark:border-gray-700'
+                : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 border border-slate-200 dark:border-gray-700'
             }`}
           >
             <Smartphone className="w-4 h-4" />
@@ -163,7 +163,7 @@ export const AppleHealthModal: React.FC<AppleHealthModalProps> = ({
             className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
               activeTab === 'xml'
                 ? 'bg-rose-500 text-white shadow-xs'
-                : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 border border-gray-200 dark:border-gray-700'
+                : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 border border-slate-200 dark:border-gray-700'
             }`}
           >
             <FileText className="w-4 h-4" />
@@ -176,7 +176,7 @@ export const AppleHealthModal: React.FC<AppleHealthModalProps> = ({
             className={`py-2 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
               activeTab === 'guide'
                 ? 'bg-rose-500 text-white shadow-xs'
-                : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 border border-gray-200 dark:border-gray-700'
+                : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 border border-slate-200 dark:border-gray-700'
             }`}
           >
             <RefreshCw className="w-4 h-4" />
@@ -261,7 +261,7 @@ export const AppleHealthModal: React.FC<AppleHealthModalProps> = ({
         {/* Tab 3: Google Fit Bridge Guide */}
         {activeTab === 'guide' && (
           <div className="p-5 flex-1 overflow-y-auto space-y-3.5 text-xs leading-relaxed">
-            <div className="p-4 rounded-2xl bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-800 space-y-2">
+            <div className="p-4 rounded-2xl bg-gray-50 dark:bg-gray-900/50 border border-slate-200 dark:border-slate-800 space-y-2">
               <h4 className="font-bold text-gray-900 dark:text-gray-100 text-sm flex items-center gap-2">
                 <RefreshCw className="w-4 h-4 text-emerald-500" />
                 Đồng bộ tự động 100% qua Google Fit trên iPhone:
@@ -343,7 +343,7 @@ export const AppleHealthModal: React.FC<AppleHealthModalProps> = ({
         )}
 
         {/* Footer Actions */}
-        <div className="p-4 border-t border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50 flex items-center justify-between">
+        <div className="p-4 border-t border-gray-100 dark:border-slate-800 bg-gray-50 dark:bg-gray-900/50 flex items-center justify-between">
           <span className="text-xs text-gray-500">
             {parsedData.length > 0 ? `Sẵn sàng đồng bộ ${parsedData.length} bản ghi` : 'Chưa có bản ghi nào'}
           </span>

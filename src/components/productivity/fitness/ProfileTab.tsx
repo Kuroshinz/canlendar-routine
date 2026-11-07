@@ -128,8 +128,8 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
       </div>
 
       {/* Profile Details & Settings Card */}
-      <div className="bg-white dark:bg-[#1a1e24] p-5 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs">
-        <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3 mb-4">
+      <div className="bg-white dark:bg-[#131b2e] p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
+        <div className="flex items-center justify-between border-b border-gray-100 dark:border-slate-800 pb-3 mb-4">
           <div>
             <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
               <Activity className="w-4 h-4 text-orange-500" />
@@ -260,38 +260,38 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
           </form>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 text-xs">
-            <div className="p-3 rounded-xl bg-gray-50 dark:bg-gray-800/40 border border-gray-100 dark:border-gray-800">
+            <div className="p-3 rounded-xl bg-gray-50 dark:bg-gray-800/40 border border-gray-100 dark:border-slate-800">
               <div className="text-[10px] text-gray-400 uppercase font-semibold">Giới tính & Tuổi</div>
               <div className="font-bold text-gray-900 dark:text-gray-100 mt-1">
                 {profile.sex === 'male' ? 'Nam' : 'Nữ'} · {profile.age} tuổi
               </div>
             </div>
 
-            <div className="p-3 rounded-xl bg-gray-50 dark:bg-gray-800/40 border border-gray-100 dark:border-gray-800">
+            <div className="p-3 rounded-xl bg-gray-50 dark:bg-gray-800/40 border border-gray-100 dark:border-slate-800">
               <div className="text-[10px] text-gray-400 uppercase font-semibold">Chiều cao</div>
               <div className="font-bold text-gray-900 dark:text-gray-100 mt-1">{profile.heightCm} cm</div>
             </div>
 
-            <div className="p-3 rounded-xl bg-gray-50 dark:bg-gray-800/40 border border-gray-100 dark:border-gray-800">
+            <div className="p-3 rounded-xl bg-gray-50 dark:bg-gray-800/40 border border-gray-100 dark:border-slate-800">
               <div className="text-[10px] text-gray-400 uppercase font-semibold">Mục tiêu</div>
               <div className="font-bold text-orange-600 dark:text-orange-400 mt-1">
                 {GOAL_LABEL[profile.goal]}
               </div>
             </div>
 
-            <div className="p-3 rounded-xl bg-gray-50 dark:bg-gray-800/40 border border-gray-100 dark:border-gray-800">
+            <div className="p-3 rounded-xl bg-gray-50 dark:bg-gray-800/40 border border-gray-100 dark:border-slate-800">
               <div className="text-[10px] text-gray-400 uppercase font-semibold">Mức vận động</div>
               <div className="font-bold text-gray-900 dark:text-gray-100 mt-1">
                 {ACTIVITY_LABEL[profile.activity]}
               </div>
             </div>
 
-            <div className="p-3 rounded-xl bg-gray-50 dark:bg-gray-800/40 border border-gray-100 dark:border-gray-800">
+            <div className="p-3 rounded-xl bg-gray-50 dark:bg-gray-800/40 border border-gray-100 dark:border-slate-800">
               <div className="text-[10px] text-gray-400 uppercase font-semibold">Cân nặng mục tiêu</div>
               <div className="font-bold text-gray-900 dark:text-gray-100 mt-1">{profile.targetWeightKg} kg</div>
             </div>
 
-            <div className="p-3 rounded-xl bg-gray-50 dark:bg-gray-800/40 border border-gray-100 dark:border-gray-800">
+            <div className="p-3 rounded-xl bg-gray-50 dark:bg-gray-800/40 border border-gray-100 dark:border-slate-800">
               <div className="text-[10px] text-gray-400 uppercase font-semibold">Mục tiêu bước / ngày</div>
               <div className="font-bold text-gray-900 dark:text-gray-100 mt-1">
                 {profile.stepGoal.toLocaleString()}

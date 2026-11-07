@@ -40,6 +40,7 @@ interface SidebarProps {
   onOpenSettings?: () => void;
   onOpenCloudSync?: () => void;
   onGoogleSignIn?: () => Promise<void>;
+  onLogout?: () => void;
   userEmail?: string;
   isLoggedInGoogle?: boolean;
 }
@@ -62,6 +63,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onOpenSettings,
   onOpenCloudSync,
   onGoogleSignIn,
+  onLogout,
   userEmail,
   isLoggedInGoogle = false,
 }) => {
@@ -315,36 +317,37 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
         </div>
 
-        {/* Bottom: Settings & Account / Logout */}
+        {/* Bottom: Settings & Logout */}
         <div className="space-y-1.5 pt-3 border-t border-slate-200/80 dark:border-slate-800/80">
           <button
             onClick={() => onOpenSettings && onOpenSettings()}
-            className="w-full flex items-center gap-3 px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors cursor-pointer"
+            className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors cursor-pointer"
           >
             <Settings className="w-4 h-4 text-slate-400" />
-            <span>{lang === 'vi' ? 'Cài đặt & Phím tắt' : 'Settings & Shortcuts'}</span>
+            <span>{lang === 'vi' ? 'Cài đặt' : 'Settings'}</span>
           </button>
 
-          {isLoggedInGoogle ? (
-            <button
-              onClick={() => onOpenCloudSync && onOpenCloudSync()}
-              className="w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 transition-colors cursor-pointer"
-            >
-              <div className="flex items-center gap-2 truncate">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
-                <span className="truncate font-mono">{userEmail || 'Google Synced'}</span>
-              </div>
-              <LogOut className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-            </button>
-          ) : (
-            <button
-              onClick={() => onGoogleSignIn && onGoogleSignIn()}
-              className="w-full flex items-center gap-3 px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors cursor-pointer"
-            >
-              <LogIn className="w-4 h-4 text-slate-400" />
-              <span>{lang === 'vi' ? 'Kết nối Google' : 'Connect Google'}</span>
-            </button>
-          )}
+          <button
+            onClick={() => {
+              if (onLogout) {
+                onLogout();
+              } else if (onOpenCloudSync) {
+                onOpenCloudSync();
+              }
+            }}
+            title={lang === 'vi' ? 'Đăng xuất khỏi hệ thống' : 'Logout from workspace'}
+            className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer group"
+          >
+            <div className="flex items-center gap-3">
+              <LogOut className="w-4 h-4 text-slate-400 group-hover:text-rose-500 transition-colors" />
+              <span>{lang === 'vi' ? 'Đăng xuất' : 'Logout'}</span>
+            </div>
+            {isLoggedInGoogle && (
+              <span className="text-[10px] text-slate-400 font-mono truncate max-w-[90px]">
+                {userEmail?.split('@')[0]}
+              </span>
+            )}
+          </button>
         </div>
       </aside>
     </>

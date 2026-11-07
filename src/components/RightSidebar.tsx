@@ -231,9 +231,9 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
     <div className="hidden md:flex relative z-20 shrink-0">
       {/* Slide-out Drawer Panel when an icon is selected */}
       {activePanel && (
-        <div className="w-80 bg-white dark:bg-[#1a1e24] border-l border-gray-200 dark:border-gray-800 shadow-xl flex flex-col h-full animate-in slide-in-from-right duration-200">
+        <div className="w-80 bg-white dark:bg-[#131b2e] border-l border-slate-200 dark:border-slate-800 shadow-xl flex flex-col h-full animate-in slide-in-from-right duration-200">
           {/* Drawer Header */}
-          <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
+          <div className="px-4 py-3 border-b border-gray-100 dark:border-slate-800 flex items-center justify-between">
             <div className="flex items-center gap-2">
               {activePanel === 'keep' && (
                 <>
@@ -290,13 +290,13 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
             {/* Google Keep Panel */}
             {activePanel === 'keep' && (
               <div className="space-y-3">
-                <form onSubmit={handleAddNote} className="p-3 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 space-y-2">
+                <form onSubmit={handleAddNote} className="p-3 bg-gray-50 dark:bg-gray-800 rounded-xl border border-slate-200 dark:border-gray-700 space-y-2">
                   <input
                     type="text"
                     value={newNoteTitle}
                     onChange={(e) => setNewNoteTitle(e.target.value)}
                     placeholder={lang === 'vi' ? 'Tiêu đề ghi chú...' : 'Title...'}
-                    className="w-full text-xs font-semibold px-2 py-1 bg-transparent border-b border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-100 focus:outline-none"
+                    className="w-full text-xs font-semibold px-2 py-1 bg-transparent border-b border-slate-200 dark:border-gray-700 text-gray-800 dark:text-gray-100 focus:outline-none"
                   />
                   <textarea
                     rows={2}
@@ -365,7 +365,7 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
                     return (
                       <div
                         key={t.id}
-                        className="group flex items-start gap-2.5 p-2.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors border border-transparent hover:border-gray-200 dark:hover:border-gray-700"
+                        className="group flex items-start gap-2.5 p-2.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors border border-transparent hover:border-slate-200 dark:hover:border-gray-700"
                       >
                         <button
                           type="button"
@@ -434,7 +434,7 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
             {activePanel === 'contacts' && (
               <div className="space-y-2">
                 {displayContacts.map((c, i) => (
-                  <div key={i} className="flex items-center gap-3 p-2.5 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/40">
+                  <div key={i} className="flex items-center gap-3 p-2.5 rounded-xl border border-gray-100 dark:border-slate-800 bg-gray-50/50 dark:bg-gray-800/40">
                     <div className="w-8 h-8 rounded-full bg-linear-to-tr from-blue-500 to-indigo-600 text-white font-bold text-xs flex items-center justify-center shrink-0">
                       {c.name[0]?.toUpperCase() || 'U'}
                     </div>
@@ -455,7 +455,7 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
                   {lang === 'vi' ? 'Vị trí sự kiện đã lưu trên lịch:' : 'Saved event locations on calendar:'}
                 </p>
                 {displayLocations.map((loc, i) => (
-                  <div key={i} className="p-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50">
+                  <div key={i} className="p-3 rounded-xl border border-slate-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50">
                     <div className="flex items-center gap-1.5 font-semibold text-gray-800 dark:text-gray-100 mb-1">
                       <MapPin className="w-3.5 h-3.5 text-red-500 shrink-0" />
                       <span className="truncate">{loc.name}</span>
@@ -470,7 +470,7 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
       )}
 
       {/* Right Icon Strip */}
-      <div className="w-14 border-l border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 flex flex-col items-center py-4 justify-between select-none">
+      <div className="w-14 border-l border-slate-200 dark:border-slate-800 bg-white dark:bg-gray-900 flex flex-col items-center py-4 justify-between select-none">
         <div className="flex flex-col items-center gap-3">
           {/* Keep Icon */}
           <button

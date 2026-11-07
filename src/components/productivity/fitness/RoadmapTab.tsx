@@ -351,15 +351,15 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
   return (
     <div className="space-y-6 animate-fadeIn pb-12">
       {/* VortexCal Header Banner */}
-      <div className="bg-[#121212] rounded-3xl border border-white/10 p-5 sm:p-6 shadow-xl relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-[#ff6025]/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="bg-[#0b101b] rounded-3xl border border-white/10 p-5 sm:p-6 shadow-xl relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-[#2563EB]/10 rounded-full blur-3xl pointer-events-none" />
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
               <span className="font-display font-extrabold text-2xl tracking-tight text-white">
-                VortexCal<span className="text-[#ff6025]">.</span>
+                VortexCal<span className="text-[#2563EB]">.</span>
               </span>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-[#ff6025]/20 text-[#ff6025] border border-[#ff6025]/30">
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-[#2563EB]/20 text-[#2563EB] border border-[#2563EB]/30">
                 AI Fitness Analyzer
               </span>
             </div>
@@ -376,7 +376,7 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
             <button
               type="button"
               onClick={handleApplyRoadmap}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#ff6025] hover:bg-[#ff4400] text-white text-xs font-bold transition-all shadow-md cursor-pointer hover:shadow-orange-500/20"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-xs font-bold transition-all shadow-md cursor-pointer hover:shadow-orange-500/20"
             >
               <CheckCircle2 className="w-4 h-4" />
               <span>Áp dụng vào hồ sơ cá nhân</span>
@@ -400,10 +400,10 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left Form: 5 Columns */}
         <div className="lg:col-span-5 space-y-4">
-          <div className="bg-[#1c1d21] rounded-2xl border border-white/10 p-5 shadow-xs space-y-4">
+          <div className="bg-[#131b2e] rounded-2xl border border-white/10 p-5 shadow-xs space-y-4">
             <div className="flex items-center justify-between border-b border-white/10 pb-3">
               <h3 className="text-xs font-bold uppercase tracking-wider text-white flex items-center gap-2">
-                <Compass className="w-4 h-4 text-[#ff6025]" />
+                <Compass className="w-4 h-4 text-[#2563EB]" />
                 Thông Số Đầu Vào
               </h3>
               <span className="text-[10px] text-white/40">Bước 1: Điền số đo</span>
@@ -421,7 +421,7 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
                     onClick={() => setSex('male')}
                     className={`py-2 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
                       sex === 'male'
-                        ? 'bg-[#ff6025] text-white border-[#ff6025] shadow-xs'
+                        ? 'bg-[#2563EB] text-white border-[#2563EB] shadow-xs'
                         : 'bg-white/5 text-white/70 border-white/10 hover:bg-white/10'
                     }`}
                   >
@@ -432,7 +432,7 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
                     onClick={() => setSex('female')}
                     className={`py-2 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
                       sex === 'female'
-                        ? 'bg-[#ff6025] text-white border-[#ff6025] shadow-xs'
+                        ? 'bg-[#2563EB] text-white border-[#2563EB] shadow-xs'
                         : 'bg-white/5 text-white/70 border-white/10 hover:bg-white/10'
                     }`}
                   >
@@ -453,7 +453,7 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
                     max="250"
                     value={heightCm}
                     onChange={(e) => setHeightCm(e.target.value)}
-                    className="mt-1 w-full text-xs font-bold px-3 py-2 rounded-xl border border-white/10 bg-[#0e0f11] text-white focus:border-[#ff6025] focus:outline-none"
+                    className="mt-1 w-full text-xs font-bold px-3 py-2 rounded-xl border border-white/10 bg-[#0e0f11] text-white focus:border-[#2563EB] focus:outline-none"
                   />
                 </div>
                 <div>
@@ -467,7 +467,7 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
                     step="0.1"
                     value={weightKg}
                     onChange={(e) => setWeightKg(e.target.value)}
-                    className="mt-1 w-full text-xs font-bold px-3 py-2 rounded-xl border border-white/10 bg-[#0e0f11] text-white focus:border-[#ff6025] focus:outline-none"
+                    className="mt-1 w-full text-xs font-bold px-3 py-2 rounded-xl border border-white/10 bg-[#0e0f11] text-white focus:border-[#2563EB] focus:outline-none"
                   />
                 </div>
               </div>
@@ -479,7 +479,7 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
                     <label className="text-[10px] font-semibold uppercase text-white/50 block">
                       Bodyfat (%)
                     </label>
-                    <span className="text-[9px] text-[#ff6025] font-bold">InBody</span>
+                    <span className="text-[9px] text-[#2563EB] font-bold">InBody</span>
                   </div>
                   <input
                     type="number"
@@ -488,7 +488,7 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
                     step="0.1"
                     value={bodyfatPct}
                     onChange={(e) => setBodyfatPct(e.target.value)}
-                    className="mt-1 w-full text-xs font-bold px-3 py-2 rounded-xl border border-white/10 bg-[#0e0f11] text-white focus:border-[#ff6025] focus:outline-none"
+                    className="mt-1 w-full text-xs font-bold px-3 py-2 rounded-xl border border-white/10 bg-[#0e0f11] text-white focus:border-[#2563EB] focus:outline-none"
                   />
                 </div>
                 <div>
@@ -502,7 +502,7 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
                     step="0.5"
                     value={waistCm}
                     onChange={(e) => setWaistCm(e.target.value)}
-                    className="mt-1 w-full text-xs font-bold px-3 py-2 rounded-xl border border-white/10 bg-[#0e0f11] text-white focus:border-[#ff6025] focus:outline-none"
+                    className="mt-1 w-full text-xs font-bold px-3 py-2 rounded-xl border border-white/10 bg-[#0e0f11] text-white focus:border-[#2563EB] focus:outline-none"
                   />
                 </div>
               </div>
@@ -523,7 +523,7 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
                       key={g.id}
                       className={`flex items-center justify-between p-2.5 rounded-xl border cursor-pointer transition-all ${
                         userGoal === g.id
-                          ? 'border-[#ff6025] bg-[#ff6025]/10 text-white'
+                          ? 'border-[#2563EB] bg-[#2563EB]/10 text-white'
                           : 'border-white/10 bg-white/5 text-white/70 hover:bg-white/8'
                       }`}
                     >
@@ -534,7 +534,7 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
                           value={g.id}
                           checked={userGoal === g.id}
                           onChange={() => setUserGoal(g.id as any)}
-                          className="accent-[#ff6025]"
+                          className="accent-[#2563EB]"
                         />
                         <span className="text-xs font-semibold">{g.label}</span>
                       </div>
@@ -547,9 +547,9 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
           </div>
 
           {/* Reference Table Accordions / Infocards */}
-          <div className="bg-[#1c1d21] rounded-2xl border border-white/10 p-4 shadow-xs space-y-3">
+          <div className="bg-[#131b2e] rounded-2xl border border-white/10 p-4 shadow-xs space-y-3">
             <h4 className="text-[11px] font-bold uppercase tracking-wider text-white/70 flex items-center gap-1.5">
-              <Info className="w-3.5 h-3.5 text-[#ff6025]" />
+              <Info className="w-3.5 h-3.5 text-[#2563EB]" />
               Bảng Tham Chiếu Thể Hình Chuẩn ({sex === 'male' ? 'Nam' : 'Nữ'})
             </h4>
 
@@ -594,13 +594,13 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
         {/* Right Output: 7 Columns */}
         <div className="lg:col-span-7 space-y-4">
           {/* Diagnostic Key Numbers */}
-          <div className="bg-[#1c1d21] rounded-2xl border border-white/10 p-5 shadow-xs space-y-4">
+          <div className="bg-[#131b2e] rounded-2xl border border-white/10 p-5 shadow-xs space-y-4">
             <div className="flex items-center justify-between border-b border-white/10 pb-3">
               <h3 className="text-xs font-bold uppercase tracking-wider text-white flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-[#ff6025]" />
+                <Sparkles className="w-4 h-4 text-[#2563EB]" />
                 Kết Quả Chẩn Đoán & Định Lượng Thể Trạng
               </h3>
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#ff6025]/20 text-[#ff6025] font-bold">
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#2563EB]/20 text-[#2563EB] font-bold">
                 VortexCal AI Verified
               </span>
             </div>
@@ -671,15 +671,15 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
           </div>
 
           {/* Strategic Roadmap Recommendation Box */}
-          <div className="bg-[#1c1d21] rounded-2xl border border-white/10 p-5 shadow-xs space-y-4">
+          <div className="bg-[#131b2e] rounded-2xl border border-white/10 p-5 shadow-xs space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Award className="w-5 h-5 text-[#ff6025]" />
+                <Award className="w-5 h-5 text-[#2563EB]" />
                 <h3 className="text-sm font-bold text-white">
                   Định Hướng Chiến Lược: {analysis.planLabelVi}
                 </h3>
               </div>
-              <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-[#ff6025] text-white">
+              <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-[#2563EB] text-white">
                 Khuyến Nghị AI
               </span>
             </div>
@@ -693,7 +693,7 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               <div className="p-3 rounded-xl bg-white/5 border border-white/5">
                 <div className="text-[10px] uppercase font-semibold text-white/40">Cân nặng mục tiêu</div>
-                <div className="text-base font-extrabold text-[#ff6025] font-mono mt-0.5">
+                <div className="text-base font-extrabold text-[#2563EB] font-mono mt-0.5">
                   {analysis.projectedWeightKg} kg
                 </div>
                 <div className="text-[10px] text-white/40">
@@ -725,7 +725,7 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/5 pb-2.5">
                 <div>
                   <div className="flex items-center gap-2">
-                    <Utensils className="w-4 h-4 text-[#ff6025]" />
+                    <Utensils className="w-4 h-4 text-[#2563EB]" />
                     <span className="font-bold text-white text-xs">Căn Chỉnh Tỉ Lệ Đa Lượng Macro</span>
                   </div>
                   <p className="text-[10px] text-white/40 mt-0.5">
@@ -763,7 +763,7 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
                     onClick={() => handleSelectMacroPreset(p.id)}
                     className={`p-2 rounded-xl text-left border transition-all cursor-pointer ${
                       macroPreset === p.id
-                        ? 'bg-[#ff6025]/15 border-[#ff6025] text-white'
+                        ? 'bg-[#2563EB]/15 border-[#2563EB] text-white'
                         : 'bg-white/5 border-white/5 text-white/70 hover:bg-white/10'
                     }`}
                   >
@@ -789,7 +789,7 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
                         setMacroPreset('custom');
                         setCustomProtein(Number(e.target.value) || 0);
                       }}
-                      className="w-16 text-center text-sm font-bold text-white bg-black/40 border border-rose-500/30 rounded-lg py-0.5 font-mono"
+                      className="w-16 text-center text-sm font-bold text-white bg-slate-100 dark:bg-slate-800/60 border border-rose-500/30 rounded-lg py-0.5 font-mono"
                     />
                     <span className="text-xs text-white/60">g</span>
                   </div>
@@ -825,7 +825,7 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
                         setMacroPreset('custom');
                         setCustomCarbs(Number(e.target.value) || 0);
                       }}
-                      className="w-16 text-center text-sm font-bold text-white bg-black/40 border border-amber-500/30 rounded-lg py-0.5 font-mono"
+                      className="w-16 text-center text-sm font-bold text-white bg-slate-100 dark:bg-slate-800/60 border border-amber-500/30 rounded-lg py-0.5 font-mono"
                     />
                     <span className="text-xs text-white/60">g</span>
                   </div>
@@ -861,7 +861,7 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
                         setMacroPreset('custom');
                         setCustomFat(Number(e.target.value) || 0);
                       }}
-                      className="w-16 text-center text-sm font-bold text-white bg-black/40 border border-emerald-500/30 rounded-lg py-0.5 font-mono"
+                      className="w-16 text-center text-sm font-bold text-white bg-slate-100 dark:bg-slate-800/60 border border-emerald-500/30 rounded-lg py-0.5 font-mono"
                     />
                     <span className="text-xs text-white/60">g</span>
                   </div>
@@ -894,7 +894,7 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
                   onClick={handleApplyMacroToNutrition}
                   className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-[11px] font-semibold transition-colors cursor-pointer flex items-center gap-1.5"
                 >
-                  <Utensils className="w-3.5 h-3.5 text-[#ff6025]" />
+                  <Utensils className="w-3.5 h-3.5 text-[#2563EB]" />
                   <span>Đồng bộ Macro vào Dinh Dưỡng</span>
                 </button>
               </div>
@@ -918,7 +918,7 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
               <button
                 type="button"
                 onClick={handleApplyRoadmap}
-                className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-[#ff6025] hover:bg-[#ff4400] text-white text-xs font-bold transition-all shadow-md cursor-pointer flex items-center justify-center gap-2"
+                className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-xs font-bold transition-all shadow-md cursor-pointer flex items-center justify-center gap-2"
               >
                 <CheckCircle2 className="w-4 h-4" />
                 <span>Áp Dụng Lộ Trình Này Vào Hệ Thống</span>
@@ -929,7 +929,7 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
       </div>
 
       {/* Saved Roadmaps Milestone Ledger */}
-      <div className="bg-[#121212] rounded-3xl border border-white/10 p-5 sm:p-6 shadow-xl space-y-4">
+      <div className="bg-[#0b101b] rounded-3xl border border-white/10 p-5 sm:p-6 shadow-xl space-y-4">
         <div className="flex items-center justify-between border-b border-white/10 pb-3">
           <div className="flex items-center gap-2.5">
             <BookmarkCheck className="w-5 h-5 text-amber-400" />
@@ -960,7 +960,7 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
             {savedRoadmaps.map((rm) => (
               <div
                 key={rm.id}
-                className="p-4 rounded-2xl bg-[#1c1d21] border border-white/10 space-y-3 flex flex-col justify-between hover:border-white/20 transition-all shadow-xs"
+                className="p-4 rounded-2xl bg-[#131b2e] border border-white/10 space-y-3 flex flex-col justify-between hover:border-white/20 transition-all shadow-xs"
               >
                 <div className="space-y-2">
                   <div className="flex items-start justify-between gap-2">
@@ -980,7 +980,7 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
                   </div>
 
                   {/* Metrics preview */}
-                  <div className="grid grid-cols-3 gap-1.5 p-2 rounded-xl bg-black/40 text-center font-mono">
+                  <div className="grid grid-cols-3 gap-1.5 p-2 rounded-xl bg-slate-100 dark:bg-slate-800/60 text-center font-mono">
                     <div>
                       <span className="text-[9px] text-white/40 block">Cân nặng</span>
                       <span className="text-xs font-bold text-white">{rm.weightKg} &rarr; {rm.targetWeightKg}kg</span>
@@ -1028,7 +1028,7 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
                   <button
                     type="button"
                     onClick={() => handleLoadSavedRoadmap(rm)}
-                    className="px-3 py-1.5 rounded-lg bg-[#ff6025] hover:bg-[#e0531e] text-white text-[11px] font-bold cursor-pointer transition-colors flex items-center gap-1.5"
+                    className="px-3 py-1.5 rounded-lg bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-[11px] font-bold cursor-pointer transition-colors flex items-center gap-1.5"
                   >
                     <Check className="w-3.5 h-3.5" />
                     <span>Kích Hoạt Lại</span>
@@ -1042,8 +1042,8 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
 
       {/* Save Roadmap Modal */}
       {showSaveModal && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-[#1a1e24] rounded-3xl border border-white/10 max-w-md w-full p-5 sm:p-6 space-y-4 shadow-2xl text-white">
+        <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-[#131b2e] rounded-3xl border border-white/10 max-w-md w-full p-5 sm:p-6 space-y-4 shadow-2xl text-white">
             <div className="flex items-center justify-between border-b border-white/10 pb-3">
               <div className="flex items-center gap-2">
                 <Bookmark className="w-5 h-5 text-amber-400" />
@@ -1069,15 +1069,15 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
                   value={saveTitle}
                   onChange={(e) => setSaveTitle(e.target.value)}
                   placeholder="Ví dụ: Siết Mỡ 6 Tuần Đón Tết..."
-                  className="w-full text-xs px-3 py-2.5 rounded-xl border border-white/15 bg-black/40 text-white focus:outline-none focus:border-[#ff6025]"
+                  className="w-full text-xs px-3 py-2.5 rounded-xl border border-white/15 bg-slate-100 dark:bg-slate-800/60 text-white focus:outline-none focus:border-[#2563EB]"
                 />
               </div>
 
               {/* Snapshot summary pill */}
-              <div className="p-3 rounded-xl bg-black/40 border border-white/5 space-y-1.5 text-xs">
+              <div className="p-3 rounded-xl bg-slate-100 dark:bg-slate-800/60 border border-white/5 space-y-1.5 text-xs">
                 <div className="flex justify-between text-white/70">
                   <span>Mục tiêu:</span>
-                  <span className="font-bold text-[#ff6025]">{analysis.planLabelVi}</span>
+                  <span className="font-bold text-[#2563EB]">{analysis.planLabelVi}</span>
                 </div>
                 <div className="flex justify-between text-white/70">
                   <span>Cân nặng &amp; % Mỡ:</span>
@@ -1098,7 +1098,7 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
                   value={saveNote}
                   onChange={(e) => setSaveNote(e.target.value)}
                   placeholder="Ví dụ: Giữ cardio 3 buổi/tuần, cắt calo chủ yếu từ bữa tối..."
-                  className="w-full text-xs px-3 py-2 rounded-xl border border-white/15 bg-black/40 text-white focus:outline-none focus:border-[#ff6025]"
+                  className="w-full text-xs px-3 py-2 rounded-xl border border-white/15 bg-slate-100 dark:bg-slate-800/60 text-white focus:outline-none focus:border-[#2563EB]"
                 />
               </div>
 
@@ -1112,7 +1112,7 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 rounded-xl bg-[#ff6025] hover:bg-[#e0531e] text-white text-xs font-bold cursor-pointer transition-colors shadow-sm flex items-center gap-1.5"
+                  className="px-5 py-2 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-xs font-bold cursor-pointer transition-colors shadow-sm flex items-center gap-1.5"
                 >
                   <Save className="w-3.5 h-3.5" />
                   <span>Lưu Định Hướng</span>

@@ -198,7 +198,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
   ];
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-y-auto bg-gray-50/50 dark:bg-gray-900 p-4 md:p-6 lg:p-8 select-none">
+    <div className="flex-1 flex flex-col h-full overflow-y-auto bg-gray-50/50 dark:bg-slate-900 p-4 md:p-6 lg:p-8 select-none">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
@@ -257,7 +257,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
           return (
             <div
               key={card.label}
-              className="bg-white dark:bg-[#1a1e24] p-3.5 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs flex items-center gap-3"
+              className="bg-white dark:bg-[#131b2e] p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex items-center gap-3"
             >
               <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${card.cls}`}>
                 <Icon className="w-4.5 h-4.5" />
@@ -360,7 +360,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
       {showForm && (
         <form
           onSubmit={handleSubmit}
-          className="bg-white dark:bg-[#1a1e24] rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs p-4 mb-6"
+          className="bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs p-4 mb-6"
         >
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
@@ -498,14 +498,14 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
           </div>
 
           {visibleTransactions.length === 0 ? (
-            <div className="bg-white dark:bg-[#1a1e24] rounded-2xl border border-dashed border-gray-300 dark:border-gray-700 p-10 text-center">
+            <div className="bg-white dark:bg-[#131b2e] rounded-2xl border border-dashed border-gray-300 dark:border-gray-700 p-10 text-center">
               <Wallet className="w-8 h-8 text-gray-300 dark:text-gray-600 mx-auto mb-2" />
               <p className="text-xs text-gray-400">
                 {lang === 'vi' ? 'Chưa có giao dịch nào trong tháng này.' : 'No transactions in this month.'}
               </p>
             </div>
           ) : (
-            <div className="bg-white dark:bg-[#1a1e24] rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs divide-y divide-gray-100 dark:divide-gray-800 overflow-hidden">
+            <div className="bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs divide-y divide-gray-100 dark:divide-gray-800 overflow-hidden">
               {visibleTransactions.map((tx) => {
                 const meta = categoryMeta(tx.category);
                 const isIncome = tx.type === 'income';
@@ -550,7 +550,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
 
         {/* Right: charts */}
         <div className="xl:col-span-5 space-y-4">
-          <div className="bg-white dark:bg-[#1a1e24] rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs p-4">
+          <div className="bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs p-4">
             <h3 className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 mb-3">
               {lang === 'vi' ? 'Tỷ lệ chi tiêu theo danh mục' : 'Spending by category'}
             </h3>
@@ -591,7 +591,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
             )}
           </div>
 
-          <div className="bg-white dark:bg-[#1a1e24] rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs p-4">
+          <div className="bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs p-4">
             <h3 className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 mb-3">
               {lang === 'vi' ? 'Dòng tiền theo ngày' : 'Daily cash flow'}
             </h3>

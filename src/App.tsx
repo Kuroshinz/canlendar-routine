@@ -32,7 +32,6 @@ import { ShortcutsModal } from './components/ShortcutsModal';
 import { ExportImportModal } from './components/ExportImportModal';
 import { CloudSyncModal } from './components/sync/CloudSyncModal';
 import { RightSidebar } from './components/RightSidebar';
-import { GoogleMeetRoom } from './components/GoogleMeetRoom';
 import { MultiHubDrawer } from './components/MultiHubDrawer';
 import { ProductivityDashboard } from './components/productivity/ProductivityDashboard';
 import { TasksGoalsView } from './components/productivity/TasksGoalsView';
@@ -202,7 +201,6 @@ export default function App() {
   const [modalType, setModalType] = useState<EventType>('event');
 
   const [selectedEventForDetail, setSelectedEventForDetail] = useState<CalendarEvent | null>(null);
-  const [activeMeetEvent, setActiveMeetEvent] = useState<CalendarEvent | null>(null);
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
   const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
   const [isExportImportOpen, setIsExportImportOpen] = useState(false);
@@ -820,6 +818,7 @@ export default function App() {
         onOpenSettings={() => setIsShortcutsOpen(true)}
         onOpenCloudSync={() => setIsCloudSyncOpen(true)}
         onGoogleSignIn={handleGoogleSignIn}
+        onLogout={handleGoogleSignOut}
         userEmail={user?.email || undefined}
         isLoggedInGoogle={Boolean(user)}
       />
@@ -946,7 +945,9 @@ export default function App() {
                     searchQuery={searchQuery}
                     onSelectEvent={(ev) => setSelectedEventForDetail(ev)}
                     onToggleCompleteTask={handleToggleCompleteTask}
-                    onJoinMeet={(ev) => setActiveMeetEvent(ev)}
+                    onJoinMeet={(ev) => {
+                      if (ev.meetUrl) window.open(ev.meetUrl, '_blank');
+                    }}
                     lang={lang}
                   />
                 )}
@@ -1226,8 +1227,7 @@ export default function App() {
           onDelete={handleDeleteEvent}
           onToggleComplete={handleToggleCompleteTask}
           onJoinMeet={(ev) => {
-            setSelectedEventForDetail(null);
-            setActiveMeetEvent(ev);
+            if (ev.meetUrl) window.open(ev.meetUrl, '_blank');
           }}
           lang={lang}
         />
@@ -1314,15 +1314,6 @@ export default function App() {
         onSyncGoogleCalendar={handleSyncGoogleCalendar}
         onCreateNewAccount={handleCreateNewAccount}
       />
-
-      {/* Google Meet In-App Room Simulator */}
-      {activeMeetEvent && (
-        <GoogleMeetRoom
-          event={activeMeetEvent}
-          onLeave={() => setActiveMeetEvent(null)}
-          lang={lang}
-        />
-      )}
 
       {/* Multi-Hub: Đồng bộ Google & Quản lý Cuộc sống (Pomodoro, Tài chính, Học tập, Sức khỏe) */}
       <MultiHubDrawer
