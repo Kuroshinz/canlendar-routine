@@ -48,6 +48,7 @@ import {
   totalFocusMinutes,
 } from '../../utils/productivityUtils';
 import { formatDateString } from '../../utils/calendarUtils';
+import { calculateDailyHealthScore } from '../../utils/fitnessMetrics';
 
 interface ProductivityDashboardProps {
   events: CalendarEvent[];
@@ -145,6 +146,16 @@ export const ProductivityDashboard: React.FC<ProductivityDashboardProps> = ({
     () => healthLogs.find((l) => l.date === today),
     [healthLogs, today]
   );
+
+  const todayHealthScore = useMemo(() => {
+    return calculateDailyHealthScore(
+      todayHealth || { date: today, source: 'manual' },
+      healthProfile.dailySteps || 8000,
+      healthProfile.dailyWaterMl || 2500,
+      2000,
+      140
+    );
+  }, [todayHealth, healthProfile, today]);
 
   const topGoals = useMemo(
     () =>
@@ -661,10 +672,19 @@ export const ProductivityDashboard: React.FC<ProductivityDashboardProps> = ({
           {/* Health */}
           <div className="bg-white dark:bg-[#1a1e24] rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs p-4">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 flex items-center gap-1.5">
-                <HeartPulse className="w-3.5 h-3.5" />
-                {lang === 'vi' ? 'Sức khỏe hôm nay' : "Today's health"}
-              </h3>
+              <div className="flex items-center gap-2">
+                <h3 className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 flex items-center gap-1.5">
+                  <HeartPulse className="w-3.5 h-3.5" />
+                  {lang === 'vi' ? 'Sức khỏe hôm nay' : "Today's health"}
+                </h3>
+                <span
+                  className="px-2 py-0.5 rounded-full text-[9px] font-bold text-white font-mono"
+                  style={{ backgroundColor: todayHealthScore.badgeColor }}
+                  title={`Điểm lối sống: ${todayHealthScore.statusLabel}`}
+                >
+                  {todayHealthScore.score}/100
+                </span>
+              </div>
               <button
                 onClick={() => onNavigate('health')}
                 className="text-[10px] font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
