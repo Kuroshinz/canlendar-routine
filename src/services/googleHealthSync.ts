@@ -64,6 +64,8 @@ interface AggregateBucket {
     dataSourceId?: string;
     point?: Array<{
       dataTypeName?: string;
+      startTimeNanos?: string;
+      endTimeNanos?: string;
       value?: Array<{ intVal?: number; fpVal?: number }>;
     }>;
   }>;
@@ -181,8 +183,21 @@ export async function fetchGoogleHealthMetrics(
           metrics.heartRateBpm = Math.round(values.reduce((a, b) => a + b, 0) / values.length);
         }
       } else if (id.includes('sleep')) {
-        // Sleep segments arrive in milliseconds; convert to hours.
-        metrics.sleepHours = Math.round((sumBucket({ dataset: [ds] }) / 3_600_000) * 10) / 10;
+        let sleepSec = 0;
+        for (const p of points) {
+          if (p.startTimeNanos && p.endTimeNanos) {
+            const duration = (Number(p.endTimeNanos) - Number(p.startTimeNanos)) / 1e9;
+            if (duration > 0 && duration < 86400) sleepSec += duration;
+          }
+        }
+        if (sleepSec > 0) {
+          metrics.sleepHours = Math.round((sleepSec / 3600) * 10) / 10;
+        } else {
+          const val = sumBucket({ dataset: [ds] });
+          if (val > 1000) {
+            metrics.sleepHours = Math.round((val / 3_600_000) * 10) / 10;
+          }
+        }
       } else if (id.includes('weight')) {
         const last = points[points.length - 1]?.value?.[0]?.fpVal;
         if (typeof last === 'number') metrics.weightKg = Math.round(last * 10) / 10;
@@ -227,11 +242,19 @@ export async function syncGoogleHealth(opts: {
   const { date, accessToken } = opts;
 
   if (!accessToken) {
-    return { source: 'mock', metrics: mockGoogleHealthMetrics(date) };
+    return {
+      source: 'google-fit',
+      metrics: { date },
+      error: 'Chưa có Access Token Google. Vui lòng đăng nhập Google để đồng bộ dữ liệu thật.',
+    };
   }
 
   if (!isGoogleHealthConfigured()) {
-    return { source: 'mock', metrics: mockGoogleHealthMetrics(date) };
+    return {
+      source: 'google-fit',
+      metrics: { date },
+      error: 'Google Health sync đã bị vô hiệu hóa trong cấu hình môi trường.',
+    };
   }
 
   try {
@@ -242,8 +265,8 @@ export async function syncGoogleHealth(opts: {
     const match = errorMsg.match(/(https:\/\/console\.(?:developers\.)?google\.com\/[^\s)]+)/);
     const enableApiUrl = match ? match[1] : undefined;
     return {
-      source: 'mock',
-      metrics: mockGoogleHealthMetrics(date),
+      source: 'google-fit',
+      metrics: { date },
       error: errorMsg,
       enableApiUrl,
     };

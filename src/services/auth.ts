@@ -19,7 +19,6 @@ provider.addScope('https://www.googleapis.com/auth/calendar.readonly');
 provider.addScope('https://www.googleapis.com/auth/fitness.activity.read');
 provider.addScope('https://www.googleapis.com/auth/fitness.body.read');
 provider.addScope('https://www.googleapis.com/auth/fitness.sleep.read');
-provider.addScope('https://www.googleapis.com/auth/fitness.heart_rate.read');
 
 const REAL_TOKEN_KEY = 'gcal_real_access_token';
 

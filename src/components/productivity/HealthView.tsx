@@ -68,7 +68,6 @@ import {
   healthSourceLabel,
   isGoogleHealthConfigured,
   syncGoogleHealth,
-  mockGoogleHealthMetrics,
 } from '../../services/googleHealthSync';
 import { InBodyTab } from './fitness/InBodyTab';
 import { TrainingTab } from './fitness/TrainingTab';
@@ -263,66 +262,63 @@ export const HealthView: React.FC<HealthViewProps> = ({
   };
 
   const applySyncResult = (result: GoogleHealthSyncResult) => {
-    const next: HealthDayLog = {
-      ...selectedLog,
-      date: selectedDate,
-      source: result.source === 'google-fit' ? 'google-fit' : 'mock',
-    };
-    if (typeof result.metrics.steps === 'number') next.steps = result.metrics.steps;
-    if (typeof result.metrics.caloriesBurned === 'number') next.caloriesBurned = result.metrics.caloriesBurned;
-    if (typeof result.metrics.sleepHours === 'number') next.sleepHours = result.metrics.sleepHours;
-    if (typeof result.metrics.weightKg === 'number') next.weightKg = result.metrics.weightKg;
-
-    onUpsertHealthLog(next);
-
-    if (result.metrics.weightKg && onAddBodyPoint) {
-      onAddBodyPoint({
+    if (!result.error && result.source === 'google-fit') {
+      const next: HealthDayLog = {
+        ...selectedLog,
         date: selectedDate,
-        weightKg: result.metrics.weightKg,
-        bodyFatPct: ctgProfile.targetBodyFatPct,
-        note: result.source === 'google-fit' ? 'Đồng bộ từ Google Fit' : 'Mô phỏng Google Health',
-      });
+        source: 'google-fit',
+      };
+      if (typeof result.metrics.steps === 'number') next.steps = result.metrics.steps;
+      if (typeof result.metrics.caloriesBurned === 'number') next.caloriesBurned = result.metrics.caloriesBurned;
+      if (typeof result.metrics.sleepHours === 'number') next.sleepHours = result.metrics.sleepHours;
+      if (typeof result.metrics.weightKg === 'number') next.weightKg = result.metrics.weightKg;
+
+      onUpsertHealthLog(next);
+
+      if (result.metrics.weightKg && onAddBodyPoint) {
+        onAddBodyPoint({
+          date: selectedDate,
+          weightKg: result.metrics.weightKg,
+          bodyFatPct: ctgProfile.targetBodyFatPct,
+          note: 'Đồng bộ từ Google Fit',
+        });
+      }
     }
 
     setSyncState({ running: false, result });
   };
 
+  const requestFreshRealGoogleToken = async (): Promise<string> => {
+    localStorage.removeItem('gcal_real_access_token');
+    let token: string | null = null;
+
+    // 1. Google Identity Services
+    if (typeof window !== 'undefined' && window.google?.accounts?.oauth2) {
+      try {
+        token = await requestRealGoogleOAuthToken();
+        localStorage.setItem('gcal_real_access_token', token);
+        return token;
+      } catch (err) {
+        console.warn('GIS requestRealGoogleOAuthToken failed, trying fallback:', err);
+      }
+    }
+
+    // 2. onGoogleSignIn callback
+    if (onGoogleSignIn) {
+      await onGoogleSignIn();
+      token = await getAccessToken();
+      if (token) return token;
+    }
+
+    // 3. Firebase popup
+    const authRes = await googleSignIn();
+    return authRes.accessToken;
+  };
+
   const handleReauthAndSync = async () => {
     setSyncState({ running: true, result: null });
     try {
-      localStorage.removeItem('gcal_real_access_token');
-      let token: string | null = null;
-
-      // 1. Try GIS first if available
-      if (typeof window !== 'undefined' && window.google?.accounts?.oauth2) {
-        try {
-          token = await requestRealGoogleOAuthToken();
-          localStorage.setItem('gcal_real_access_token', token);
-        } catch {
-          // fallback
-        }
-      }
-
-      // 2. Try onGoogleSignIn prop if provided
-      if (!token && onGoogleSignIn) {
-        await onGoogleSignIn();
-        token = await getAccessToken();
-      }
-
-      // 3. Fallback to Firebase popup
-      if (!token) {
-        const authRes = await googleSignIn();
-        token = authRes.accessToken;
-      }
-
-      if (!token) {
-        throw new Error(
-          lang === 'vi'
-            ? 'Chưa nhận được quyền xác thực từ Google.'
-            : 'No access token received from Google.'
-        );
-      }
-
+      const token = await requestFreshRealGoogleToken();
       const result = await syncGoogleHealth({ date: selectedDate, accessToken: token });
       if (result.error && (result.error.includes('401') || result.error.includes('403'))) {
         localStorage.removeItem('gcal_real_access_token');
@@ -340,17 +336,23 @@ export const HealthView: React.FC<HealthViewProps> = ({
   const handleSync = async () => {
     setSyncState({ running: true, result: null });
     try {
-      const token = await getAccessToken();
+      let token = await getAccessToken();
       if (!token) {
-        await handleReauthAndSync();
-        return;
+        token = await requestFreshRealGoogleToken();
       }
 
-      const result = await syncGoogleHealth({ date: selectedDate, accessToken: token });
+      let result = await syncGoogleHealth({ date: selectedDate, accessToken: token });
 
-      // If token expired (401) or rejected by permission/disabled API (403), clean stale token immediately
+      // If token failed with 403 (API newly enabled on Cloud) or 401:
+      // Clear the obsolete token and automatically launch Google consent to get a fresh authorized token!
       if (result.error && (result.error.includes('401') || result.error.includes('403'))) {
         localStorage.removeItem('gcal_real_access_token');
+        try {
+          const freshToken = await requestFreshRealGoogleToken();
+          result = await syncGoogleHealth({ date: selectedDate, accessToken: freshToken });
+        } catch {
+          // If popup is closed by user, preserve the specific Google error
+        }
       }
 
       applySyncResult(result);
@@ -361,28 +363,6 @@ export const HealthView: React.FC<HealthViewProps> = ({
         message: err?.message || (lang === 'vi' ? 'Đồng bộ thất bại' : 'Sync failed'),
       });
     }
-  };
-
-  const handleApplySmartSimulation = () => {
-    const mock = mockGoogleHealthMetrics(selectedDate);
-    applySyncResult({
-      source: 'mock',
-      metrics: {
-        ...mock,
-        steps: Math.max(mock.steps || 7500, 8200),
-        caloriesBurned: Math.max(mock.caloriesBurned || 1900, 2150),
-        sleepHours: 7.8,
-        weightKg: ctgProfile.targetWeightKg || mock.weightKg || 66.5,
-      },
-    });
-    setSyncState({
-      running: false,
-      result: null,
-      message:
-        lang === 'vi'
-          ? 'Đã áp dụng bộ chỉ số sức khỏe thông minh (bước chân, calo, giấc ngủ, cân nặng)!'
-          : 'Applied smart health metrics for today!',
-    });
   };
 
   const handleSubmitWorkout = (e: React.FormEvent) => {
@@ -480,15 +460,6 @@ export const HealthView: React.FC<HealthViewProps> = ({
             onChange={(e) => setSelectedDate(e.target.value)}
             className="text-xs px-2.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200"
           />
-          <button
-            type="button"
-            onClick={handleApplySmartSimulation}
-            className="flex items-center gap-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-xs transition-colors cursor-pointer"
-            title={lang === 'vi' ? 'Nạp nhanh bộ dữ liệu sức khỏe mô phỏng thực tế' : 'Fill realistic smart fitness data'}
-          >
-            <Sparkles className="w-4 h-4" />
-            <span className="hidden sm:inline">{lang === 'vi' ? 'Dữ liệu thông minh' : 'Smart Data'}</span>
-          </button>
           <button
             onClick={handleSync}
             disabled={syncState.running}
@@ -646,11 +617,11 @@ export const HealthView: React.FC<HealthViewProps> = ({
                     ? lang === 'vi'
                       ? (syncState.result!.metrics.steps || 0) === 0 && (syncState.result!.metrics.caloriesBurned || 0) === 0
                         ? 'Kết nối Google Fit thành công nhưng tài khoản Google của bạn chưa có dữ liệu bước chân/calo cho ngày này. Hãy đảm bảo điện thoại hoặc đồng hồ đã đồng bộ dữ liệu vào Google Fit.'
-                        : `Số liệu lấy trực tiếp từ Google Fit API (${(syncState.result!.metrics.steps || 0).toLocaleString()} bước, ${syncState.result!.metrics.caloriesBurned || 0} kcal).`
-                      : 'Metrics fetched directly from Google Fit API.'
+                        : `Số liệu thật lấy trực tiếp từ Google Fit API (${(syncState.result!.metrics.steps || 0).toLocaleString()} bước, ${syncState.result!.metrics.caloriesBurned || 0} kcal).`
+                      : 'Real metrics fetched directly from Google Fit API.'
                     : lang === 'vi'
-                      ? 'Đang dùng số liệu mô phỏng (tài khoản chưa cấp quyền Google Fit hoặc chưa có dữ liệu ngày này).'
-                      : 'Using simulated metrics (Google Fit scope not granted or no data recorded for this date).'}
+                      ? 'Dữ liệu nhập tay.'
+                      : 'Manual data.'}
                 </div>
                 {syncState.result!.error && (
                   <div className="mt-3 pt-3 border-t border-amber-200/80 dark:border-amber-900/60 space-y-2.5">
@@ -660,54 +631,41 @@ export const HealthView: React.FC<HealthViewProps> = ({
                         <p className="font-bold">
                           {syncState.result?.enableApiUrl
                             ? (lang === 'vi'
-                                ? 'Dự án Google Cloud của bạn chưa BẬT Fitness API (Mã dự án: 755336412189)'
-                                : 'Fitness API is disabled in your Google Cloud project (755336412189)')
+                                ? 'Cần làm mới Token để áp dụng Fitness API vừa bật (Dự án: 755336412189)'
+                                : 'Token refresh required for newly enabled Fitness API (Project: 755336412189)')
                             : syncState.result!.error.includes('401')
                               ? (lang === 'vi' ? 'Phiên đăng nhập Google đã hết hạn (401 Unauthorized).' : 'Google access token expired (401 Unauthorized).')
                               : syncState.result!.error}
                         </p>
                         <p className="text-[11px] opacity-85 mt-0.5">
-                          {syncState.result?.enableApiUrl
-                            ? (lang === 'vi'
-                                ? 'Google yêu cầu nhấn nút "BẬT" (ENABLE) tại đúng dự án Google Cloud bạn đang dùng. Bạn có thể nhấn mở link bên dưới, hoặc chọn "Bỏ qua & Dùng dữ liệu thông minh" để dùng app ngay!'
-                                : 'Google requires you to click "ENABLE" in your Google Cloud project. You can click the link below, or click "Skip & Use Smart Data" to proceed immediately!')
-                            : (lang === 'vi'
-                                ? 'Vui lòng bấm đăng nhập lại để làm mới token và cấp quyền Google Fit.'
-                                : 'Please re-authenticate to refresh token and grant Google Fit permissions.')}
+                          {lang === 'vi'
+                            ? 'Vì bạn vừa bật Fitness API trên Google Cloud, Token cũ của phiên trước chưa mang quyền truy cập. Vui lòng bấm nút xanh bên dưới để Google cấp Token mới mang đủ quyền tải dữ liệu thật.'
+                            : 'Since you enabled Fitness API on Google Cloud, your prior token lacked permission. Please click below to get a fresh token with real data access.'}
                         </p>
                       </div>
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2 pt-1">
-                      {syncState.result?.enableApiUrl ? (
+                      <button
+                        type="button"
+                        onClick={handleReauthAndSync}
+                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white rounded-xl text-xs font-bold shadow-xs transition-all cursor-pointer inline-flex items-center gap-1.5"
+                      >
+                        <Key className="w-3.5 h-3.5" />
+                        <span>{lang === 'vi' ? 'Đăng nhập Google lấy Token mới & Nạp dữ liệu thật' : 'Re-authenticate with Google & Fetch Real Data'}</span>
+                      </button>
+
+                      {syncState.result?.enableApiUrl && (
                         <a
                           href={syncState.result.enableApiUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white rounded-xl text-xs font-bold shadow-xs transition-all inline-flex items-center gap-1.5"
+                          className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-semibold shadow-xs transition-all inline-flex items-center gap-1.5"
                         >
                           <ExternalLink className="w-3.5 h-3.5" />
-                          <span>{lang === 'vi' ? '1. Mở trang Google Cloud để BẬT API (1-Click)' : '1. Open Google Cloud to Enable API'}</span>
+                          <span>{lang === 'vi' ? 'Kiểm tra trạng thái trên Google Cloud' : 'Check status on Google Cloud'}</span>
                         </a>
-                      ) : null}
-
-                      <button
-                        type="button"
-                        onClick={handleApplySmartSimulation}
-                        className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white rounded-xl text-xs font-bold shadow-xs transition-all cursor-pointer inline-flex items-center gap-1.5"
-                      >
-                        <Sparkles className="w-3.5 h-3.5" />
-                        <span>{lang === 'vi' ? '2. Bỏ qua & Dùng dữ liệu thông minh' : '2. Skip & Use Smart Data'}</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={handleReauthAndSync}
-                        className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 active:scale-95 text-white rounded-xl text-xs font-semibold shadow-xs transition-all cursor-pointer inline-flex items-center gap-1.5"
-                      >
-                        <Key className="w-3.5 h-3.5" />
-                        <span>{lang === 'vi' ? 'Thử lại sau khi đã Bật' : 'Retry after Enabling'}</span>
-                      </button>
+                      )}
                     </div>
                   </div>
                 )}
