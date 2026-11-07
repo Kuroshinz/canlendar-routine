@@ -22,6 +22,7 @@ import {
   Zap,
   History,
   Minus,
+  Calculator,
 } from 'lucide-react';
 import {
   Exercise,
@@ -37,6 +38,8 @@ import {
 } from '../../../types/productivity';
 import {
   EXERCISES,
+  calculate1RM,
+  calculateBarbellPlates,
   exerciseById,
   gymCalories,
   personalRecords,
@@ -104,6 +107,22 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
   const [showSportModal, setShowSportModal] = useState(false);
   const [showLibraryModal, setShowLibraryModal] = useState(false);
   const [exerciseSearch, setExerciseSearch] = useState('');
+
+  // 1RM & Barbell Plate Calculator states
+  const [showCalculatorModal, setShowCalculatorModal] = useState(false);
+  const [calcTab, setCalcTab] = useState<'1rm' | 'plates'>('1rm');
+  const [oneRmWeight, setOneRmWeight] = useState('80');
+  const [oneRmReps, setOneRmReps] = useState('6');
+  const [plateTargetTotal, setPlateTargetTotal] = useState('90');
+  const [plateBarWeight, setPlateBarWeight] = useState('20');
+
+  const oneRmResult = useMemo(() => {
+    return calculate1RM(Number(oneRmWeight) || 0, Number(oneRmReps) || 0);
+  }, [oneRmWeight, oneRmReps]);
+
+  const plateResult = useMemo(() => {
+    return calculateBarbellPlates(Number(plateTargetTotal) || 0, Number(plateBarWeight) || 20);
+  }, [plateTargetTotal, plateBarWeight]);
 
   // Sport form state
   const [sportType, setSportType] = useState<SportType>('running');
@@ -527,7 +546,16 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
           </p>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={() => setShowCalculatorModal(true)}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-orange-300 dark:border-orange-800/60 bg-orange-50/70 dark:bg-orange-950/30 text-orange-700 dark:text-orange-300 text-xs font-semibold hover:bg-orange-100 dark:hover:bg-orange-900/40 cursor-pointer transition-colors shadow-2xs"
+            title="Tính 1RM tối đa & Máy tính xếp bánh tạ đòn Olympic"
+          >
+            <Calculator className="w-4 h-4 text-orange-500" />
+            <span>1RM &amp; Đĩa Tạ</span>
+          </button>
           <button
             onClick={() => setShowLibraryModal(true)}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 text-xs font-semibold hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer"
@@ -1921,6 +1949,272 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* 1RM & Barbell Plate Calculator Modal */}
+      {showCalculatorModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+          <div className="bg-white dark:bg-[#1a1e24] w-full max-w-2xl max-h-[85vh] rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xl overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-150">
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-800 bg-linear-to-r from-orange-500/10 to-transparent">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-xl bg-orange-500/10 text-orange-600 dark:text-orange-400">
+                  <Calculator className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                    Máy Tính 1RM &amp; Xếp Bánh Tạ Đòn (Barbell)
+                  </h3>
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                    Công thức Epley / Brzycki &amp; quy chuẩn xếp đĩa tạ Olympic thi đấu
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowCalculatorModal(false)}
+                className="p-1 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Sub-tabs */}
+            <div className="p-3 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/30 flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setCalcTab('1rm')}
+                className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  calcTab === '1rm'
+                    ? 'bg-orange-500 text-white shadow-xs'
+                    : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 border border-gray-200 dark:border-gray-700'
+                }`}
+              >
+                Tính 1RM &amp; Tải Trọng Tập
+              </button>
+              <button
+                type="button"
+                onClick={() => setCalcTab('plates')}
+                className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  calcTab === 'plates'
+                    ? 'bg-orange-500 text-white shadow-xs'
+                    : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 border border-gray-200 dark:border-gray-700'
+                }`}
+              >
+                Xếp Bánh Tạ (Plate Math)
+              </button>
+            </div>
+
+            {/* Tab 1: 1RM Content */}
+            {calcTab === '1rm' && (
+              <div className="p-5 flex-1 overflow-y-auto space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[10px] font-semibold uppercase text-gray-400">
+                      Mức tạ đã đẩy (kg)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.5"
+                      min={1}
+                      value={oneRmWeight}
+                      onChange={(e) => setOneRmWeight(e.target.value)}
+                      className="mt-1 w-full text-xs px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 font-bold"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-semibold uppercase text-gray-400">
+                      Số rep hoàn thành (Reps)
+                    </label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={30}
+                      value={oneRmReps}
+                      onChange={(e) => setOneRmReps(e.target.value)}
+                      className="mt-1 w-full text-xs px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 font-bold"
+                    />
+                  </div>
+                </div>
+
+                {/* 1RM Highlight */}
+                <div className="bg-linear-to-br from-orange-500 to-amber-600 rounded-2xl p-4 text-white text-center shadow-md">
+                  <span className="text-[11px] font-semibold uppercase tracking-wider opacity-90">
+                    1RM Ước Tính (One Rep Max)
+                  </span>
+                  <div className="text-4xl font-extrabold font-mono mt-0.5 tracking-tight">
+                    {oneRmResult.oneRepMax} <span className="text-xl">kg</span>
+                  </div>
+                  <div className="text-[11px] opacity-90 mt-1 flex items-center justify-center gap-3">
+                    <span>Epley: {oneRmResult.epley} kg</span>
+                    <span>·</span>
+                    <span>Brzycki: {oneRmResult.brzycki} kg</span>
+                  </div>
+                </div>
+
+                {/* Percentages Table */}
+                <div className="space-y-1.5">
+                  <h4 className="text-[11px] font-bold text-gray-800 dark:text-gray-200 uppercase tracking-wider">
+                    Bảng Tải Trọng Tập Luyện Theo Mục Tiêu:
+                  </h4>
+                  <div className="border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden divide-y divide-gray-100 dark:divide-gray-800">
+                    {oneRmResult.percentages.map((row) => (
+                      <div
+                        key={row.pct}
+                        className="px-3.5 py-2 flex items-center justify-between text-xs bg-white dark:bg-gray-900/40 hover:bg-gray-50 dark:hover:bg-gray-800/40"
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <span className="w-12 font-mono font-bold text-orange-600 dark:text-orange-400">
+                            {row.pct}%
+                          </span>
+                          <span className="text-gray-700 dark:text-gray-300">{row.description}</span>
+                        </div>
+                        <div className="flex items-center gap-3 font-mono">
+                          <span className="text-[11px] text-gray-400">{row.targetReps}</span>
+                          <span className="font-extrabold text-gray-900 dark:text-gray-100 text-sm">
+                            {row.weight} kg
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Tab 2: Plates Math Content */}
+            {calcTab === 'plates' && (
+              <div className="p-5 flex-1 overflow-y-auto space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[10px] font-semibold uppercase text-gray-400">
+                      Tổng Cân Nặng Muốn Nâng (kg)
+                    </label>
+                    <input
+                      type="number"
+                      step="2.5"
+                      min={plateResult.barWeightKg}
+                      value={plateTargetTotal}
+                      onChange={(e) => setPlateTargetTotal(e.target.value)}
+                      className="mt-1 w-full text-xs px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 font-bold"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-semibold uppercase text-gray-400">
+                      Loại Thanh Đòn (Barbell)
+                    </label>
+                    <select
+                      value={plateBarWeight}
+                      onChange={(e) => setPlateBarWeight(e.target.value)}
+                      className="mt-1 w-full text-xs px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 font-bold"
+                    >
+                      <option value="20">Đòn Olympic Chuẩn Nam (20 kg)</option>
+                      <option value="15">Đòn Olympic Chuẩn Nữ (15 kg)</option>
+                      <option value="10">Đòn Ngắn / EZ Bar (10 kg)</option>
+                      <option value="8">Đòn Thẳng Nhẹ (8 kg)</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Visual Barbell Display */}
+                <div className="bg-gray-900 text-white rounded-2xl p-5 shadow-inner space-y-4">
+                  <div className="flex items-center justify-between text-xs text-gray-400 border-b border-gray-800 pb-2">
+                    <span>
+                      Đòn: <strong className="text-white">{plateResult.barWeightKg}kg</strong>
+                    </span>
+                    <span>
+                      Mỗi bên cần lắp:{' '}
+                      <strong className="text-orange-400 text-sm">{plateResult.loadedPerSideKg}kg</strong>
+                    </span>
+                  </div>
+
+                  {/* Graphic Barbell */}
+                  <div className="flex items-center justify-center py-4 overflow-x-auto">
+                    <div className="flex items-center gap-1 bg-gray-800/80 p-3 rounded-2xl border border-gray-700">
+                      {/* Left plates (mirrored) */}
+                      <div className="flex items-center gap-1 flex-row-reverse">
+                        {plateResult.platesPerSide.flatMap((p) =>
+                          Array.from({ length: p.count }).map((_, idx) => (
+                            <div
+                              key={`left-${p.plateKg}-${idx}`}
+                              style={{ backgroundColor: p.color }}
+                              className="w-4 h-16 rounded-xs flex items-center justify-center text-[9px] font-black font-mono text-white shadow-xs"
+                              title={`Bánh ${p.plateKg}kg`}
+                            >
+                              {p.plateKg}
+                            </div>
+                          ))
+                        )}
+                      </div>
+
+                      {/* Bar center */}
+                      <div className="w-16 h-3 bg-gray-400 rounded-sm relative flex items-center justify-center">
+                        <span className="text-[8px] font-mono text-gray-900 font-bold">
+                          {plateResult.barWeightKg}KG
+                        </span>
+                      </div>
+
+                      {/* Right plates */}
+                      <div className="flex items-center gap-1">
+                        {plateResult.platesPerSide.flatMap((p) =>
+                          Array.from({ length: p.count }).map((_, idx) => (
+                            <div
+                              key={`right-${p.plateKg}-${idx}`}
+                              style={{ backgroundColor: p.color }}
+                              className="w-4 h-16 rounded-xs flex items-center justify-center text-[9px] font-black font-mono text-white shadow-xs"
+                              title={`Bánh ${p.plateKg}kg`}
+                            >
+                              {p.plateKg}
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Detailed list per side */}
+                  <div className="space-y-1 text-xs">
+                    <div className="font-semibold text-gray-300">Danh sách bánh tạ cho MỖI BÊN:</div>
+                    {plateResult.platesPerSide.length === 0 ? (
+                      <p className="text-gray-500 text-[11px]">Chỉ dùng thanh đòn, chưa cần lắp thêm bánh tạ.</p>
+                    ) : (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-1">
+                        {plateResult.platesPerSide.map((p) => (
+                          <div
+                            key={p.plateKg}
+                            className="p-2 rounded-xl bg-gray-800 border border-gray-700 flex items-center gap-2"
+                          >
+                            <span
+                              className="w-3 h-3 rounded-full shrink-0"
+                              style={{ backgroundColor: p.color }}
+                            />
+                            <span className="font-bold text-white">{p.count}x bánh {p.plateKg} kg</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {plateResult.remainderKg > 0 && (
+                      <p className="text-amber-400 text-[11px] pt-1">
+                        Lưu ý: Còn dư {plateResult.remainderKg}kg do không đủ phân số bánh tạ nhỏ hơn 1.25kg.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Footer */}
+            <div className="p-3 border-t border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowCalculatorModal(false)}
+                className="px-4 py-1.5 rounded-xl border border-gray-300 dark:border-gray-700 font-semibold text-xs text-gray-700 dark:text-gray-200 hover:bg-gray-100 cursor-pointer"
+              >
+                Đóng
+              </button>
+            </div>
           </div>
         </div>
       )}

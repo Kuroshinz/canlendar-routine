@@ -13,6 +13,11 @@ import {
   Sliders,
   Droplets,
   X,
+  Search,
+  BookOpen,
+  Coffee,
+  Flame,
+  Check,
 } from 'lucide-react';
 import {
   CtgProfile,
@@ -25,6 +30,12 @@ import {
   NutritionSettings,
 } from '../../../types/productivity';
 import {
+  BALANCED_MEAL_COMBOS,
+  CatalogFoodItem,
+  FOOD_CATEGORY_LABEL,
+  FoodCategory,
+  MealComboPreset,
+  VIETNAMESE_FOOD_CATALOG,
   calorieTarget,
   dayTotals,
   macroTargets,
@@ -79,6 +90,68 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
   const [manualFat, setManualFat] = useState('5');
 
   const [showOverrideModal, setShowOverrideModal] = useState(false);
+
+  // Food Catalog & Meal Combos state
+  const [showFoodCatalogModal, setShowFoodCatalogModal] = useState(false);
+  const [showCombosSection, setShowCombosSection] = useState(false);
+  const [catalogSearch, setCatalogSearch] = useState('');
+  const [catalogCategory, setCatalogCategory] = useState<'all' | FoodCategory>('all');
+  const [selectedCatalogFood, setSelectedCatalogFood] = useState<CatalogFoodItem | null>(null);
+  const [catalogMultiplier, setCatalogMultiplier] = useState(1);
+  const [catalogTargetSlot, setCatalogTargetSlot] = useState<MealSlot>('lunch');
+  const [comboToast, setComboToast] = useState<string | null>(null);
+
+  // Filtered Catalog
+  const filteredCatalog = useMemo(() => {
+    return VIETNAMESE_FOOD_CATALOG.filter((item) => {
+      const matchCat = catalogCategory === 'all' || item.category === catalogCategory;
+      const matchSearch =
+        !catalogSearch.trim() ||
+        item.name.toLowerCase().includes(catalogSearch.toLowerCase()) ||
+        item.note?.toLowerCase().includes(catalogSearch.toLowerCase());
+      return matchCat && matchSearch;
+    });
+  }, [catalogCategory, catalogSearch]);
+
+  const handleAddCatalogFood = (item: CatalogFoodItem, mult = 1, slot = selectedSlot) => {
+    const amount = Math.round(item.servingGramsOrMl * mult);
+    const kcal = Math.round(item.kcalPerServing * mult);
+    const protein = Math.round(item.protein * mult * 10) / 10;
+    const carbs = Math.round(item.carbs * mult * 10) / 10;
+    const fat = Math.round(item.fat * mult * 10) / 10;
+
+    const portionText = mult === 1 ? item.servingLabel : `${mult}x ${item.servingLabel}`;
+    onAddMealLog({
+      date: selectedDate,
+      slot,
+      description: `${item.name} (${portionText})`,
+      items: [
+        {
+          name: item.name,
+          amount,
+          unit: item.unit,
+          kcal,
+          protein,
+          carbs,
+          fat,
+        },
+      ],
+    });
+
+    setComboToast(`Đã thêm "${item.name}" vào ${MEAL_LABEL[slot]}!`);
+    setTimeout(() => setComboToast(null), 3000);
+  };
+
+  const handleApplyCombo = (combo: MealComboPreset) => {
+    onAddMealLog({
+      date: selectedDate,
+      slot: combo.slot,
+      description: combo.name,
+      items: combo.items,
+    });
+    setComboToast(`Đã nạp toàn bộ combo "${combo.name}" vào ${MEAL_LABEL[combo.slot]} hôm nay!`);
+    setTimeout(() => setComboToast(null), 3500);
+  };
 
   // Targets
   const userTdee = tdee(profile, userWeightKg);
@@ -416,6 +489,86 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
         </div>
       </div>
 
+      {/* Toast Notification Banner */}
+      {comboToast && (
+        <div className="fixed top-20 right-6 z-50 bg-emerald-600 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-lg flex items-center gap-2 animate-in fade-in slide-in-from-top-2 duration-200">
+          <CheckCircle2 className="w-4 h-4 text-emerald-200" />
+          <span>{comboToast}</span>
+        </div>
+      )}
+
+      {/* Balanced Meal Combos Section */}
+      {showCombosSection && (
+        <div className="bg-white dark:bg-[#1a1e24] p-4 md:p-5 rounded-2xl border border-orange-200 dark:border-orange-900/50 shadow-xs space-y-3">
+          <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-2.5">
+            <div>
+              <h3 className="text-xs font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                <Flame className="w-4 h-4 text-orange-500" />
+                Gợi Ý Thực Đơn Mẫu Chuẩn Thể Hình Việt
+              </h3>
+              <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
+                Các combo bữa ăn được tính toán sẵn macro tối ưu quanh các món ăn truyền thống Việt Nam.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowCombosSection(false)}
+              className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1 cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {BALANCED_MEAL_COMBOS.map((combo) => (
+              <div
+                key={combo.id}
+                className="p-3.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/30 flex flex-col justify-between gap-3 hover:border-orange-300 dark:hover:border-orange-800 transition-colors"
+              >
+                <div>
+                  <div className="flex items-start justify-between gap-2">
+                    <h4 className="text-xs font-bold text-gray-900 dark:text-gray-100">
+                      {combo.name}
+                    </h4>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-orange-100 dark:bg-orange-950/50 text-orange-700 dark:text-orange-300 shrink-0">
+                      {MEAL_LABEL[combo.slot]}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
+                    {combo.description}
+                  </p>
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {combo.items.map((it, idx) => (
+                      <span
+                        key={idx}
+                        className="text-[10px] px-2 py-0.5 rounded-md bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300"
+                      >
+                        {it.name} ({it.amount}{it.unit})
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-gray-800/60">
+                  <div className="text-[11px] font-mono text-gray-600 dark:text-gray-300">
+                    <span className="font-bold text-orange-600 dark:text-orange-400">{combo.totalKcal} kcal</span> · P:{' '}
+                    {combo.totalProtein}g · C: {combo.totalCarbs}g · F: {combo.totalFat}g
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleApplyCombo(combo)}
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#ff6025] hover:bg-[#ff4400] text-white text-[11px] font-bold cursor-pointer transition-colors shadow-2xs"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Nạp Combo</span>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Food Input Box: Tabs for NLP vs Manual Input */}
       <div className="bg-white dark:bg-[#1a1e24] p-4 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs space-y-3.5">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-100 dark:border-gray-800 pb-3">
@@ -426,30 +579,50 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
             </h3>
           </div>
 
-          {/* Toggle between NLP and Manual mode */}
-          <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 p-0.5 rounded-xl self-start sm:self-auto">
+          <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
-              onClick={() => setInputMode('quick')}
-              className={`px-3 py-1 text-[11px] font-semibold rounded-lg transition-colors cursor-pointer ${
-                inputMode === 'quick'
-                  ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-2xs font-bold'
-                  : 'text-gray-500 hover:text-gray-900 dark:hover:text-gray-200'
-              }`}
+              onClick={() => setShowFoodCatalogModal(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-xs font-semibold cursor-pointer transition-all"
             >
-              Nhập nhanh văn bản
+              <BookOpen className="w-3.5 h-3.5" />
+              <span>Thư Viện Món Việt (50+)</span>
             </button>
+
             <button
               type="button"
-              onClick={() => setInputMode('manual')}
-              className={`px-3 py-1 text-[11px] font-semibold rounded-lg transition-colors cursor-pointer ${
-                inputMode === 'manual'
-                  ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-2xs font-bold'
-                  : 'text-gray-500 hover:text-gray-900 dark:hover:text-gray-200'
-              }`}
+              onClick={() => setShowCombosSection((v) => !v)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-orange-500/10 hover:bg-orange-500/20 text-orange-700 dark:text-orange-300 border border-orange-500/30 text-xs font-semibold cursor-pointer transition-all"
             >
-              Nhập chi tiết thủ công
+              <Flame className="w-3.5 h-3.5" />
+              <span>{showCombosSection ? 'Ẩn Thực Đơn Mẫu' : 'Thực Đơn Mẫu (Combos)'}</span>
             </button>
+
+            {/* Toggle between NLP and Manual mode */}
+            <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 p-0.5 rounded-xl">
+              <button
+                type="button"
+                onClick={() => setInputMode('quick')}
+                className={`px-2.5 py-1 text-[11px] font-semibold rounded-lg transition-colors cursor-pointer ${
+                  inputMode === 'quick'
+                    ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-2xs font-bold'
+                    : 'text-gray-500 hover:text-gray-900 dark:hover:text-gray-200'
+                }`}
+              >
+                Nhập nhanh
+              </button>
+              <button
+                type="button"
+                onClick={() => setInputMode('manual')}
+                className={`px-2.5 py-1 text-[11px] font-semibold rounded-lg transition-colors cursor-pointer ${
+                  inputMode === 'manual'
+                    ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-2xs font-bold'
+                    : 'text-gray-500 hover:text-gray-900 dark:hover:text-gray-200'
+                }`}
+              >
+                Thủ công
+              </button>
+            </div>
           </div>
         </div>
 
@@ -837,6 +1010,198 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
                 className="px-4 py-2 rounded-xl bg-[#ff6025] hover:bg-[#ff4400] text-white text-xs font-bold cursor-pointer shadow-xs"
               >
                 Lưu Tùy Chỉnh
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Vietnamese Food Catalog & Multiplier Modal */}
+      {showFoodCatalogModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+          <div className="bg-white dark:bg-[#1a1e24] w-full max-w-3xl max-h-[85vh] rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xl overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-150">
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-800 bg-linear-to-r from-emerald-500/10 to-transparent">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                  <BookOpen className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                    Thư Viện Món Ăn Việt & Thực Phẩm Thể Hình
+                  </h3>
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                    Tra cứu và nạp nhanh món ăn chuẩn định lượng calo & macro vào nhật ký
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowFoodCatalogModal(false);
+                  setSelectedCatalogFood(null);
+                }}
+                className="p-1 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Controls: Search, Category Filter & Slot Selector */}
+            <div className="p-4 border-b border-gray-100 dark:border-gray-800 space-y-3 bg-gray-50/50 dark:bg-gray-900/30">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+                <div className="relative flex-1">
+                  <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="text"
+                    value={catalogSearch}
+                    onChange={(e) => setCatalogSearch(e.target.value)}
+                    placeholder="Tìm món: phở bò, ức gà, cơm tấm, bún chả, whey, cá hồi..."
+                    className="w-full text-xs pl-9 pr-3 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 shadow-2xs"
+                  />
+                </div>
+
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <span className="text-[10px] font-semibold text-gray-400 uppercase">Thêm vào:</span>
+                  <select
+                    value={catalogTargetSlot}
+                    onChange={(e) => setCatalogTargetSlot(e.target.value as MealSlot)}
+                    className="text-xs px-2.5 py-1.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 font-semibold"
+                  >
+                    {MEAL_SLOTS.map((s) => (
+                      <option key={s} value={s}>
+                        {MEAL_LABEL[s]}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Categories */}
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setCatalogCategory('all')}
+                  className={`px-3 py-1 rounded-lg whitespace-nowrap font-semibold cursor-pointer transition-colors ${
+                    catalogCategory === 'all'
+                      ? 'bg-emerald-600 text-white shadow-2xs'
+                      : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 border border-gray-200 dark:border-gray-700'
+                  }`}
+                >
+                  Tất cả ({VIETNAMESE_FOOD_CATALOG.length})
+                </button>
+                {(
+                  [
+                    'pho_bun',
+                    'rice_dish',
+                    'protein',
+                    'carbs',
+                    'dairy_whey',
+                    'veg_soup',
+                    'drinks_snacks',
+                  ] as FoodCategory[]
+                ).map((cat) => (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => setCatalogCategory(cat)}
+                    className={`px-3 py-1 rounded-lg whitespace-nowrap font-semibold cursor-pointer transition-colors ${
+                      catalogCategory === cat
+                        ? 'bg-emerald-600 text-white shadow-2xs'
+                        : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 border border-gray-200 dark:border-gray-700'
+                    }`}
+                  >
+                    {FOOD_CATEGORY_LABEL[cat]}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Food Grid */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-2.5">
+              {filteredCatalog.length === 0 ? (
+                <div className="text-center py-10 text-gray-400 text-xs">
+                  Không tìm thấy món ăn nào khớp với từ khóa "{catalogSearch}".
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {filteredCatalog.map((item) => (
+                    <div
+                      key={item.id}
+                      className="p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/40 hover:border-emerald-300 dark:hover:border-emerald-800 transition-all flex flex-col justify-between gap-2.5 shadow-2xs"
+                    >
+                      <div>
+                        <div className="flex items-start justify-between gap-2">
+                          <h4 className="text-xs font-bold text-gray-900 dark:text-gray-100">
+                            {item.name}
+                          </h4>
+                          <span className="text-[10px] px-2 py-0.5 rounded-md bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 shrink-0 font-medium">
+                            {item.servingLabel}
+                          </span>
+                        </div>
+                        {item.note && (
+                          <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">
+                            {item.note}
+                          </p>
+                        )}
+                        <div className="flex items-center gap-2 mt-2 font-mono text-[11px]">
+                          <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                            {item.kcalPerServing} kcal
+                          </span>
+                          <span className="text-gray-300 dark:text-gray-700">·</span>
+                          <span className="text-rose-600 dark:text-rose-400 font-semibold">
+                            P: {item.protein}g
+                          </span>
+                          <span className="text-gray-300 dark:text-gray-700">·</span>
+                          <span className="text-amber-600 dark:text-amber-400 font-semibold">
+                            C: {item.carbs}g
+                          </span>
+                          <span className="text-gray-300 dark:text-gray-700">·</span>
+                          <span className="text-purple-600 dark:text-purple-400 font-semibold">
+                            F: {item.fat}g
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-gray-800">
+                        <div className="flex items-center gap-1">
+                          {[0.5, 1, 1.5, 2].map((mult) => (
+                            <button
+                              key={mult}
+                              type="button"
+                              onClick={() => handleAddCatalogFood(item, mult, catalogTargetSlot)}
+                              className="px-2 py-1 rounded-md text-[10px] font-semibold bg-gray-100 dark:bg-gray-800 hover:bg-emerald-50 hover:text-emerald-700 dark:hover:bg-emerald-950/40 text-gray-700 dark:text-gray-300 transition-colors cursor-pointer"
+                              title={`Thêm ${mult}x suất`}
+                            >
+                              +{mult}x
+                            </button>
+                          ))}
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => handleAddCatalogFood(item, 1, catalogTargetSlot)}
+                          className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold cursor-pointer transition-colors shadow-2xs"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>Thêm 1 suất</span>
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="p-3 border-t border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50 flex items-center justify-between text-xs text-gray-500">
+              <span>Đang chọn nạp vào: <strong className="text-gray-800 dark:text-gray-200">{MEAL_LABEL[catalogTargetSlot]}</strong></span>
+              <button
+                type="button"
+                onClick={() => setShowFoodCatalogModal(false)}
+                className="px-4 py-1.5 rounded-xl border border-gray-300 dark:border-gray-700 font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-100 cursor-pointer"
+              >
+                Xong
               </button>
             </div>
           </div>

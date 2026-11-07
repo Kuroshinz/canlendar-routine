@@ -14,8 +14,14 @@ import {
   parseFoodText,
   sportCalories,
   tdee,
+  calculateNavyBodyFat,
+  calculate1RM,
+  calculateBarbellPlates,
+  calculateDailyHealthScore,
+  VIETNAMESE_FOOD_CATALOG,
+  BALANCED_MEAL_COMBOS,
 } from './fitnessMetrics';
-import { BodyPoint, CtgProfile, NutritionSettings, SetLog, SportSession } from '../types/productivity';
+import { BodyPoint, CtgProfile, HealthDayLog, NutritionSettings, SetLog, SportSession } from '../types/productivity';
 
 const mockProfile: CtgProfile = {
   name: 'Test User',
@@ -112,6 +118,41 @@ assert(parsed[0].item.name.includes('ức gà'), 'Item 0 should be ức gà');
 assert(parsed[0].item.amount === 200, 'Item 0 amount should be 200');
 assert(parsed[0].recognised === true, 'Item 0 should be recognised');
 assert(parsed[0].item.protein > 50, '200g chicken breast should have > 50g protein');
+
+// 7. US Navy Body Fat
+const maleBf = calculateNavyBodyFat('male', 175, 82, 38);
+assert(maleBf > 10 && maleBf < 20, `Expected realistic male Navy BF, got ${maleBf}`);
+const femaleBf = calculateNavyBodyFat('female', 162, 70, 32, 95);
+assert(femaleBf > 15 && femaleBf < 30, `Expected realistic female Navy BF, got ${femaleBf}`);
+
+// 8. 1RM & Barbell Plates
+const maxBench = calculate1RM(80, 6);
+assert(maxBench.oneRepMax > 90 && maxBench.oneRepMax < 100, `Expected 1RM ~93-96kg, got ${maxBench.oneRepMax}`);
+assert(maxBench.percentages.length === 9, 'Should have 9 percentage tiers');
+
+const plateCalc = calculateBarbellPlates(90, 20); // 70kg / 2 = 35kg per side -> 20 + 15
+assert(plateCalc.loadedPerSideKg === 35, `Expected 35kg per side, got ${plateCalc.loadedPerSideKg}`);
+assert(plateCalc.platesPerSide.length === 2, `Expected 2 plates per side, got ${plateCalc.platesPerSide.length}`);
+assert(plateCalc.platesPerSide[0].plateKg === 20, 'First plate should be 20kg');
+assert(plateCalc.platesPerSide[1].plateKg === 15, 'Second plate should be 15kg');
+
+// 9. Vietnamese Catalog & Combos
+assert(VIETNAMESE_FOOD_CATALOG.length >= 20, 'Catalog should have at least 20 items');
+assert(BALANCED_MEAL_COMBOS.length >= 3, 'Should have at least 3 balanced combos');
+
+// 10. Daily Health Score
+const testDayLog: HealthDayLog = {
+  date: '2026-11-05',
+  steps: 8500,
+  waterMl: 2600,
+  sleepHours: 7.5,
+  protein: 150,
+  caloriesBurned: 2200,
+  source: 'manual',
+};
+const healthScore = calculateDailyHealthScore(testDayLog, 8000, 2500, 2000, 140);
+assert(healthScore.score >= 90, `Expected score >= 90, got ${healthScore.score}`);
+assert(healthScore.status === 'excellent', `Expected excellent status, got ${healthScore.status}`);
 
 console.log('All fitness metrics tests passed successfully!');
 

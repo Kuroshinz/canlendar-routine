@@ -55,6 +55,7 @@ import {
   weightTrend,
   workoutMinutesThisWeek,
 } from '../../utils/productivityUtils';
+import { calculateDailyHealthScore } from '../../utils/fitnessMetrics';
 import { formatDateString } from '../../utils/calendarUtils';
 import { getAccessToken } from '../../services/auth';
 import {
@@ -210,6 +211,16 @@ export const HealthView: React.FC<HealthViewProps> = ({
   const currentBmi = bmi(selectedLog.weightKg || 0, healthProfile.heightCm);
   const macros = macroPercentages(selectedLog.protein || 0, selectedLog.carbs || 0, selectedLog.fat || 0);
   const macroTotal = macroCalories(selectedLog.protein || 0, selectedLog.carbs || 0, selectedLog.fat || 0);
+
+  const healthScore = useMemo(() => {
+    return calculateDailyHealthScore(
+      selectedLog,
+      healthProfile.dailySteps || 8000,
+      healthProfile.dailyWaterMl || 2500,
+      2000,
+      140
+    );
+  }, [selectedLog, healthProfile]);
 
   const patchLog = (patch: Partial<HealthDayLog>) => {
     onUpsertHealthLog({ ...selectedLog, ...patch, date: selectedDate, source: patch.source || 'manual' });
@@ -541,6 +552,64 @@ export const HealthView: React.FC<HealthViewProps> = ({
           </button>
         </div>
       )}
+
+      {/* Daily Health Score Banner */}
+      <div className="bg-white dark:bg-[#1a1e24] p-4 md:p-5 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs mb-6 flex flex-col md:flex-row md:items-center justify-between gap-5">
+        <div className="flex items-center gap-4">
+          {/* Big Score Badge */}
+          <div
+            className="w-18 h-18 rounded-2xl flex flex-col items-center justify-center text-white shrink-0 shadow-md font-mono"
+            style={{ backgroundColor: healthScore.badgeColor }}
+          >
+            <span className="text-2xl font-black leading-none">{healthScore.score}</span>
+            <span className="text-[10px] font-semibold opacity-90 mt-0.5">/ 100 ĐIỂM</span>
+          </div>
+
+          <div>
+            <div className="flex items-center gap-2">
+              <span
+                className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider text-white"
+                style={{ backgroundColor: healthScore.badgeColor }}
+              >
+                {healthScore.statusLabel}
+              </span>
+              <span className="text-xs text-gray-500 dark:text-gray-400">
+                Chỉ số sức khỏe tổng hợp ngày {selectedDate}
+              </span>
+            </div>
+            <h3 className="text-base font-bold text-gray-900 dark:text-gray-100 mt-1">
+              {healthScore.score >= 85
+                ? 'Tuyệt vời! Bạn đang duy trì lối sống đỉnh cao.'
+                : healthScore.score >= 70
+                  ? 'Rất tốt! Tiến độ rèn luyện & dinh dưỡng đang đi đúng hướng.'
+                  : healthScore.score >= 50
+                    ? 'Khá tốt! Hãy nạp thêm nước hoặc vận động nhẹ để tối ưu điểm số.'
+                    : 'Hãy hoàn thành các mục tiêu bước chân, nước và giấc ngủ hôm nay!'}
+            </h3>
+          </div>
+        </div>
+
+        {/* 4 Score Pillars */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 shrink-0 md:min-w-[420px]">
+          {healthScore.breakdown.map((item) => (
+            <div
+              key={item.title}
+              className="p-2.5 rounded-xl bg-gray-50 dark:bg-gray-900/40 border border-gray-100 dark:border-gray-800/80 flex flex-col justify-between"
+            >
+              <div className="flex items-center justify-between text-[10px] text-gray-500 dark:text-gray-400 mb-1">
+                <span className="font-semibold truncate">{item.title.split(' ')[0]}</span>
+                <span className="font-mono font-bold text-gray-700 dark:text-gray-300">
+                  {item.score}/{item.max}
+                </span>
+              </div>
+              <ProgressBar percent={item.pct} color={healthScore.badgeColor} height={4} className="mb-1.5" />
+              <div className="text-[10px] text-gray-600 dark:text-gray-400 truncate font-mono">
+                {item.detail}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
 
       {/* Metric cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">

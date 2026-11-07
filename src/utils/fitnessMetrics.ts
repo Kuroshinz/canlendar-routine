@@ -5,6 +5,7 @@ import {
   Exercise,
   FoodItem,
   Goal,
+  HealthDayLog,
   MealLog,
   MealSlot,
   MuscleGroup,
@@ -887,3 +888,858 @@ export const generateSplitSessions = (template: RoutineSplitTemplate): PlannedSe
       ];
   }
 };
+
+// ---------------------------------------------------------------------------
+// 7. US Navy Body Fat Calculator (Thước Dây Hải Quân Mỹ)
+// ---------------------------------------------------------------------------
+
+/**
+ * Calculates Body Fat Percentage using the US Navy Circumference Method.
+ * Men: %BF = 495 / (1.0324 - 0.19077 * log10(waist - neck) + 0.15456 * log10(height)) - 450
+ * Women: %BF = 495 / (1.29579 - 0.35004 * log10(waist + hip - neck) + 0.22100 * log10(height)) - 450
+ * Measurements in cm.
+ */
+export function calculateNavyBodyFat(
+  sex: Sex,
+  heightCm: number,
+  waistCm: number,
+  neckCm: number,
+  hipCm?: number
+): number {
+  if (heightCm <= 0 || waistCm <= 0 || neckCm <= 0) return 0;
+
+  if (sex === 'male') {
+    const diff = waistCm - neckCm;
+    if (diff <= 0) return 0;
+    const logDiff = Math.log10(diff);
+    const logHeight = Math.log10(heightCm);
+    const denominator = 1.0324 - 0.19077 * logDiff + 0.15456 * logHeight;
+    if (denominator <= 0) return 0;
+    const bf = 495 / denominator - 450;
+    return Math.max(3, Math.min(50, Math.round(bf * 10) / 10));
+  } else {
+    const hip = hipCm || waistCm * 1.15; // default fallback if hip not specified
+    const sum = waistCm + hip - neckCm;
+    if (sum <= 0) return 0;
+    const logSum = Math.log10(sum);
+    const logHeight = Math.log10(heightCm);
+    const denominator = 1.29579 - 0.35004 * logSum + 0.221 * logHeight;
+    if (denominator <= 0) return 0;
+    const bf = 495 / denominator - 450;
+    return Math.max(8, Math.min(60, Math.round(bf * 10) / 10));
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 8. One Rep Max (1RM) & Barbell Plate Calculator
+// ---------------------------------------------------------------------------
+
+export interface OneRepMaxResult {
+  oneRepMax: number;
+  epley: number;
+  brzycki: number;
+  percentages: {
+    pct: number;
+    weight: number;
+    targetReps: string;
+    description: string;
+  }[];
+}
+
+/**
+ * Calculates 1RM from submaximal weight and reps using standard Epley & Brzycki models.
+ */
+export function calculate1RM(weightKg: number, reps: number): OneRepMaxResult {
+  if (weightKg <= 0 || reps <= 0) {
+    return {
+      oneRepMax: 0,
+      epley: 0,
+      brzycki: 0,
+      percentages: [],
+    };
+  }
+
+  if (reps === 1) {
+    const val = Math.round(weightKg * 10) / 10;
+    return {
+      oneRepMax: val,
+      epley: val,
+      brzycki: val,
+      percentages: buildPercentages(val),
+    };
+  }
+
+  // Epley: weight * (1 + reps / 30)
+  const epley = Math.round(weightKg * (1 + reps / 30) * 10) / 10;
+  // Brzycki: weight * (36 / (37 - reps))
+  const brzycki = reps < 37 ? Math.round(weightKg * (36 / (37 - reps)) * 10) / 10 : epley;
+
+  // Average of both
+  const oneRepMax = Math.round(((epley + brzycki) / 2) * 10) / 10;
+
+  return {
+    oneRepMax,
+    epley,
+    brzycki,
+    percentages: buildPercentages(oneRepMax),
+  };
+}
+
+function buildPercentages(max: number) {
+  const table = [
+    { pct: 100, targetReps: '1 rep', description: 'Kỷ lục tối đa (Max Effort)' },
+    { pct: 95, targetReps: '2 reps', description: 'Sức mạnh cực đại (Peak Power)' },
+    { pct: 90, targetReps: '3-4 reps', description: 'Phát triển sức mạnh (Heavy Strength)' },
+    { pct: 85, targetReps: '5-6 reps', description: 'Sức mạnh nền tảng (Strength Core)' },
+    { pct: 80, targetReps: '7-8 reps', description: 'Tăng cơ & Sức mạnh (Hypertrophy/Strength)' },
+    { pct: 75, targetReps: '9-10 reps', description: 'Tăng cơ tối ưu (Pure Hypertrophy)' },
+    { pct: 70, targetReps: '11-12 reps', description: 'Tăng cơ khối lượng cao (Volume Hypertrophy)' },
+    { pct: 65, targetReps: '13-15 reps', description: 'Sức bền cơ bắp (Endurance Strength)' },
+    { pct: 60, targetReps: '16-20 reps', description: 'Khởi động & Sức bền (Pump / Warmup)' },
+  ];
+
+  return table.map((row) => ({
+    ...row,
+    weight: Math.round((max * (row.pct / 100)) * 2) / 2, // round to nearest 0.5kg
+  }));
+}
+
+export interface BarbellPlateBreakdown {
+  targetTotalKg: number;
+  barWeightKg: number;
+  loadedPerSideKg: number;
+  platesPerSide: {
+    plateKg: number;
+    count: number;
+    color: string;
+  }[];
+  remainderKg: number;
+}
+
+/**
+ * Calculates the exact plates required on each side of an Olympic barbell.
+ * Standard Olympic plate denominations: 20kg, 15kg, 10kg, 5kg, 2.5kg, 1.25kg.
+ */
+export function calculateBarbellPlates(
+  targetTotalKg: number,
+  barWeightKg: number = 20
+): BarbellPlateBreakdown {
+  const standardPlates = [
+    { kg: 20, color: '#2563EB' }, // Blue
+    { kg: 15, color: '#EAB308' }, // Yellow
+    { kg: 10, color: '#16A34A' }, // Green
+    { kg: 5, color: '#DC2626' },  // Red/White
+    { kg: 2.5, color: '#4B5563' },// Charcoal
+    { kg: 1.25, color: '#9CA3AF' },// Silver
+  ];
+
+  if (targetTotalKg <= barWeightKg) {
+    return {
+      targetTotalKg,
+      barWeightKg,
+      loadedPerSideKg: 0,
+      platesPerSide: [],
+      remainderKg: 0,
+    };
+  }
+
+  const weightNeededTotal = targetTotalKg - barWeightKg;
+  let remainingPerSide = weightNeededTotal / 2;
+  const platesPerSide: { plateKg: number; count: number; color: string }[] = [];
+
+  for (const p of standardPlates) {
+    if (remainingPerSide >= p.kg) {
+      const count = Math.floor(remainingPerSide / p.kg);
+      remainingPerSide = Math.round((remainingPerSide - count * p.kg) * 100) / 100;
+      platesPerSide.push({
+        plateKg: p.kg,
+        count,
+        color: p.color,
+      });
+    }
+  }
+
+  const loadedPerSideKg = (weightNeededTotal / 2) - remainingPerSide;
+
+  return {
+    targetTotalKg,
+    barWeightKg,
+    loadedPerSideKg: Math.round(loadedPerSideKg * 100) / 100,
+    platesPerSide,
+    remainderKg: Math.round(remainingPerSide * 2 * 100) / 100,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// 9. Comprehensive Vietnamese Food Catalog & Preset Combos
+// ---------------------------------------------------------------------------
+
+export type FoodCategory =
+  | 'pho_bun'
+  | 'rice_dish'
+  | 'protein'
+  | 'carbs'
+  | 'dairy_whey'
+  | 'veg_soup'
+  | 'drinks_snacks';
+
+export const FOOD_CATEGORY_LABEL: Record<FoodCategory, string> = {
+  pho_bun: 'Phở & Bún Mì',
+  rice_dish: 'Cơm & Món Chính',
+  protein: 'Thịt & Hải Sản',
+  carbs: 'Khoai & Tinh Bột',
+  dairy_whey: 'Trứng, Sữa & Whey',
+  veg_soup: 'Rau Xanh & Canh',
+  drinks_snacks: 'Đồ Uống & Ăn Vặt',
+};
+
+export interface CatalogFoodItem {
+  id: string;
+  name: string;
+  category: FoodCategory;
+  servingLabel: string;
+  servingGramsOrMl: number;
+  unit: 'g' | 'ml';
+  kcalPerServing: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  note?: string;
+}
+
+export const VIETNAMESE_FOOD_CATALOG: CatalogFoodItem[] = [
+  // Phở & Bún
+  {
+    id: 'pho-bo-tai',
+    name: 'Phở Bò Tái Nạc',
+    category: 'pho_bun',
+    servingLabel: '1 Tô chuẩn',
+    servingGramsOrMl: 550,
+    unit: 'g',
+    kcalPerServing: 430,
+    protein: 34,
+    carbs: 58,
+    fat: 6,
+    note: 'Bánh phở tươi + 150g thăn bò tái, nước dùng thanh ít váng dầu',
+  },
+  {
+    id: 'pho-ga-xe',
+    name: 'Phở Gà Xé Nạc',
+    category: 'pho_bun',
+    servingLabel: '1 Tô chuẩn',
+    servingGramsOrMl: 500,
+    unit: 'g',
+    kcalPerServing: 390,
+    protein: 32,
+    carbs: 55,
+    fat: 4.5,
+    note: 'Ức gà xé bỏ da, nhiều rau hành',
+  },
+  {
+    id: 'bun-bo-hue',
+    name: 'Bún Bò Huế (Bắp Bò Nạc)',
+    category: 'pho_bun',
+    servingLabel: '1 Tô chuẩn',
+    servingGramsOrMl: 600,
+    unit: 'g',
+    kcalPerServing: 480,
+    protein: 35,
+    carbs: 62,
+    fat: 9,
+    note: 'Thịt bắp bò nạc, bỏ mỡ nổi, kèm nhiều giá rau sống',
+  },
+  {
+    id: 'bun-cha-ha-noi',
+    name: 'Bún Chả Hà Nội (Nạc Nướng)',
+    category: 'pho_bun',
+    servingLabel: '1 Phần suất',
+    servingGramsOrMl: 400,
+    unit: 'g',
+    kcalPerServing: 510,
+    protein: 36,
+    carbs: 65,
+    fat: 11,
+    note: 'Thịt nạc nướng than hoa, bún tươi, nước mắm dưa góp',
+  },
+  {
+    id: 'banh-canh-cua',
+    name: 'Bánh Canh Cua Thịt Nạc',
+    category: 'pho_bun',
+    servingLabel: '1 Tô chuẩn',
+    servingGramsOrMl: 500,
+    unit: 'g',
+    kcalPerServing: 420,
+    protein: 28,
+    carbs: 56,
+    fat: 8,
+    note: 'Thịt cua, tôm, thịt nạc dăm, bánh canh bột gạo',
+  },
+  {
+    id: 'hu-tieu-nam-vang',
+    name: 'Hủ Tiếu Nam Vang Nước',
+    category: 'pho_bun',
+    servingLabel: '1 Tô chuẩn',
+    servingGramsOrMl: 500,
+    unit: 'g',
+    kcalPerServing: 440,
+    protein: 29,
+    carbs: 60,
+    fat: 8.5,
+    note: 'Tôm tươi, thịt nạc, trứng cút, nước hầm xương',
+  },
+
+  // Cơm & Món Chính
+  {
+    id: 'com-tam-suon-cha',
+    name: 'Cơm Tấm Sườn Nạc + Trứng Ốp La',
+    category: 'rice_dish',
+    servingLabel: '1 Dĩa chuẩn',
+    servingGramsOrMl: 380,
+    unit: 'g',
+    kcalPerServing: 560,
+    protein: 38,
+    carbs: 68,
+    fat: 14,
+    note: 'Sườn nướng lọc mỡ, 1 trứng ốp la lòng đào, dưa chuột cà chua',
+  },
+  {
+    id: 'com-trang-bat',
+    name: 'Cơm Trắng (1 Bát Đầy)',
+    category: 'rice_dish',
+    servingLabel: '1 Bát đầy (150g)',
+    servingGramsOrMl: 150,
+    unit: 'g',
+    kcalPerServing: 195,
+    protein: 4,
+    carbs: 42,
+    fat: 0.5,
+    note: 'Nguồn tinh bột kinh điển, dễ tiêu hóa trước và sau tập',
+  },
+  {
+    id: 'com-ga-xoi-mo',
+    name: 'Cơm Gà Luộc Xé Gừng',
+    category: 'rice_dish',
+    servingLabel: '1 Dĩa chuẩn',
+    servingGramsOrMl: 350,
+    unit: 'g',
+    kcalPerServing: 480,
+    protein: 36,
+    carbs: 62,
+    fat: 8,
+    note: 'Gà ta xé bỏ da, cơm nấu nước luộc gà ít mỡ',
+  },
+  {
+    id: 'banh-mi-thit-nuong',
+    name: 'Bánh Mì Kẹp Thịt Nạc Nướng',
+    category: 'rice_dish',
+    servingLabel: '1 Ổ chuẩn',
+    servingGramsOrMl: 180,
+    unit: 'g',
+    kcalPerServing: 410,
+    protein: 24,
+    carbs: 52,
+    fat: 11,
+    note: 'Bánh mì giòn, thịt nạc ướp sả, đồ chua, dưa leo, ngò',
+  },
+  {
+    id: 'bo-ne-banh-mi',
+    name: 'Bò Né Trứng Ốp La + 1 Bánh Mì',
+    category: 'rice_dish',
+    servingLabel: '1 Chảo gang',
+    servingGramsOrMl: 300,
+    unit: 'g',
+    kcalPerServing: 540,
+    protein: 38,
+    carbs: 48,
+    fat: 20,
+    note: '120g bít tết bò mềm, 1 trứng, patê ít, ăn kèm bánh mì giòn',
+  },
+
+  // Protein Nạc
+  {
+    id: 'uc-ga-ap-chao',
+    name: 'Ức Gà Áp Chảo Thảo Mộc (200g)',
+    category: 'protein',
+    servingLabel: '200g nạc tươi',
+    servingGramsOrMl: 200,
+    unit: 'g',
+    kcalPerServing: 330,
+    protein: 62,
+    carbs: 0,
+    fat: 7,
+    note: 'Vua protein thể hình, 0g carb, giàu leucine phục hồi cơ',
+  },
+  {
+    id: 'thit-bo-ap-chao',
+    name: 'Thăn Bò Áp Chảo / Xào Cần Tây (150g)',
+    category: 'protein',
+    servingLabel: '150g thăn nạc',
+    servingGramsOrMl: 150,
+    unit: 'g',
+    kcalPerServing: 310,
+    protein: 40,
+    carbs: 3,
+    fat: 14,
+    note: 'Giàu kẽm, sắt và creatine tự nhiên tăng sức mạnh',
+  },
+  {
+    id: 'ca-hoi-nuong',
+    name: 'Cá Hồi Na Uy Nướng Muối Tiêu (150g)',
+    category: 'protein',
+    servingLabel: '150g fillet',
+    servingGramsOrMl: 150,
+    unit: 'g',
+    kcalPerServing: 312,
+    protein: 30,
+    carbs: 0,
+    fat: 19.5,
+    note: 'Nguồn Omega-3 EPA/DHA vàng giúp kháng viêm khớp và tim mạch',
+  },
+  {
+    id: 'ca-ngu-ngam-nuoc',
+    name: 'Cá Ngừ Ngâm Nước Khoáng (1 Hộp)',
+    category: 'protein',
+    servingLabel: '1 Hộp (140g)',
+    servingGramsOrMl: 140,
+    unit: 'g',
+    kcalPerServing: 160,
+    protein: 36,
+    carbs: 0,
+    fat: 1.5,
+    note: 'Tiện lợi, gần như 100% protein tinh khiết',
+  },
+  {
+    id: 'tom-hap-sa',
+    name: 'Tôm Sú Hấp Sả (200g)',
+    category: 'protein',
+    servingLabel: '200g thịt tôm',
+    servingGramsOrMl: 200,
+    unit: 'g',
+    kcalPerServing: 198,
+    protein: 48,
+    carbs: 0.5,
+    fat: 0.6,
+    note: 'Siêu nạc, cực ít chất béo, vị ngọt tự nhiên',
+  },
+  {
+    id: 'dau-hu-trang',
+    name: 'Đậu Hũ Trắng Luộc / Sốt Cà (150g)',
+    category: 'protein',
+    servingLabel: '150g miếng',
+    servingGramsOrMl: 150,
+    unit: 'g',
+    kcalPerServing: 115,
+    protein: 12,
+    carbs: 3,
+    fat: 7,
+    note: 'Protein thực vật dồi dào, canxi và isoflavone tốt cho tim mạch',
+  },
+
+  // Carbs Tốt
+  {
+    id: 'khoai-lang-luoc',
+    name: 'Khoai Lang Mật Luộc (1 Củ vừa)',
+    category: 'carbs',
+    servingLabel: '1 Củ (180g)',
+    servingGramsOrMl: 180,
+    unit: 'g',
+    kcalPerServing: 155,
+    protein: 2.8,
+    carbs: 36,
+    fat: 0.2,
+    note: 'Chỉ số GI thấp, giải phóng năng lượng bền bỉ suốt buổi tập',
+  },
+  {
+    id: 'yen-mach-nau',
+    name: 'Yến Mạch Cán Dẹt Nấu (50g khô)',
+    category: 'carbs',
+    servingLabel: '1 Bát cháo (50g khô)',
+    servingGramsOrMl: 200,
+    unit: 'g',
+    kcalPerServing: 195,
+    protein: 8.5,
+    carbs: 33,
+    fat: 3.5,
+    note: 'Giàu chất xơ beta-glucan giảm cholesterol và no lâu',
+  },
+  {
+    id: 'chuoi-tieu',
+    name: 'Chuối Tiêu Chín (1 Quả vừa)',
+    category: 'carbs',
+    servingLabel: '1 Quả (120g)',
+    servingGramsOrMl: 120,
+    unit: 'g',
+    kcalPerServing: 105,
+    protein: 1.3,
+    carbs: 27,
+    fat: 0.4,
+    note: 'Giàu kali chống chuột rút, cung cấp carb nhanh trước tập 30p',
+  },
+  {
+    id: 'bap-ngot-luoc',
+    name: 'Bắp Ngọt Luộc (1 Bắp)',
+    category: 'carbs',
+    servingLabel: '1 Bắp (160g)',
+    servingGramsOrMl: 160,
+    unit: 'g',
+    kcalPerServing: 140,
+    protein: 5,
+    carbs: 30,
+    fat: 2,
+    note: 'Chất xơ cao, vị ngọt tự nhiên, tạo cảm giác thỏa mãn khi thèm ngọt',
+  },
+
+  // Trứng, Sữa & Whey
+  {
+    id: 'whey-isolate',
+    name: 'Whey Protein Isolate (1 Muỗng)',
+    category: 'dairy_whey',
+    servingLabel: '1 Muỗng (30g)',
+    servingGramsOrMl: 30,
+    unit: 'g',
+    kcalPerServing: 120,
+    protein: 27,
+    carbs: 1,
+    fat: 0.5,
+    note: 'Hấp thu nhanh sau tập, kích hoạt tổng hợp protein cơ bắp (MPS)',
+  },
+  {
+    id: 'trung-ga-luoc',
+    name: 'Trứng Gà Luộc (2 Quả)',
+    category: 'dairy_whey',
+    servingLabel: '2 Quả (110g)',
+    servingGramsOrMl: 110,
+    unit: 'g',
+    kcalPerServing: 155,
+    protein: 13,
+    carbs: 1,
+    fat: 10.5,
+    note: 'Nguồn choline nuôi dưỡng não bộ và vitamin A/D/E/K',
+  },
+  {
+    id: 'long-trang-trung',
+    name: 'Lòng Trắng Trứng Chiên/Luộc (100g)',
+    category: 'dairy_whey',
+    servingLabel: '100g (~3 lòng trắng)',
+    servingGramsOrMl: 100,
+    unit: 'g',
+    kcalPerServing: 52,
+    protein: 11,
+    carbs: 0.7,
+    fat: 0.2,
+    note: 'Thuần protein, 0g mỡ, lý tưởng cho giai đoạn siết cơ sâu',
+  },
+  {
+    id: 'sua-chua-hy-lap',
+    name: 'Sữa Chua Hy Lạp Không Đường',
+    category: 'dairy_whey',
+    servingLabel: '1 Hộp (120g)',
+    servingGramsOrMl: 120,
+    unit: 'g',
+    kcalPerServing: 90,
+    protein: 10,
+    carbs: 4.5,
+    fat: 3,
+    note: 'Gấp đôi protein so với sữa chua thông thường, nhiều lợi khuẩn đường ruột',
+  },
+  {
+    id: 'sua-tuoi-khong-duong',
+    name: 'Sữa Tươi Tiệt Trùng Không Đường',
+    category: 'dairy_whey',
+    servingLabel: '1 Hộp (200ml)',
+    servingGramsOrMl: 200,
+    unit: 'ml',
+    kcalPerServing: 120,
+    protein: 7,
+    carbs: 10,
+    fat: 6,
+    note: 'Canxi sinh học cao, tiện mang theo uống kèm bữa phụ',
+  },
+
+  // Rau Xanh & Canh
+  {
+    id: 'rau-muong-luoc',
+    name: 'Rau Muống Luộc Nước Chanh (1 Dĩa)',
+    category: 'veg_soup',
+    servingLabel: '1 Dĩa (200g)',
+    servingGramsOrMl: 200,
+    unit: 'g',
+    kcalPerServing: 45,
+    protein: 3.2,
+    carbs: 6,
+    fat: 0.4,
+    note: 'Món quốc dân Việt Nam, thanh nhiệt, dồi dào chất xơ',
+  },
+  {
+    id: 'canh-cai-nau-thit',
+    name: 'Canh Cải Xanh Nấu Thịt Bằm (1 Bát)',
+    category: 'veg_soup',
+    servingLabel: '1 Bát tô',
+    servingGramsOrMl: 250,
+    unit: 'ml',
+    kcalPerServing: 85,
+    protein: 8,
+    carbs: 3,
+    fat: 4,
+    note: 'Ấm bụng, bổ sung nước và vi chất cho bữa cơm gia đình',
+  },
+  {
+    id: 'canh-chua-ca-loc',
+    name: 'Canh Chua Cá Lóc Nam Bộ',
+    category: 'veg_soup',
+    servingLabel: '1 Bát tô',
+    servingGramsOrMl: 300,
+    unit: 'ml',
+    kcalPerServing: 160,
+    protein: 16,
+    carbs: 12,
+    fat: 4.5,
+    note: 'Cá lóc đồng nạc, đậu bắp, bạc hà, cà chua, me chua thanh mát',
+  },
+  {
+    id: 'bong-cai-xanh-luoc',
+    name: 'Bông Cải Xanh (Broccoli) Luộc (150g)',
+    category: 'veg_soup',
+    servingLabel: '150g',
+    servingGramsOrMl: 150,
+    unit: 'g',
+    kcalPerServing: 52,
+    protein: 4.2,
+    carbs: 9,
+    fat: 0.6,
+    note: 'Chống oxy hóa Sulforaphane mạnh mẽ, siêu thực phẩm thể hình',
+  },
+
+  // Đồ Uống & Ăn Vặt Lành Mạnh
+  {
+    id: 'ca-phe-den-khong-duong',
+    name: 'Cà Phê Đen Đá Không Đường (Americano)',
+    category: 'drinks_snacks',
+    servingLabel: '1 Ly (250ml)',
+    servingGramsOrMl: 250,
+    unit: 'ml',
+    kcalPerServing: 5,
+    protein: 0.3,
+    carbs: 0.5,
+    fat: 0.1,
+    note: 'Tăng tỉnh táo, kích thích đốt mỡ tự nhiên trước tập 30 phút',
+  },
+  {
+    id: 'tra-xanh-tuoi',
+    name: 'Nước Trà Xanh Tươi Hãm Nóng/Đá',
+    category: 'drinks_snacks',
+    servingLabel: '1 Ly (300ml)',
+    servingGramsOrMl: 300,
+    unit: 'ml',
+    kcalPerServing: 2,
+    protein: 0,
+    carbs: 0.4,
+    fat: 0,
+    note: 'EGCG chống lão hóa, thanh lọc độc tố',
+  },
+  {
+    id: 'hat-hanh-nhan',
+    name: 'Hạt Hạnh Nhân Sấy Tự Nhiên (30g)',
+    category: 'drinks_snacks',
+    servingLabel: '1 Nắm nhỏ (30g)',
+    servingGramsOrMl: 30,
+    unit: 'g',
+    kcalPerServing: 175,
+    protein: 6.3,
+    carbs: 6.5,
+    fat: 15,
+    note: 'Chất béo đơn bất bão hòa tốt cho tim mạch và Vitamin E',
+  },
+];
+
+export interface MealComboPreset {
+  id: string;
+  name: string;
+  goalType: 'cut' | 'maintain' | 'bulk';
+  slot: MealSlot;
+  totalKcal: number;
+  totalProtein: number;
+  totalCarbs: number;
+  totalFat: number;
+  items: FoodItem[];
+  description: string;
+}
+
+export const BALANCED_MEAL_COMBOS: MealComboPreset[] = [
+  {
+    id: 'combo-sang-pho-bo',
+    name: 'Bữa Sáng Năng Lượng: Phở Bò Tái Nạc + 1 Trứng Chần',
+    goalType: 'maintain',
+    slot: 'breakfast',
+    totalKcal: 510,
+    totalProtein: 40,
+    totalCarbs: 58,
+    totalFat: 11,
+    description: 'Bát phở bò tái chuẩn vị Việt kết hợp trứng chần lòng đào giàu đạm cho cả buổi sáng sung mãn.',
+    items: [
+      { name: 'Phở Bò Tái Nạc', amount: 550, unit: 'g', kcal: 430, protein: 34, carbs: 58, fat: 6 },
+      { name: 'Trứng Chần Lòng Đào', amount: 55, unit: 'g', kcal: 80, protein: 6, carbs: 0, fat: 5 },
+    ],
+  },
+  {
+    id: 'combo-trua-com-tam-fitness',
+    name: 'Bữa Trưa Siết Mỡ: Cơm Tấm Sườn Nạc + Canh Khổ Qua',
+    goalType: 'cut',
+    slot: 'lunch',
+    totalKcal: 590,
+    totalProtein: 42,
+    totalCarbs: 68,
+    totalFat: 15,
+    description: 'Cơm tấm sườn nướng ít mỡ + trứng ốp la, ăn kèm canh khổ qua dồn thịt băm thanh nhiệt giải ngấy.',
+    items: [
+      { name: 'Cơm Tấm Sườn Nạc + Ốp La', amount: 380, unit: 'g', kcal: 560, protein: 38, carbs: 68, fat: 14 },
+      { name: 'Canh Khổ Qua Thịt Băm', amount: 200, unit: 'ml', kcal: 30, protein: 4, carbs: 0, fat: 1 },
+    ],
+  },
+  {
+    id: 'combo-pre-workout',
+    name: 'Bữa Phụ Trước Tập: 1 Chuối Chín + 1 Scoop Whey Isolate',
+    goalType: 'bulk',
+    slot: 'snack',
+    totalKcal: 225,
+    totalProtein: 28.3,
+    totalCarbs: 28,
+    totalFat: 0.9,
+    description: 'Nạp trước tập 30-45 phút: chuối nạp glycogen nhanh kết hợp whey isolate nạp amino acid bảo vệ cơ bắp.',
+    items: [
+      { name: 'Chuối Tiêu Chín', amount: 120, unit: 'g', kcal: 105, protein: 1.3, carbs: 27, fat: 0.4 },
+      { name: 'Whey Protein Isolate', amount: 30, unit: 'g', kcal: 120, protein: 27, carbs: 1, fat: 0.5 },
+    ],
+  },
+  {
+    id: 'combo-toi-uc-ga-khoai-lang',
+    name: 'Bữa Tối Tăng Cơ: Ức Gà Áp Chảo + Khoai Lang + Rau Luộc',
+    goalType: 'cut',
+    slot: 'dinner',
+    totalKcal: 530,
+    totalProtein: 68,
+    totalCarbs: 42,
+    totalFat: 7.6,
+    description: 'Bộ ba dinh dưỡng vàng: 200g ức gà áp chảo thơm lừng, 1 củ khoai lang ngọt bùi và dĩa rau muống luộc.',
+    items: [
+      { name: 'Ức Gà Áp Chảo (200g)', amount: 200, unit: 'g', kcal: 330, protein: 62, carbs: 0, fat: 7 },
+      { name: 'Khoai Lang Mật Luộc', amount: 180, unit: 'g', kcal: 155, protein: 2.8, carbs: 36, fat: 0.2 },
+      { name: 'Rau Muống Luộc', amount: 200, unit: 'g', kcal: 45, protein: 3.2, carbs: 6, fat: 0.4 },
+    ],
+  },
+];
+
+// ---------------------------------------------------------------------------
+// 10. Daily Health Score (Chỉ số Sức Khỏe Toàn Diện 0 - 100)
+// ---------------------------------------------------------------------------
+
+export interface HealthScoreResult {
+  score: number;
+  status: 'excellent' | 'good' | 'moderate' | 'needs_improvement';
+  statusLabel: string;
+  badgeColor: string;
+  breakdown: {
+    title: string;
+    score: number;
+    max: number;
+    pct: number;
+    detail: string;
+    icon: string;
+  }[];
+}
+
+export function calculateDailyHealthScore(
+  log: HealthDayLog,
+  targetSteps: number = 8000,
+  targetWaterMl: number = 2500,
+  targetKcal: number = 2000,
+  targetProtein: number = 140
+): HealthScoreResult {
+  // 1. Steps (max 25)
+  const steps = log.steps || 0;
+  const stepPct = Math.min(1.2, targetSteps > 0 ? steps / targetSteps : 0);
+  const stepScore = Math.min(25, Math.round(stepPct * 25));
+
+  // 2. Hydration (max 25)
+  const water = log.waterMl || 0;
+  const waterPct = Math.min(1.2, targetWaterMl > 0 ? water / targetWaterMl : 0);
+  const waterScore = Math.min(25, Math.round(waterPct * 25));
+
+  // 3. Sleep (max 25): ideal 7-8 hours
+  const sleep = log.sleepHours || 0;
+  let sleepScore = 0;
+  if (sleep >= 7 && sleep <= 9) sleepScore = 25;
+  else if (sleep >= 6) sleepScore = 18;
+  else if (sleep >= 5) sleepScore = 12;
+  else if (sleep > 0) sleepScore = 6;
+
+  // 4. Nutrition / Protein (max 25)
+  const protein = log.protein || 0;
+  const proteinPct = Math.min(1.2, targetProtein > 0 ? protein / targetProtein : 0);
+  const nutritionScore = Math.min(25, Math.round(proteinPct * 25));
+
+  const total = Math.min(100, Math.max(0, stepScore + waterScore + sleepScore + nutritionScore));
+
+  let status: HealthScoreResult['status'] = 'moderate';
+  let statusLabel = 'Trung Bình';
+  let badgeColor = '#F59E0B';
+
+  if (total >= 85) {
+    status = 'excellent';
+    statusLabel = 'Xuất Sắc';
+    badgeColor = '#10B981';
+  } else if (total >= 70) {
+    status = 'good';
+    statusLabel = 'Tốt';
+    badgeColor = '#3B82F6';
+  } else if (total >= 50) {
+    status = 'moderate';
+    statusLabel = 'Khá';
+    badgeColor = '#F59E0B';
+  } else {
+    status = 'needs_improvement';
+    statusLabel = 'Cần Cải Thiện';
+    badgeColor = '#EF4444';
+  }
+
+  return {
+    score: total,
+    status,
+    statusLabel,
+    badgeColor,
+    breakdown: [
+      {
+        title: 'Vận Động (Bước Chân)',
+        score: stepScore,
+        max: 25,
+        pct: Math.round((stepScore / 25) * 100),
+        detail: `${steps.toLocaleString()} / ${targetSteps.toLocaleString()} bước`,
+        icon: 'Footprints',
+      },
+      {
+        title: 'Nước Uống (Hydration)',
+        score: waterScore,
+        max: 25,
+        pct: Math.round((waterScore / 25) * 100),
+        detail: `${water} / ${targetWaterMl} ml`,
+        icon: 'Droplets',
+      },
+      {
+        title: 'Giấc Ngủ (Phục Hồi)',
+        score: sleepScore,
+        max: 25,
+        pct: Math.round((sleepScore / 25) * 100),
+        detail: sleep > 0 ? `${sleep} giờ ngủ` : 'Chưa ghi nhận',
+        icon: 'Moon',
+      },
+      {
+        title: 'Dinh Dưỡng (Protein Nạp)',
+        score: nutritionScore,
+        max: 25,
+        pct: Math.round((nutritionScore / 25) * 100),
+        detail: `${Math.round(protein)}g / ${targetProtein}g protein`,
+        icon: 'Utensils',
+      },
+    ],
+  };
+}
