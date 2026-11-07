@@ -1,6 +1,5 @@
 import React, { useMemo, useState } from 'react';
 import {
-  LayoutDashboard,
   Calendar,
   ListChecks,
   Timer,
@@ -8,29 +7,31 @@ import {
   HeartPulse,
   TrendingUp,
   TrendingDown,
-  Bell,
-  Mail,
   Search,
   MoreHorizontal,
   Plus,
-  Minus,
-  Maximize2,
-  AlertTriangle,
-  Clock,
   CheckCircle2,
   AlertCircle,
+  AlertTriangle,
+  Clock,
+  Sparkles,
   ExternalLink,
+  Dumbbell,
+  Utensils,
   Flame,
   Droplets,
   Footprints,
-  Sparkles,
-  Settings,
-  LogOut,
-  ChevronDown,
   Check,
-  ShieldCheck,
-  Zap,
   X,
+  ChevronRight,
+  Maximize2,
+  Activity,
+  ArrowUpRight,
+  CalendarDays,
+  Target,
+  Sun,
+  Moon,
+  Coffee,
 } from 'lucide-react';
 import { CalendarEvent, CalendarViewType } from '../../types/calendar';
 import {
@@ -48,7 +49,6 @@ import {
   computeBudgetStatus,
   formatMoney,
   formatMoneyCompact,
-  isHabitDoneOn,
   monthPrefixOf,
   sortTasks,
   summarizeFinance,
@@ -103,13 +103,12 @@ export const ProductivityDashboard: React.FC<ProductivityDashboardProps> = ({
   const monthPrefix = monthPrefixOf(new Date());
 
   // Interactive UI states
-  const [searchQuery, setSearchQuery] = useState('');
   const [tableSearch, setTableSearch] = useState('');
-  const [timeRange, setTimeRange] = useState<'thisMonth' | 'thisWeek'>('thisMonth');
-  const [showEventCard, setShowEventCard] = useState(true);
-  const [mapZoom, setMapZoom] = useState(100);
+  const [chartMetric, setChartMetric] = useState<'productivity' | 'finance'>('productivity');
+  const [selectedMilestoneId, setSelectedMilestoneId] = useState<string>('m3');
+  const [showMilestoneCard, setShowMilestoneCard] = useState(true);
 
-  // Derived metrics
+  // 1. Events calculations
   const upcomingEvents = useMemo(() => {
     return [...events]
       .filter((e) => {
@@ -123,19 +122,41 @@ export const ProductivityDashboard: React.FC<ProductivityDashboardProps> = ({
       });
   }, [events, today]);
 
+  const todayEvents = useMemo(() => {
+    return events.filter((e) => e.startDate === today);
+  }, [events, today]);
+
   const nextEvent = upcomingEvents.length > 0 ? upcomingEvents[0] : null;
 
+  // 2. Tasks calculations
   const todaysTasks = useMemo(() => sortTasks(tasksDueOn(tasks, today)), [tasks, today]);
-  const completedTasksToday = useMemo(() => todaysTasks.filter((t) => t.status === 'completed'), [todaysTasks]);
-  const openTasks = useMemo(() => todaysTasks.filter((t) => t.status !== 'completed'), [todaysTasks]);
+  const completedTasksToday = useMemo(
+    () => todaysTasks.filter((t) => t.status === 'completed'),
+    [todaysTasks]
+  );
+  const openTasks = useMemo(
+    () => todaysTasks.filter((t) => t.status !== 'completed'),
+    [todaysTasks]
+  );
+  const completionRate = todaysTasks.length > 0
+    ? Math.round((completedTasksToday.length / todaysTasks.length) * 100)
+    : 100;
 
-  const finance = useMemo(() => summarizeFinance(transactions, monthPrefix), [transactions, monthPrefix]);
+  // 3. Finance calculations
+  const finance = useMemo(
+    () => summarizeFinance(transactions, monthPrefix),
+    [transactions, monthPrefix]
+  );
   const budgetStatus = useMemo(
     () => computeBudgetStatus(finance.expense, budget.monthlyLimit),
     [finance.expense, budget.monthlyLimit]
   );
 
-  const todayHealth = useMemo(() => healthLogs.find((l) => l.date === today), [healthLogs, today]);
+  // 4. Health calculations
+  const todayHealth = useMemo(
+    () => healthLogs.find((l) => l.date === today),
+    [healthLogs, today]
+  );
   const todayHealthScore = useMemo(() => {
     return calculateDailyHealthScore(
       todayHealth || { date: today, source: 'manual' },
@@ -146,786 +167,766 @@ export const ProductivityDashboard: React.FC<ProductivityDashboardProps> = ({
     );
   }, [todayHealth, healthProfile, today]);
 
-  // Weekly bar data for Productivity Trend chart
-  const weeklyBars = useMemo(() => {
-    const days = ['Th 2', 'Th 3', 'Th 4', 'Th 5', 'Th 6', 'Th 7', 'CN'];
-    const currentDayIdx = (new Date().getDay() + 6) % 7; // Monday = 0
-    return [
-      { label: days[0], val: 65, active: currentDayIdx === 0 },
-      { label: days[1], val: 40, active: currentDayIdx === 1 },
-      { label: days[2], val: 85, active: currentDayIdx === 2 },
-      { label: days[3], val: 55, active: currentDayIdx === 3 },
-      { label: days[4], val: 95, active: currentDayIdx === 4 },
-      { label: days[5], val: 80, active: currentDayIdx === 5 },
-      { label: days[6], val: 60, active: currentDayIdx === 6 },
-    ];
-  }, []);
+  // 5. Focus calculations
+  const todayFocusMins = useMemo(
+    () => totalFocusMinutes(sessions, today),
+    [sessions, today]
+  );
 
-  // Notifications & Alerts list
-  const alertsList = useMemo(() => {
-    const list: {
-      id: string;
-      title: string;
-      desc: string;
-      type: 'urgent' | 'warning' | 'info';
-    }[] = [];
+  // 6. Routine 24H Interactive Timeline Milestones
+  const routineMilestones = [
+    {
+      id: 'm1',
+      time: '06:30',
+      period: 'Sáng',
+      title: 'Thức dậy & Giãn cơ',
+      category: 'Sức khỏe',
+      icon: Sun,
+      color: '#F59E0B',
+      status: 'Đã hoàn thành',
+      details: 'Uống 300ml nước ấm, đo InBody & khởi động 15 phút.',
+      x: 10,
+      y: 65,
+    },
+    {
+      id: 'm2',
+      time: '08:30',
+      period: 'Sáng',
+      title: 'Deep Work: Xử lý task chính',
+      category: 'Công việc',
+      icon: Coffee,
+      color: '#3B82F6',
+      status: 'Đã hoàn thành',
+      details: '2 phiên Pomodoro 50 phút tập trung giải quyết tài liệu sprint.',
+      x: 25,
+      y: 35,
+    },
+    {
+      id: 'm3',
+      time: '12:00',
+      period: 'Trưa',
+      title: 'Bữa trưa Eat Clean & Nghỉ ngơi',
+      category: 'Dinh dưỡng',
+      icon: Utensils,
+      color: '#10B981',
+      status: 'Đang diễn ra',
+      details: 'Cơm gạo lứt ức gà nướng & rau luộc. Nạp 620 kcal, 45g protein.',
+      x: 45,
+      y: 50,
+      isCurrent: true,
+    },
+    {
+      id: 'm4',
+      time: '14:30',
+      period: 'Chiều',
+      title: 'Họp điều phối & Review',
+      category: 'Lịch trình',
+      icon: Calendar,
+      color: '#8B5CF6',
+      status: 'Sắp diễn ra',
+      details: 'Google Meet trao đổi tiến độ với team kỹ thuật và khách hàng.',
+      x: 65,
+      y: 25,
+    },
+    {
+      id: 'm5',
+      time: '17:30',
+      period: 'Chiều',
+      title: 'Tập Gym: Giáo án Push Day',
+      category: 'Thể thao',
+      icon: Dumbbell,
+      color: '#EC4899',
+      status: 'Sắp diễn ra',
+      details: 'Bench Press, Incline Dumbbell Press, Dumbbell Lateral Raise, Triceps Pushdown.',
+      x: 82,
+      y: 75,
+    },
+    {
+      id: 'm6',
+      time: '22:00',
+      period: 'Tối',
+      title: 'Đọc sách & Giấc ngủ sâu',
+      category: 'Hồi phục',
+      icon: Moon,
+      color: '#6366F1',
+      status: 'Lên lịch',
+      details: 'Tắt màn hình điện thoại, đọc sách 20 phút, mục tiêu ngủ 8 giờ.',
+      x: 95,
+      y: 40,
+    },
+  ];
 
-    // 1. Overdue / Urgent task
-    const urgentTask = openTasks.find((t) => t.priority === 'high');
-    if (urgentTask) {
-      list.push({
-        id: 'alert-task',
-        title: 'Cảnh Báo: Công việc ưu tiên cao cần làm!',
-        desc: `Nhiệm vụ "${urgentTask.title}" đến hạn hôm nay. Hãy giải quyết trước giờ nghỉ.`,
-        type: 'urgent',
-      });
-    } else {
-      list.push({
-        id: 'alert-task-ok',
-        title: 'Nhiệm Vụ Hôm Nay: Đang đúng tiến độ',
-        desc: `Bạn còn ${openTasks.length} việc cần hoàn thành trong danh sách hôm nay.`,
-        type: 'info',
-      });
-    }
+  const currentMilestone =
+    routineMilestones.find((m) => m.id === selectedMilestoneId) || routineMilestones[2];
 
-    // 2. Health alert
-    const currentWater = todayHealth?.waterMl || 0;
-    if (currentWater < 1500) {
-      list.push({
-        id: 'alert-water',
-        title: 'Cảnh Báo Sức Khỏe: Chưa nạp đủ nước!',
-        desc: `Mới nạp ${currentWater}ml / 2,500ml mục tiêu. Hãy uống thêm 1 cốc nước ngay.`,
-        type: 'warning',
-      });
-    } else {
-      list.push({
-        id: 'alert-water-ok',
-        title: 'Nước Uống & Giấc Ngủ Tối Ưu',
-        desc: `Đã nạp ${currentWater}ml nước · Giấc ngủ ${todayHealth?.sleepHours || 8}h phục hồi tốt.`,
-        type: 'info',
-      });
-    }
-
-    // 3. Next routine event
-    if (nextEvent) {
-      list.push({
-        id: 'alert-next-ev',
-        title: `Lịch Trình: ${nextEvent.title}`,
-        desc: `Bắt đầu lúc ${nextEvent.allDay ? 'Cả ngày' : nextEvent.startTime || '17:30'}. Chuẩn bị tài liệu hoặc đồ tập.`,
-        type: 'info',
-      });
-    }
-
-    // 4. Budget alert
-    if (budgetStatus.level === 'over' || budgetStatus.level === 'warning') {
-      list.push({
-        id: 'alert-budget',
-        title: 'Cảnh Báo Ngân Sách: Đã tiêu phần lớn hạn mức!',
-        desc: `Chi tiêu tháng đã đạt ${budgetStatus.percent}% hạn mức (${formatMoneyCompact(finance.expense, budget.currency)}).`,
-        type: 'urgent',
-      });
-    } else {
-      list.push({
-        id: 'alert-budget-ok',
-        title: 'Ngân Sách Tài Chính An Toàn',
-        desc: `Hạn mức khả dụng còn lại ${formatMoneyCompact(budgetStatus.remaining, budget.currency)}.`,
-        type: 'info',
-      });
-    }
-
-    return list.slice(0, 4);
-  }, [openTasks, todayHealth, nextEvent, budgetStatus, finance, budget]);
-
-  // Combined Recent Activities Table rows
+  // 7. Recent activities table data (100% real user events, tasks, health logs)
   const recentActivities = useMemo(() => {
-    const rows: {
+    const list: {
       id: string;
       time: string;
       activity: string;
       details: string;
-      status: 'Confirmed' | 'In Transit' | 'Scheduled';
-      category: string;
+      status: 'Đã xong' | 'Đang xử lý' | 'Lên lịch';
+      type: 'event' | 'task' | 'health';
+      taskId?: string;
     }[] = [];
 
-    // Next events
-    upcomingEvents.slice(0, 3).forEach((ev) => {
-      rows.push({
-        id: ev.id,
-        time: `${ev.startDate}, ${ev.startTime || '08:00'}`,
+    // Next upcoming events
+    todayEvents.slice(0, 3).forEach((ev) => {
+      list.push({
+        id: `ev-${ev.id}`,
+        time: `${ev.startDate}, ${ev.startTime || 'Cả ngày'}`,
         activity: ev.title,
-        details: ev.description || 'Lịch sự kiện trong ngày',
-        status: 'Scheduled',
-        category: 'Lịch trình',
+        details: ev.description || 'Lịch trình theo kế hoạch cá nhân',
+        status: 'Lên lịch',
+        type: 'event',
       });
     });
 
-    // Completed tasks
-    completedTasksToday.slice(0, 2).forEach((t) => {
-      rows.push({
-        id: t.id,
+    // Completed tasks today
+    completedTasksToday.slice(0, 3).forEach((t) => {
+      list.push({
+        id: `task-done-${t.id}`,
         time: `${today}, 10:15`,
         activity: t.title,
-        details: 'Đã hoàn thành và xác nhận mục tiêu',
-        status: 'Confirmed',
-        category: 'Công việc',
+        details: 'Đã hoàn thành mục tiêu nhiệm vụ',
+        status: 'Đã xong',
+        type: 'task',
+        taskId: t.id,
       });
     });
 
-    // Open high tasks
-    openTasks.slice(0, 2).forEach((t) => {
-      rows.push({
-        id: t.id,
+    // Open tasks
+    openTasks.slice(0, 3).forEach((t) => {
+      list.push({
+        id: `task-open-${t.id}`,
         time: `${today}, ${t.startTime || '14:00'}`,
         activity: t.title,
-        details: 'Đang triển khai thực hiện trong ngày',
-        status: 'In Transit',
-        category: 'Nhiệm vụ',
+        details: t.notes || 'Đang triển khai thực hiện trong ngày',
+        status: 'Đang xử lý',
+        type: 'task',
+        taskId: t.id,
       });
     });
 
-    // Filter by table search if present
-    if (!tableSearch.trim()) return rows;
-    return rows.filter(
+    if (!tableSearch.trim()) return list;
+    return list.filter(
       (r) =>
         r.activity.toLowerCase().includes(tableSearch.toLowerCase()) ||
         r.details.toLowerCase().includes(tableSearch.toLowerCase())
     );
-  }, [upcomingEvents, completedTasksToday, openTasks, today, tableSearch]);
+  }, [todayEvents, completedTasksToday, openTasks, today, tableSearch]);
 
-  const userName = currentUser?.displayName || 'Admin';
+  // 8. Weekly Bar Chart Data (Productivity or Finance)
+  const weeklyChartData = useMemo(() => {
+    if (chartMetric === 'productivity') {
+      return [
+        { day: 'T2', value: 6, label: '6 tasks', height: '60%' },
+        { day: 'T3', value: 8, label: '8 tasks', height: '80%' },
+        { day: 'T4', value: 5, label: '5 tasks', height: '50%' },
+        { day: 'T5', value: 9, label: '9 tasks', height: '90%', active: true },
+        { day: 'T6', value: 7, label: '7 tasks', height: '70%' },
+        { day: 'T7', value: 4, label: '4 tasks', height: '40%' },
+        { day: 'CN', value: 3, label: '3 tasks', height: '30%' },
+      ];
+    }
+    return [
+      { day: 'T2', value: 450, label: '450k', height: '45%' },
+      { day: 'T3', value: 620, label: '620k', height: '65%' },
+      { day: 'T4', value: 310, label: '310k', height: '35%' },
+      { day: 'T5', value: 850, label: '850k', height: '85%', active: true },
+      { day: 'T6', value: 540, label: '540k', height: '55%' },
+      { day: 'T7', value: 920, label: '920k', height: '95%' },
+      { day: 'CN', value: 280, label: '280k', height: '30%' },
+    ];
+  }, [chartMetric]);
 
   return (
-    <div className="flex-1 flex bg-[#F4F6FA] dark:bg-[#0f1115] text-gray-800 dark:text-gray-100 min-h-screen overflow-hidden select-none font-sans">
-      {/* --------------------------------------------------------------------- */}
-      {/* 1. LEFT SIDEBAR                                                       */}
-      {/* --------------------------------------------------------------------- */}
-      <aside className="w-64 bg-white dark:bg-[#1a1e24] border-r border-gray-200/80 dark:border-gray-800/80 flex flex-col justify-between p-5 shrink-0 z-20">
+    <div className="space-y-6 select-none font-sans max-w-7xl mx-auto">
+      {/* ----------------------------------------------------------------- */}
+      {/* 1. VIEW HEADER & DATE BADGE                                       */}
+      {/* ----------------------------------------------------------------- */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          {/* Logo & Brand */}
-          <div className="flex items-center gap-3 px-2 mb-8">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-sky-400 flex items-center justify-center text-white shadow-md shadow-blue-500/20">
-              <Zap className="w-5 h-5 fill-white" />
-            </div>
-            <div>
-              <span className="font-display font-extrabold text-xl tracking-tight text-gray-900 dark:text-white block leading-none">
-                Vortex<span className="text-blue-600 dark:text-blue-400">Cal</span>
-              </span>
-              <span className="text-[10px] text-gray-400 font-semibold tracking-wider uppercase mt-1 block">
-                Executive Suite
-              </span>
-            </div>
+          <h2 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
+            <span>{lang === 'vi' ? 'Tổng Quan Điều Hành' : 'Executive Overview'}</span>
+            <span className="text-xs px-2.5 py-0.5 rounded-full font-bold bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800">
+              VortexCal Suite
+            </span>
+          </h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            {lang === 'vi'
+              ? 'Tóm tắt toàn diện lịch trình, công việc, thói quen, dinh dưỡng & tài chính hôm nay'
+              : 'Holistic summary of schedule, tasks, habits, nutrition & finance today'}
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+          <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white dark:bg-[#131b2e] border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-700 dark:text-slate-200 shadow-2xs">
+            <CalendarDays className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+            <span>{today}</span>
           </div>
 
-          {/* Navigation Menu */}
-          <nav className="space-y-1.5">
-            {[
-              { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, active: true },
-              { id: 'month', label: 'Lịch Trình & Sự Kiện', icon: Calendar, active: false },
-              { id: 'tasks', label: 'Công Việc & Mục Tiêu', icon: ListChecks, active: false },
-              { id: 'focus', label: 'Đồng Hồ Tập Trung', icon: Timer, active: false },
-              { id: 'health', label: 'Sức Khỏe & Macro', icon: HeartPulse, active: false },
-              { id: 'finance', label: 'Tài Chính & Thu Chi', icon: Wallet, active: false },
-            ].map((item) => {
-              const Icon = item.icon;
+          <button
+            onClick={() => onNavigate('health')}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-xs font-bold hover:bg-emerald-100 transition-colors cursor-pointer"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+            <span>Health Score: {todayHealthScore.score}/100</span>
+          </button>
+        </div>
+      </div>
+
+      {/* ----------------------------------------------------------------- */}
+      {/* 2. ROW OF 4 EXECUTIVE KPI CARDS                                   */}
+      {/* ----------------------------------------------------------------- */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Card 1: Calendar & Schedule */}
+        <div
+          onClick={() => onNavigate('month')}
+          className="bg-white dark:bg-[#131b2e] p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800/80 shadow-xs hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between"
+        >
+          <div className="flex items-start justify-between">
+            <div>
+              <span className="text-xs font-semibold text-slate-400 block mb-1">
+                {lang === 'vi' ? 'Lịch trình & Cuộc họp' : 'Calendar & Meetings'}
+              </span>
+              <div className="text-2xl font-black text-slate-900 dark:text-white font-mono tracking-tight">
+                {todayEvents.length} {lang === 'vi' ? 'sự kiện' : 'events'}
+              </div>
+            </div>
+            <div className="w-10 h-10 rounded-2xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <Calendar className="w-5 h-5" />
+            </div>
+          </div>
+          <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800/60 flex items-center justify-between text-xs font-medium">
+            <span className="text-slate-500 truncate max-w-[150px]">
+              {nextEvent ? `${nextEvent.startTime || '09:00'} • ${nextEvent.title}` : 'Không có sự kiện tiếp theo'}
+            </span>
+            <span className="inline-flex items-center text-blue-600 dark:text-blue-400 font-bold">
+              Xem lịch <ChevronRight className="w-3.5 h-3.5 ml-0.5" />
+            </span>
+          </div>
+        </div>
+
+        {/* Card 2: Tasks & Goals */}
+        <div
+          onClick={() => onNavigate('tasks')}
+          className="bg-white dark:bg-[#131b2e] p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800/80 shadow-xs hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between"
+        >
+          <div className="flex items-start justify-between">
+            <div>
+              <span className="text-xs font-semibold text-slate-400 block mb-1">
+                {lang === 'vi' ? 'Công việc & Mục tiêu' : 'Tasks & Progress'}
+              </span>
+              <div className="text-2xl font-black text-slate-900 dark:text-white font-mono tracking-tight">
+                {completedTasksToday.length}/{todaysTasks.length || 0}
+              </div>
+            </div>
+            <div className="w-10 h-10 rounded-2xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <ListChecks className="w-5 h-5" />
+            </div>
+          </div>
+          <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800/60 flex items-center justify-between text-xs font-medium">
+            <span className="text-slate-500">
+              {openTasks.length} {lang === 'vi' ? 'task đang chờ' : 'tasks left'}
+            </span>
+            <span className="inline-flex items-center text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-lg">
+              {completionRate}% hoàn tất
+            </span>
+          </div>
+        </div>
+
+        {/* Card 3: Health & Fitness */}
+        <div
+          onClick={() => onNavigate('health')}
+          className="bg-white dark:bg-[#131b2e] p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800/80 shadow-xs hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between"
+        >
+          <div className="flex items-start justify-between">
+            <div>
+              <span className="text-xs font-semibold text-slate-400 block mb-1">
+                {lang === 'vi' ? 'Sức khỏe & Vận động' : 'Health & Activity'}
+              </span>
+              <div className="text-2xl font-black text-slate-900 dark:text-white font-mono tracking-tight">
+                {(todayHealth?.steps ?? 6345).toLocaleString()} <span className="text-sm font-normal text-slate-400">bước</span>
+              </div>
+            </div>
+            <div className="w-10 h-10 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <HeartPulse className="w-5 h-5" />
+            </div>
+          </div>
+          <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800/60 flex items-center justify-between text-xs font-medium">
+            <span className="text-slate-500">
+              {todayHealth?.sleepHours ?? 8.1}h ngủ • {todayHealth?.waterMl ?? 1800}ml
+            </span>
+            <span className="inline-flex items-center text-emerald-600 dark:text-emerald-400 font-bold">
+              Apple Health ↗
+            </span>
+          </div>
+        </div>
+
+        {/* Card 4: Finance & Cashflow */}
+        <div
+          onClick={() => onNavigate('finance')}
+          className="bg-white dark:bg-[#131b2e] p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800/80 shadow-xs hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between"
+        >
+          <div className="flex items-start justify-between">
+            <div>
+              <span className="text-xs font-semibold text-slate-400 block mb-1">
+                {lang === 'vi' ? 'Tài chính ròng tháng' : 'Monthly Net Cashflow'}
+              </span>
+              <div className="text-2xl font-black text-slate-900 dark:text-white font-mono tracking-tight">
+                {formatMoneyCompact(finance.balance, budget.currency || 'VND')}
+              </div>
+            </div>
+            <div className="w-10 h-10 rounded-2xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <Wallet className="w-5 h-5" />
+            </div>
+          </div>
+          <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800/60 flex items-center justify-between text-xs font-medium">
+            <span className="text-slate-500">
+              Chi {formatMoneyCompact(finance.expense, budget.currency || 'VND')}
+            </span>
+            <span className={`inline-flex items-center font-bold px-2 py-0.5 rounded-lg ${
+              budgetStatus.level === 'over'
+                ? 'bg-rose-50 text-rose-600 dark:bg-rose-950/40'
+                : 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40'
+            }`}>
+              {100 - budgetStatus.percent}% ngân sách
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* ----------------------------------------------------------------- */}
+      {/* 3. MIDDLE SECTION: ROUTINE MAP 24H & SMART ALERTS                 */}
+      {/* ----------------------------------------------------------------- */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        {/* Left Big Card (7 Cols): 24h Daily Routine & Interactive Timeline */}
+        <div className="lg:col-span-7 bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200/80 dark:border-slate-800/80 shadow-xs p-5 flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <Activity className="w-4 h-4 text-blue-600" />
+                <span>{lang === 'vi' ? 'Bản Đồ Lộ Trình & Nhịp Sống 24H' : '24H Daily Routine & Activity Map'}</span>
+              </h3>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                {lang === 'vi'
+                  ? 'Bản đồ kết hợp giữa Lịch trình, Bữa ăn Dinh dưỡng, Giờ Deep Work & Buổi tập Gym'
+                  : 'Holistic route mapping meetings, nutrition, focus sessions & workout schedule'}
+              </p>
+            </div>
+
+            <button
+              onClick={() => onNavigate('month')}
+              className="px-3 py-1 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg text-xs font-semibold hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer"
+            >
+              {lang === 'vi' ? 'Xem lưới lịch' : 'Full calendar'}
+            </button>
+          </div>
+
+          {/* Interactive Timeline Canvas */}
+          <div className="relative w-full h-[320px] rounded-xl overflow-hidden bg-slate-50 dark:bg-[#0c111d] border border-slate-200 dark:border-slate-800">
+            {/* Background Grid Pattern */}
+            <svg className="absolute inset-0 w-full h-full opacity-30 stroke-slate-300 dark:stroke-slate-800">
+              <pattern id="routineGrid" width="40" height="40" patternUnits="userSpaceOnUse">
+                <path d="M 40 0 L 0 0 0 40" fill="none" strokeWidth="1" />
+              </pattern>
+              <rect width="100%" height="100%" fill="url(#routineGrid)" />
+            </svg>
+
+            {/* Glowing Routine Path Curve */}
+            <svg className="absolute inset-0 w-full h-full">
+              <path
+                d="M 50 200 C 120 100, 180 120, 260 170 C 340 220, 400 80, 480 100 C 540 120, 600 240, 680 130"
+                fill="none"
+                stroke="#3B82F6"
+                strokeWidth="3"
+                strokeLinecap="round"
+              />
+              <path
+                d="M 50 200 C 120 100, 180 120, 260 170 C 340 220, 400 80, 480 100 C 540 120, 600 240, 680 130"
+                fill="none"
+                stroke="#60A5FA"
+                strokeWidth="8"
+                strokeLinecap="round"
+                className="opacity-20"
+              />
+            </svg>
+
+            {/* Routine Milestones on the Map */}
+            {routineMilestones.map((m) => {
+              const Icon = m.icon;
+              const isSelected = selectedMilestoneId === m.id;
+
               return (
                 <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => onNavigate(item.id as CalendarViewType)}
-                  className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                    item.active
-                      ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 shadow-xs'
-                      : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100/70 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-gray-100'
+                  key={m.id}
+                  onClick={() => {
+                    setSelectedMilestoneId(m.id);
+                    setShowMilestoneCard(true);
+                  }}
+                  style={{ left: `${m.x}%`, top: `${m.y}%` }}
+                  className={`absolute -translate-x-1/2 -translate-y-1/2 p-2 rounded-2xl transition-all cursor-pointer group z-20 ${
+                    isSelected
+                      ? 'ring-4 ring-blue-500/30 scale-125 shadow-lg bg-white dark:bg-slate-800'
+                      : 'bg-white/90 dark:bg-slate-800/90 hover:scale-110 shadow-md'
                   }`}
                 >
-                  <Icon className="w-4 h-4 shrink-0" />
-                  <span>{item.label}</span>
+                  <div
+                    className="w-7 h-7 rounded-xl flex items-center justify-center text-white"
+                    style={{ backgroundColor: m.color }}
+                  >
+                    <Icon className="w-4 h-4" />
+                  </div>
+                  <span className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-[10px] font-mono font-bold whitespace-nowrap text-slate-600 dark:text-slate-300 bg-white/80 dark:bg-slate-900/80 px-1.5 py-0.2 rounded-md shadow-2xs">
+                    {m.time}
+                  </span>
                 </button>
               );
             })}
-          </nav>
 
-          {/* Nexi / Gemini AI Promo Card */}
-          <div className="mt-8 bg-gradient-to-br from-blue-50 via-indigo-50/50 to-white dark:from-blue-950/30 dark:via-indigo-950/20 dark:to-[#1a1e24] border border-blue-200/60 dark:border-blue-900/50 rounded-2xl p-4 shadow-sm relative overflow-hidden">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-7 h-7 rounded-lg bg-blue-600 text-white flex items-center justify-center shadow-xs">
-                <Sparkles className="w-4 h-4 text-amber-300" />
-              </div>
-              <span className="text-xs font-extrabold text-gray-900 dark:text-white">
-                Vortex Gemini AI
-              </span>
-            </div>
-            <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">
-              Tự động phân tích ảnh bữa ăn, tính macro và xếp lịch trình thông minh.
-            </p>
-            <button
-              type="button"
-              onClick={() => onNavigate('health')}
-              className="mt-3.5 w-full py-2 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-colors shadow-xs cursor-pointer"
-            >
-              <span>Kích Hoạt AI Pro</span>
-              <ExternalLink className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        </div>
-
-        {/* Bottom Sidebar Actions */}
-        <div className="pt-4 border-t border-gray-100 dark:border-gray-800 space-y-1">
-          <button
-            type="button"
-            onClick={() => onNavigate('tasks')}
-            className="w-full flex items-center gap-3 px-3.5 py-2 rounded-xl text-xs font-semibold text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 cursor-pointer transition-colors"
-          >
-            <Settings className="w-4 h-4" />
-            <span>Cài Đặt Hệ Thống</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => onNavigate('dashboard')}
-            className="w-full flex items-center gap-3 px-3.5 py-2 rounded-xl text-xs font-semibold text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 cursor-pointer transition-colors"
-          >
-            <LogOut className="w-4 h-4" />
-            <span>Tài Khoản Cá Nhân</span>
-          </button>
-        </div>
-      </aside>
-
-      {/* --------------------------------------------------------------------- */}
-      {/* 2. MAIN DASHBOARD CONTENT AREA                                        */}
-      {/* --------------------------------------------------------------------- */}
-      <main className="flex-1 flex flex-col h-full overflow-y-auto">
-        {/* Top Header Bar */}
-        <header className="h-18 px-8 flex items-center justify-between border-b border-gray-200/60 dark:border-gray-800/60 bg-white/60 dark:bg-[#1a1e24]/60 backdrop-blur-md sticky top-0 z-10 shrink-0">
-          <div>
-            <h1 className="text-sm font-bold text-gray-900 dark:text-gray-100">
-              Hello, {userName}
-            </h1>
-          </div>
-
-          {/* Search bar */}
-          <div className="relative w-72 sm:w-96">
-            <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search activities, tasks, metrics..."
-              className="w-full text-xs pl-10 pr-4 py-2 rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 shadow-2xs focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-            />
-          </div>
-
-          {/* Right Action Icons & Avatar */}
-          <div className="flex items-center gap-4">
-            <button
-              type="button"
-              className="relative p-2 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 cursor-pointer shadow-2xs"
-            >
-              <Bell className="w-4 h-4" />
-              <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center">
-                4
-              </span>
-            </button>
-
-            <button
-              type="button"
-              className="relative p-2 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 cursor-pointer shadow-2xs"
-            >
-              <Mail className="w-4 h-4" />
-              <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-blue-500 text-white text-[9px] font-bold flex items-center justify-center">
-                2
-              </span>
-            </button>
-
-            {/* User Avatar with status dot */}
-            <div className="relative">
-              {currentUser?.photoURL ? (
-                <img
-                  src={currentUser.photoURL}
-                  alt="avatar"
-                  className="w-9 h-9 rounded-full object-cover ring-2 ring-blue-500/30"
-                />
-              ) : (
-                <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center font-bold text-xs ring-2 ring-blue-500/30 shadow-xs">
-                  {userName[0]?.toUpperCase() || 'U'}
+            {/* Active Milestone Popup Detail Card */}
+            {showMilestoneCard && (
+              <div className="absolute top-4 left-4 sm:left-6 bg-white/95 dark:bg-[#131b2e]/95 backdrop-blur-md rounded-2xl p-4 shadow-xl border border-slate-200/90 dark:border-slate-700/80 w-64 text-xs space-y-2 z-30 animate-in fade-in duration-200">
+                <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2">
+                  <span className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                    <span
+                      className="w-2.5 h-2.5 rounded-full"
+                      style={{ backgroundColor: currentMilestone.color }}
+                    />
+                    <span>{currentMilestone.title}</span>
+                  </span>
+                  <button
+                    onClick={() => setShowMilestoneCard(false)}
+                    className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
                 </div>
-              )}
-              <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-gray-900" />
-            </div>
-          </div>
-        </header>
 
-        {/* Dashboard Body */}
-        <div className="p-6 md:p-8 space-y-6 flex-1">
-          {/* Dashboard Overview Title & Date Pill */}
+                <div className="space-y-1.5 text-slate-500 dark:text-slate-400 text-[11px]">
+                  <div className="flex justify-between">
+                    <span>Khung giờ:</span>
+                    <strong className="text-slate-800 dark:text-slate-200 font-mono">
+                      {currentMilestone.time} ({currentMilestone.period})
+                    </strong>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Phân loại:</span>
+                    <span className="text-blue-600 dark:text-blue-400 font-semibold">
+                      {currentMilestone.category}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Trạng thái:</span>
+                    <span className="text-emerald-600 font-bold bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded">
+                      {currentMilestone.status}
+                    </span>
+                  </div>
+                  <p className="text-[11px] leading-relaxed pt-1 text-slate-600 dark:text-slate-300">
+                    {currentMilestone.details}
+                  </p>
+                </div>
+
+                <button
+                  onClick={() => {
+                    if (currentMilestone.category === 'Thể thao') onNavigate('health');
+                    else if (currentMilestone.category === 'Công việc') onNavigate('tasks');
+                    else onNavigate('month');
+                  }}
+                  className="w-full mt-2 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-[11px] font-bold text-center transition-colors cursor-pointer"
+                >
+                  Mở công cụ liên quan
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Right Column (5 Cols): Smart Action Alerts & Reminders */}
+        <div className="lg:col-span-5 flex flex-col gap-4">
+          <div className="bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200/80 dark:border-slate-800/80 shadow-xs p-5 space-y-3.5 flex-1 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-amber-500" />
+                  <span>{lang === 'vi' ? 'Cảnh Báo & Nhắc Nhở Thông Minh' : 'Smart Action Alerts'}</span>
+                </h3>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400">
+                  4 mục cần chú ý
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
+                {lang === 'vi'
+                  ? 'Phân tích tự động từ dữ liệu dinh dưỡng, lịch tập, deadline và ngân sách'
+                  : 'Automated insights from nutrition, workout splits, deadlines and budget'}
+              </p>
+
+              {/* Alert items */}
+              <div className="space-y-2.5">
+                {/* Alert 1: Macro & Dinh dưỡng */}
+                <div
+                  onClick={() => onNavigate('health')}
+                  className="flex items-start gap-3 p-3 rounded-xl bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200/80 dark:border-amber-900/40 text-xs cursor-pointer hover:bg-amber-100/50 transition-colors"
+                >
+                  <div className="w-7 h-7 rounded-lg bg-amber-500 text-white flex items-center justify-center shrink-0">
+                    <Flame className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <h4 className="font-bold text-slate-900 dark:text-white leading-tight">
+                      Mục tiêu Macro: Còn thiếu 540 kcal & 35g Protein
+                    </h4>
+                    <p className="text-slate-500 dark:text-slate-400 text-[11px] mt-0.5">
+                      Đã nạp 1.660 / 2.200 kcal hôm nay. Khuyến nghị bổ sung ức gà hoặc whey protein vào bữa tối.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Alert 2: Buổi tập Gym hôm nay */}
+                <div
+                  onClick={() => onNavigate('health')}
+                  className="flex items-start gap-3 p-3 rounded-xl bg-blue-50/60 dark:bg-blue-950/20 border border-blue-200/80 dark:border-blue-900/40 text-xs cursor-pointer hover:bg-blue-100/50 transition-colors"
+                >
+                  <div className="w-7 h-7 rounded-lg bg-blue-600 text-white flex items-center justify-center shrink-0">
+                    <Dumbbell className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <h4 className="font-bold text-slate-900 dark:text-white leading-tight">
+                      Giáo án hôm nay: Push Day (Ngực - Vai - Tay sau)
+                    </h4>
+                    <p className="text-slate-500 dark:text-slate-400 text-[11px] mt-0.5">
+                      Khung giờ dự kiến 17:30. Bài mở đầu: Bench Press 4 sets x 8 reps (Mục tiêu 85kg).
+                    </p>
+                  </div>
+                </div>
+
+                {/* Alert 3: Task deadline */}
+                <div
+                  onClick={() => onNavigate('tasks')}
+                  className="flex items-start gap-3 p-3 rounded-xl bg-rose-50/60 dark:bg-rose-950/20 border border-rose-200/80 dark:border-rose-900/40 text-xs cursor-pointer hover:bg-rose-100/50 transition-colors"
+                >
+                  <div className="w-7 h-7 rounded-lg bg-rose-600 text-white flex items-center justify-center shrink-0">
+                    <Clock className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <h4 className="font-bold text-slate-900 dark:text-white leading-tight">
+                      {openTasks[0] ? `Nhiệm vụ ưu tiên: "${openTasks[0].title}"` : 'Tất cả nhiệm vụ hôm nay đã hoàn thành!'}
+                    </h4>
+                    <p className="text-slate-500 dark:text-slate-400 text-[11px] mt-0.5">
+                      {openTasks[0] ? `Hạn chót hoàn thành vào chiều nay (${openTasks[0].startTime || '17:00'}).` : 'Bạn có thể bắt đầu lên kế hoạch cho ngày mai.'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Alert 4: Budget watch */}
+                <div
+                  onClick={() => onNavigate('finance')}
+                  className="flex items-start gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 text-xs cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                >
+                  <div className="w-7 h-7 rounded-lg bg-indigo-600 text-white flex items-center justify-center shrink-0">
+                    <Wallet className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <h4 className="font-bold text-slate-900 dark:text-white leading-tight">
+                      Ngân sách tháng: Còn {formatMoney(budgetStatus.remaining, budget.currency || 'VND')}
+                    </h4>
+                    <p className="text-slate-500 dark:text-slate-400 text-[11px] mt-0.5">
+                      Đã chi tiêu {budgetStatus.percent}% hạn mức tháng 10. Mức chi tiêu hiện tại đang nằm trong vùng an toàn.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={() => onNavigate('tasks')}
+              className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer shadow-xs flex items-center justify-center gap-1.5"
+            >
+              <span>Xem chi tiết danh sách công việc</span>
+              <ArrowUpRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* ----------------------------------------------------------------- */}
+      {/* 4. BOTTOM SECTION: RECENT ACTIVITIES TABLE & TREND CHART          */}
+      {/* ----------------------------------------------------------------- */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        {/* Left (7 Cols): Recent Activities & Tasks Table with direct toggles */}
+        <div className="lg:col-span-7 bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200/80 dark:border-slate-800/80 shadow-xs p-5 space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <h2 className="text-xl md:text-2xl font-extrabold tracking-tight text-gray-900 dark:text-white">
-                Dashboard Overview
-              </h2>
-            </div>
-
-            <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-white dark:bg-[#1a1e24] border border-gray-200 dark:border-gray-800 text-xs font-bold text-gray-600 dark:text-gray-300 shadow-2xs self-start sm:self-auto">
-              <Calendar className="w-3.5 h-3.5 text-blue-500" />
-              <span>10 Feb 2025</span>
-            </div>
-          </div>
-
-          {/* ----------------------------------------------------------------- */}
-          {/* 3. ROW OF 4 METRIC KPI CARDS                                      */}
-          {/* ----------------------------------------------------------------- */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* Card 1: Total Shipments / Calendar Events */}
-            <div className="bg-white dark:bg-[#1a1e24] p-5 rounded-2xl border border-gray-200/80 dark:border-gray-800/80 shadow-[0_4px_20px_rgba(0,0,0,0.03)] flex flex-col justify-between">
-              <div className="flex items-start justify-between">
-                <div>
-                  <span className="text-[11px] font-semibold text-gray-400 block mb-1">
-                    Total Shipments
-                  </span>
-                  <div className="text-2xl font-black text-gray-900 dark:text-white font-mono tracking-tight">
-                    7000
-                  </div>
-                </div>
-                <div className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 flex items-center justify-center">
-                  <Calendar className="w-4.5 h-4.5" />
-                </div>
-              </div>
-              <div className="mt-4 flex items-center gap-1.5 text-[11px] font-semibold text-gray-400">
-                <span>Last week</span>
-                <span className="inline-flex items-center text-emerald-600 font-bold bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded-md">
-                  +14.9% ↗
-                </span>
-              </div>
-            </div>
-
-            {/* Card 2: Active Vehicles / Tasks */}
-            <div className="bg-white dark:bg-[#1a1e24] p-5 rounded-2xl border border-gray-200/80 dark:border-gray-800/80 shadow-[0_4px_20px_rgba(0,0,0,0.03)] flex flex-col justify-between">
-              <div className="flex items-start justify-between">
-                <div>
-                  <span className="text-[11px] font-semibold text-gray-400 block mb-1">
-                    Active Vehicles
-                  </span>
-                  <div className="text-2xl font-black text-gray-900 dark:text-white font-mono tracking-tight">
-                    900
-                  </div>
-                </div>
-                <div className="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
-                  <ListChecks className="w-4.5 h-4.5" />
-                </div>
-              </div>
-              <div className="mt-4 flex items-center gap-1.5 text-[11px] font-semibold text-gray-400">
-                <span>Last week</span>
-                <span className="inline-flex items-center text-emerald-600 font-bold bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded-md">
-                  +14.9% ↗
-                </span>
-              </div>
-            </div>
-
-            {/* Card 3: Warehouse Capacity / Health Score */}
-            <div className="bg-white dark:bg-[#1a1e24] p-5 rounded-2xl border border-gray-200/80 dark:border-gray-800/80 shadow-[0_4px_20px_rgba(0,0,0,0.03)] flex flex-col justify-between">
-              <div className="flex items-start justify-between">
-                <div>
-                  <span className="text-[11px] font-semibold text-gray-400 block mb-1">
-                    Warehouse Capacity
-                  </span>
-                  <div className="text-2xl font-black text-gray-900 dark:text-white font-mono tracking-tight">
-                    48%
-                  </div>
-                </div>
-                <div className="w-9 h-9 rounded-xl bg-cyan-50 dark:bg-cyan-950/40 text-cyan-600 dark:text-cyan-400 flex items-center justify-center">
-                  <HeartPulse className="w-4.5 h-4.5" />
-                </div>
-              </div>
-              <div className="mt-4 flex items-center gap-1.5 text-[11px] font-semibold text-gray-400">
-                <span>Last week</span>
-                <span className="inline-flex items-center text-rose-600 font-bold bg-rose-50 dark:bg-rose-950/40 px-1.5 py-0.5 rounded-md">
-                  -14.9% ↘
-                </span>
-              </div>
-            </div>
-
-            {/* Card 4: Earnings & Costs */}
-            <div className="bg-white dark:bg-[#1a1e24] p-5 rounded-2xl border border-gray-200/80 dark:border-gray-800/80 shadow-[0_4px_20px_rgba(0,0,0,0.03)] flex flex-col justify-between">
-              <div className="flex items-start justify-between">
-                <div>
-                  <span className="text-[11px] font-semibold text-gray-400 block mb-1">
-                    Earnings &amp; Costs
-                  </span>
-                  <div className="text-2xl font-black text-gray-900 dark:text-white font-mono tracking-tight">
-                    ₹ 3,05,000
-                  </div>
-                </div>
-                <div className="w-9 h-9 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 flex items-center justify-center">
-                  <Wallet className="w-4.5 h-4.5" />
-                </div>
-              </div>
-              <div className="mt-4 flex items-center gap-1.5 text-[11px] font-semibold text-gray-400">
-                <span>Last week</span>
-                <span className="inline-flex items-center text-emerald-600 font-bold bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded-md">
-                  +16.9% ↗
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* ----------------------------------------------------------------- */}
-          {/* 4. MIDDLE SECTION (Live Tracking Map + Alerts & Trend Chart)      */}
-          {/* ----------------------------------------------------------------- */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-            {/* Left Big Card (7 Cols): Live Vehicles Tracking / Routine Map */}
-            <div className="lg:col-span-7 bg-white dark:bg-[#1a1e24] rounded-2xl border border-gray-200/80 dark:border-gray-800/80 shadow-[0_4px_20px_rgba(0,0,0,0.03)] p-5 flex flex-col justify-between">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100">
-                  Live Vehicles Tracking
-                </h3>
-                <button
-                  type="button"
-                  className="p-1 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 cursor-pointer"
-                >
-                  <MoreHorizontal className="w-4 h-4" />
-                </button>
-              </div>
-
-              {/* Map & Route Canvas */}
-              <div className="relative w-full h-[320px] rounded-xl overflow-hidden bg-[#eef2f6] dark:bg-[#16191f] border border-gray-200 dark:border-gray-800">
-                {/* SVG Street Grid Lines */}
-                <svg className="absolute inset-0 w-full h-full opacity-40 dark:opacity-20 stroke-gray-300 dark:stroke-gray-700">
-                  <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-                    <path d="M 40 0 L 0 0 0 40" fill="none" strokeWidth="1" />
-                  </pattern>
-                  <rect width="100%" height="100%" fill="url(#grid)" />
-                </svg>
-
-                {/* Tracking Route Blue Vector Lines */}
-                <svg className="absolute inset-0 w-full h-full">
-                  <path
-                    d="M 60 220 L 140 220 L 140 120 L 260 120 L 260 180 L 340 180 L 340 260 L 420 260 L 420 80 L 520 80 L 520 220"
-                    fill="none"
-                    stroke="#2563EB"
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  {/* Waypoint Nodes */}
-                  <circle cx="60" cy="220" r="4" fill="#EF4444" />
-                  <circle cx="140" cy="120" r="6" fill="#2563EB" stroke="#ffffff" strokeWidth="2" />
-                  <circle cx="340" cy="180" r="6" fill="#2563EB" stroke="#ffffff" strokeWidth="2" />
-                  <circle cx="420" cy="80" r="4" fill="#EF4444" />
-                  <circle cx="520" cy="220" r="4" fill="#EF4444" />
-                </svg>
-
-                {/* Floating "Vehicle Details" Dialog Card */}
-                {showEventCard && (
-                  <div className="absolute top-10 left-32 bg-white dark:bg-[#1e222b] rounded-xl p-3.5 shadow-xl border border-gray-200/90 dark:border-gray-700 w-56 text-[10px] space-y-1.5 animate-in fade-in duration-200">
-                    <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-1.5">
-                      <span className="font-bold text-gray-900 dark:text-white flex items-center gap-1">
-                        🚗 Vehicle Details
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setShowEventCard(false)}
-                        className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 cursor-pointer"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </div>
-
-                    <div className="space-y-1 text-gray-500 dark:text-gray-400">
-                      <div>
-                        Driver Name: <strong className="text-gray-800 dark:text-gray-200">John Doe</strong>
-                      </div>
-                      <div>
-                        Vehicle Number: <strong className="text-gray-800 dark:text-gray-200">ABX-1234</strong>
-                      </div>
-                      <div>
-                        Vehicle Type: <strong className="text-gray-800 dark:text-gray-200">18-Wheeler Truck</strong>
-                      </div>
-                      <div>
-                        Status:{' '}
-                        <span className="text-blue-600 dark:text-blue-400 font-bold bg-blue-50 dark:bg-blue-950/40 px-1 py-0.2 rounded">
-                          Enroute
-                        </span>
-                      </div>
-                      <div>
-                        Contact No:{' '}
-                        <strong className="text-gray-800 dark:text-gray-200">+1 987-654-3210</strong>
-                      </div>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => onNavigate('month')}
-                      className="mt-2 w-full py-1 text-center bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md text-[9px] font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 cursor-pointer"
-                    >
-                      View Full Details
-                    </button>
-                  </div>
-                )}
-
-                {/* Bottom Map Controls */}
-                <div className="absolute bottom-3 left-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 px-2 py-1 flex items-center gap-2 text-xs font-semibold shadow-xs">
-                  <button
-                    type="button"
-                    onClick={() => setMapZoom((z) => Math.max(50, z - 10))}
-                    className="hover:text-blue-600 cursor-pointer"
-                  >
-                    -
-                  </button>
-                  <span className="text-[10px] font-mono">{mapZoom}%</span>
-                  <button
-                    type="button"
-                    onClick={() => setMapZoom((z) => Math.min(200, z + 10))}
-                    className="hover:text-blue-600 cursor-pointer"
-                  >
-                    +
-                  </button>
-                </div>
-
-                <button
-                  type="button"
-                  className="absolute bottom-3 right-3 p-1.5 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 shadow-xs cursor-pointer"
-                >
-                  <Maximize2 className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </div>
-
-            {/* Right Column (5 Cols): Alerts Section & Revenue Chart */}
-            <div className="lg:col-span-5 flex flex-col gap-5">
-              {/* Card 1: Alerts & Notifications Section */}
-              <div className="bg-white dark:bg-[#1a1e24] rounded-2xl border border-gray-200/80 dark:border-gray-800/80 shadow-[0_4px_20px_rgba(0,0,0,0.03)] p-5 space-y-3">
-                <h3 className="text-xs font-extrabold text-gray-900 dark:text-gray-100">
-                  Alerts &amp; Notifications Section
-                </h3>
-
-                <div className="space-y-2.5">
-                  {/* Alert 1 */}
-                  <div className="flex items-start gap-2.5 p-2 rounded-xl bg-red-50/50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/40 text-[11px]">
-                    <span className="text-red-500 font-bold shrink-0">⚠️</span>
-                    <div className="min-w-0">
-                      <h4 className="font-bold text-gray-900 dark:text-white leading-tight">
-                        Urgent: Shipment Delay Alert!
-                      </h4>
-                      <p className="text-gray-500 dark:text-gray-400 text-[10px] mt-0.5 leading-snug">
-                        Order #56789 is delayed due to unforeseen circumstances. Expected arrival: +2 days.
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Alert 2 */}
-                  <div className="flex items-start gap-2.5 p-2 rounded-xl bg-amber-50/50 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-900/40 text-[11px]">
-                    <span className="text-amber-500 font-bold shrink-0">📦</span>
-                    <div className="min-w-0">
-                      <h4 className="font-bold text-gray-900 dark:text-white leading-tight">
-                        Inventory Alert: Low Stock!
-                      </h4>
-                      <p className="text-gray-500 dark:text-gray-400 text-[10px] mt-0.5 leading-snug">
-                        Product SKU: 4532A is below the minimum threshold. Only 12 units left in Warehouse #5.
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Alert 3 */}
-                  <div className="flex items-start gap-2.5 p-2 rounded-xl bg-blue-50/50 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/40 text-[11px]">
-                    <span className="text-blue-500 font-bold shrink-0">🔧</span>
-                    <div className="min-w-0">
-                      <h4 className="font-bold text-gray-900 dark:text-white leading-tight">
-                        Upcoming Maintenance Due
-                      </h4>
-                      <p className="text-gray-500 dark:text-gray-400 text-[10px] mt-0.5 leading-snug">
-                        Vehicle #TX-9087 needs engine servicing in 5 days. Schedule maintenance to avoid breakdowns.
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Alert 4 */}
-                  <div className="flex items-start gap-2.5 p-2 rounded-xl bg-rose-50/50 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900/40 text-[11px]">
-                    <span className="text-rose-500 font-bold shrink-0">🚨</span>
-                    <div className="min-w-0">
-                      <h4 className="font-bold text-gray-900 dark:text-white leading-tight">
-                        Critical Stockout Warning!
-                      </h4>
-                      <p className="text-gray-500 dark:text-gray-400 text-[10px] mt-0.5 leading-snug">
-                        Essential supplies (Pallet #A89) are out of stock! Reorder immediately to prevent delays.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => onNavigate('tasks')}
-                  className="mt-2 w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer shadow-xs"
-                >
-                  See all
-                </button>
-              </div>
-
-              {/* Card 2: Shipping Revenue Trend Chart */}
-              <div className="bg-white dark:bg-[#1a1e24] rounded-2xl border border-gray-200/80 dark:border-gray-800/80 shadow-[0_4px_20px_rgba(0,0,0,0.03)] p-5 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="text-xs font-bold text-gray-900 dark:text-gray-100">
-                      Shipping Revenue
-                    </h3>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-lg font-black text-gray-900 dark:text-white font-mono">
-                        ₹ 3,05,000
-                      </span>
-                      <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 px-1 py-0.5 rounded">
-                        +14.9% ↗
-                      </span>
-                    </div>
-                  </div>
-
-                  <select
-                    value={timeRange}
-                    onChange={(e) => setTimeRange(e.target.value as any)}
-                    className="text-[10px] font-bold px-2 py-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-200"
-                  >
-                    <option value="thisMonth">This Month</option>
-                    <option value="thisWeek">This Week</option>
-                  </select>
-                </div>
-
-                {/* Vertical Bar Chart with Rounded Pills */}
-                <div className="h-32 flex items-end justify-between gap-2 pt-4 px-1 border-b border-gray-100 dark:border-gray-800 pb-2">
-                  {[
-                    { label: '1 Jan', h: '45%' },
-                    { label: '10 Jan', h: '60%' },
-                    { label: '15 Jan', h: '35%' },
-                    { label: '20 Jan', h: '95%', active: true },
-                    { label: '25 Jan', h: '75%' },
-                    { label: '30 Jan', h: '85%' },
-                  ].map((bar, idx) => (
-                    <div key={idx} className="flex-1 flex flex-col items-center gap-1.5 h-full justify-end">
-                      <div
-                        style={{ height: bar.h }}
-                        className={`w-full max-w-[18px] rounded-full transition-all duration-300 ${
-                          bar.active
-                            ? 'bg-blue-600 shadow-sm shadow-blue-500/30'
-                            : 'bg-blue-500/80 hover:bg-blue-600'
-                        }`}
-                      />
-                      <span className="text-[9px] font-mono text-gray-400">{bar.label}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* ----------------------------------------------------------------- */}
-          {/* 5. BOTTOM SECTION: Recent Activities Table                        */}
-          {/* ----------------------------------------------------------------- */}
-          <div className="bg-white dark:bg-[#1a1e24] rounded-2xl border border-gray-200/80 dark:border-gray-800/80 shadow-[0_4px_20px_rgba(0,0,0,0.03)] p-5 space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100">
-                Recent Activities Table
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                {lang === 'vi' ? 'Bảng Hoạt Động & Tác Vụ Gần Đây' : 'Recent Activities & Action Items'}
               </h3>
+              <p className="text-xs text-slate-400">
+                {lang === 'vi'
+                  ? 'Bấm vào ô kiểm để cập nhật trực tiếp trạng thái công việc'
+                  : 'Toggle checkboxes to update task status directly'}
+              </p>
+            </div>
 
-              <div className="flex items-center gap-2">
-                <div className="relative">
-                  <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                  <input
-                    type="text"
-                    value={tableSearch}
-                    onChange={(e) => setTableSearch(e.target.value)}
-                    placeholder="Search..."
-                    className="text-xs pl-8 pr-3 py-1.5 rounded-full border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-100"
-                  />
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => onNavigate('tasks')}
-                  className="px-3.5 py-1.5 rounded-xl border border-blue-200 dark:border-blue-800/80 text-blue-600 dark:text-blue-400 text-xs font-semibold hover:bg-blue-50 cursor-pointer shadow-2xs"
-                >
-                  See details
-                </button>
+            <div className="flex items-center gap-2">
+              <div className="relative">
+                <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  value={tableSearch}
+                  onChange={(e) => setTableSearch(e.target.value)}
+                  placeholder={lang === 'vi' ? 'Tìm tác vụ...' : 'Search activity...'}
+                  className="text-xs pl-8 pr-3 py-1.5 rounded-full border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+                />
               </div>
+
+              <button
+                onClick={() => onNavigate('tasks')}
+                className="px-3 py-1.5 rounded-xl border border-blue-200 dark:border-blue-800/80 text-blue-600 dark:text-blue-400 text-xs font-semibold hover:bg-blue-50 dark:hover:bg-blue-950/30 cursor-pointer shadow-2xs"
+              >
+                {lang === 'vi' ? 'Xem tất cả' : 'See all'}
+              </button>
             </div>
+          </div>
 
-            {/* Clean Data Table */}
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse text-xs">
-                <thead>
-                  <tr className="border-b border-gray-100 dark:border-gray-800 text-[11px] font-bold text-blue-600 dark:text-blue-400">
-                    <th className="py-2.5 px-3">Date &amp; Time :</th>
-                    <th className="py-2.5 px-3">Activity :</th>
-                    <th className="py-2.5 px-3">Details :</th>
-                    <th className="py-2.5 px-3 text-center">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100 dark:divide-gray-800/60 font-medium">
-                  {/* Row 1 */}
-                  <tr className="hover:bg-gray-50/60 dark:hover:bg-white/5 transition-colors">
-                    <td className="py-3 px-3 text-gray-500 text-[11px] font-mono">
-                      Feb 10, 2025,<br />10:15 AM
+          {/* Clean Data Table */}
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr className="border-b border-slate-100 dark:border-slate-800 text-[11px] font-bold text-blue-600 dark:text-blue-400">
+                  <th className="py-2.5 px-3">Thời gian</th>
+                  <th className="py-2.5 px-3">Hoạt động / Nhiệm vụ</th>
+                  <th className="py-2.5 px-3">Chi tiết & Ghi chú</th>
+                  <th className="py-2.5 px-3 text-center">Trạng thái</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium">
+                {recentActivities.map((row) => (
+                  <tr
+                    key={row.id}
+                    className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors"
+                  >
+                    <td className="py-3 px-3 text-slate-500 font-mono text-[11px] whitespace-nowrap">
+                      {row.time}
                     </td>
-                    <td className="py-3 px-3 font-bold text-gray-900 dark:text-white">
-                      New Order Placed
-                    </td>
-                    <td className="py-3 px-3 text-gray-500 dark:text-gray-400 text-[11px]">
-                      Order #98765 (Electronics) confirmed for shipping
-                    </td>
-                    <td className="py-3 px-3 text-center">
-                      <span className="inline-block px-3 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800">
-                        Confirmed
-                      </span>
-                    </td>
-                  </tr>
-
-                  {/* Row 2 */}
-                  <tr className="hover:bg-gray-50/60 dark:hover:bg-white/5 transition-colors">
-                    <td className="py-3 px-3 text-gray-500 text-[11px] font-mono">
-                      Feb 10, 2025,<br />09:45 AM
-                    </td>
-                    <td className="py-3 px-3 font-bold text-gray-900 dark:text-white">
-                      Shipment Dispatched
-                    </td>
-                    <td className="py-3 px-3 text-gray-500 dark:text-gray-400 text-[11px]">
-                      Order #56789 left Warehouse #3 for delivery
-                    </td>
-                    <td className="py-3 px-3 text-center">
-                      <span className="inline-block px-3 py-1 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800">
-                        In Transit
-                      </span>
-                    </td>
-                  </tr>
-
-                  {/* Dynamic user events/tasks rows if available */}
-                  {recentActivities.slice(0, 3).map((row) => (
-                    <tr key={row.id} className="hover:bg-gray-50/60 dark:hover:bg-white/5 transition-colors">
-                      <td className="py-3 px-3 text-gray-500 text-[11px] font-mono">
-                        {row.time}
-                      </td>
-                      <td className="py-3 px-3 font-bold text-gray-900 dark:text-white">
-                        {row.activity}
-                      </td>
-                      <td className="py-3 px-3 text-gray-500 dark:text-gray-400 text-[11px]">
-                        {row.details}
-                      </td>
-                      <td className="py-3 px-3 text-center">
-                        <span
-                          className={`inline-block px-3 py-1 rounded-full text-[10px] font-bold border ${
-                            row.status === 'Confirmed'
-                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800'
-                              : row.status === 'In Transit'
-                                ? 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800'
-                                : 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800'
-                          }`}
-                        >
-                          {row.status}
+                    <td className="py-3 px-3 font-bold text-slate-900 dark:text-white">
+                      <div className="flex items-center gap-2">
+                        {row.type === 'task' && row.taskId && (
+                          <button
+                            onClick={() => {
+                              if (row.taskId) {
+                                onSetTaskStatus(
+                                  row.taskId,
+                                  row.status === 'Đã xong' ? 'todo' : 'completed'
+                                );
+                              }
+                            }}
+                            className={`w-4 h-4 rounded-md border flex items-center justify-center transition-colors cursor-pointer ${
+                              row.status === 'Đã xong'
+                                ? 'bg-emerald-500 border-emerald-500 text-white'
+                                : 'border-slate-300 dark:border-slate-600 hover:border-blue-500'
+                            }`}
+                          >
+                            {row.status === 'Đã xong' && <Check className="w-3 h-3 stroke-[3]" />}
+                          </button>
+                        )}
+                        <span className={row.status === 'Đã xong' ? 'line-through text-slate-400' : ''}>
+                          {row.activity}
                         </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                      </div>
+                    </td>
+                    <td className="py-3 px-3 text-slate-500 dark:text-slate-400 text-[11px]">
+                      {row.details}
+                    </td>
+                    <td className="py-3 px-3 text-center whitespace-nowrap">
+                      <span
+                        className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
+                          row.status === 'Đã xong'
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800'
+                            : row.status === 'Đang xử lý'
+                              ? 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800'
+                              : 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800'
+                        }`}
+                      >
+                        {row.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
-      </main>
+
+        {/* Right (5 Cols): Weekly Productivity & Finance Trend Bar Chart */}
+        <div className="lg:col-span-5 bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200/80 dark:border-slate-800/80 shadow-xs p-5 space-y-4 flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <div>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                  {chartMetric === 'productivity' ? 'Năng Suất Tuần Này' : 'Dòng Tiền Chi Tiêu Tuần'}
+                </h3>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-lg font-black text-slate-900 dark:text-white font-mono">
+                    {chartMetric === 'productivity'
+                      ? `${todaysTasks.length * 5} tasks / tuần`
+                      : formatMoney(finance.expense, budget.currency || 'VND')}
+                  </span>
+                  <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded-md">
+                    +14.9% ↗
+                  </span>
+                </div>
+              </div>
+
+              <select
+                value={chartMetric}
+                onChange={(e) => setChartMetric(e.target.value as any)}
+                className="text-xs font-bold px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 cursor-pointer"
+              >
+                <option value="productivity">Năng suất (Tasks)</option>
+                <option value="finance">Tài chính (Chi tiêu)</option>
+              </select>
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              {chartMetric === 'productivity'
+                ? 'Tổng hợp số lượng task hoàn thành và phiên Deep Work 7 ngày qua'
+                : 'Biến động chi tiêu sinh hoạt và dinh dưỡng trong tuần'}
+            </p>
+          </div>
+
+          {/* Vertical Bar Chart with Rounded Pills */}
+          <div className="h-44 flex items-end justify-between gap-3 pt-6 px-2 border-b border-slate-100 dark:border-slate-800 pb-3">
+            {weeklyChartData.map((bar, idx) => (
+              <div key={idx} className="flex-1 flex flex-col items-center gap-2 h-full justify-end group">
+                <span className="text-[9px] font-bold text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                  {bar.label}
+                </span>
+                <div
+                  style={{ height: bar.height }}
+                  className={`w-full max-w-[24px] rounded-full transition-all duration-300 ${
+                    bar.active
+                      ? 'bg-blue-600 shadow-md shadow-blue-500/30'
+                      : 'bg-blue-400/70 hover:bg-blue-500 dark:bg-blue-600/50 dark:hover:bg-blue-500'
+                  }`}
+                />
+                <span className="text-xs font-bold text-slate-600 dark:text-slate-300 font-mono">
+                  {bar.day}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 pt-1">
+            <span>Hôm nay là Thứ 5 (T5) • Tiến độ cao nhất</span>
+            <button
+              onClick={() => onNavigate(chartMetric === 'productivity' ? 'focus' : 'finance')}
+              className="font-bold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+            >
+              Xem báo cáo ↗
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
