@@ -173,3 +173,4 @@ export const IOS_SHORTCUT_RECIPE = `
 }
 5. Thêm tác vụ "Sao chép vào Bộ nhớ tạm" (Copy to Clipboard) hoặc "Mở URL" với trang web VortexCal.
 `;
+

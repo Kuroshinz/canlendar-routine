@@ -91,3 +91,4 @@ assert(parsedBullets[0].protein === 62, `Expected 62g protein, got ${parsedBulle
 assert(parsedBullets[0].slot === 'dinner', `Expected dinner slot, got ${parsedBullets[0].slot}`);
 
 console.log('All Apple Health and Gemini Sync tests passed successfully!');
+

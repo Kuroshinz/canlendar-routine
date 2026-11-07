@@ -908,6 +908,7 @@ export default function App() {
               onScheduleTask={(taskId, dateStr, startTime, endTime) => {
                 productivity.updateTask(taskId, { dueDate: dateStr, startTime, endTime });
               }}
+              currentUser={user}
             />
           )}
 

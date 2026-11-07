@@ -404,3 +404,4 @@ export const GeminiMacroModal: React.FC<GeminiMacroModalProps> = ({
     </div>
   );
 };
+

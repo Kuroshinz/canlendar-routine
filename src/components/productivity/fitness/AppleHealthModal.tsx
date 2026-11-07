@@ -371,3 +371,4 @@ export const AppleHealthModal: React.FC<AppleHealthModalProps> = ({
     </div>
   );
 };
+
