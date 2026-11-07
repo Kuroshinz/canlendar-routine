@@ -36,7 +36,6 @@ interface SidebarProps {
   onViewChange?: (view: CalendarViewType) => void;
   currentView?: CalendarViewType;
   onOpenGeminiMacro?: () => void;
-  onOpenAppleHealth?: () => void;
   onOpenSettings?: () => void;
   onOpenCloudSync?: () => void;
   onGoogleSignIn?: () => Promise<void>;
@@ -59,7 +58,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onViewChange,
   currentView = 'dashboard',
   onOpenGeminiMacro,
-  onOpenAppleHealth,
   onOpenSettings,
   onOpenCloudSync,
   onGoogleSignIn,
@@ -303,8 +301,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
             <p className="text-[11px] leading-relaxed text-slate-600 dark:text-slate-300 mb-3 font-medium">
               {lang === 'vi'
-                ? 'Bóc tách Macro món Việt từ ảnh & đồng bộ Apple Health tự động.'
-                : 'Auto parse Vietnamese food macros & sync Apple Health.'}
+                ? 'Bóc tách Macro món Việt từ ảnh & đồng bộ Google Health tự động.'
+                : 'Auto parse Vietnamese food macros & sync Google Health.'}
             </p>
 
             <button

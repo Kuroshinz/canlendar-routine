@@ -71,8 +71,6 @@ import { TrainingTab } from './fitness/TrainingTab';
 import { NutritionTab } from './fitness/NutritionTab';
 import { ProfileTab } from './fitness/ProfileTab';
 import { RoadmapTab } from './fitness/RoadmapTab';
-import { AppleHealthModal } from './fitness/AppleHealthModal';
-import { AppleHealthDayData } from '../../services/appleHealthSync';
 
 export interface HealthViewProps {
   healthLogs: HealthDayLog[];
@@ -199,7 +197,6 @@ export const HealthView: React.FC<HealthViewProps> = ({
     result: GoogleHealthSyncResult | null;
     message?: string;
   }>({ running: false, result: null });
-  const [showAppleHealthModal, setShowAppleHealthModal] = useState(false);
 
   // --- Workout form state
   const [woName, setWoName] = useState('');
@@ -359,41 +356,6 @@ export const HealthView: React.FC<HealthViewProps> = ({
     }
   };
 
-  const handleApplyAppleHealthData = (dataList: AppleHealthDayData[]) => {
-    for (const data of dataList) {
-      const existingLog = healthLogs.find((l) => l.date === data.date) || {
-        date: data.date,
-        source: 'manual',
-      };
-      const updated: HealthDayLog = {
-        ...existingLog,
-        date: data.date,
-        source: 'manual',
-      };
-      if (data.steps !== undefined) updated.steps = data.steps;
-      if (data.activeEnergyKcal !== undefined) updated.caloriesBurned = data.activeEnergyKcal;
-      if (data.sleepHours !== undefined) updated.sleepHours = data.sleepHours;
-      if (data.waterMl !== undefined) updated.waterMl = data.waterMl;
-      if (data.weightKg !== undefined) updated.weightKg = data.weightKg;
-
-      onUpsertHealthLog(updated);
-
-      if (data.weightKg !== undefined && onAddBodyPoint) {
-        onAddBodyPoint({
-          date: data.date,
-          weightKg: data.weightKg,
-          bodyFatPct: data.bodyFatPct || ctgProfile.targetBodyFatPct,
-          note: 'Đồng bộ từ Apple Health',
-        });
-      }
-    }
-    setSyncState({
-      running: false,
-      result: null,
-      message: `Đã đồng bộ thành công ${dataList.length} ngày từ Apple Health!`,
-    });
-  };
-
   const handleSubmitWorkout = (e: React.FormEvent) => {
     e.preventDefault();
     if (!woName.trim()) return;
@@ -489,15 +451,6 @@ export const HealthView: React.FC<HealthViewProps> = ({
             onChange={(e) => setSelectedDate(e.target.value)}
             className="text-xs px-2.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200"
           />
-          <button
-            type="button"
-            onClick={() => setShowAppleHealthModal(true)}
-            className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white rounded-xl text-xs font-semibold shadow-xs transition-colors cursor-pointer shrink-0"
-            title="Đồng bộ số bước chân, calo đốt, cân nặng và giấc ngủ từ iPhone Apple Health"
-          >
-            <span className="font-bold text-sm leading-none"></span>
-            <span>Apple Health</span>
-          </button>
           <button
             onClick={handleSync}
             disabled={syncState.running}
@@ -653,8 +606,10 @@ export const HealthView: React.FC<HealthViewProps> = ({
                 <div className="opacity-80 mt-0.5">
                   {syncState.result!.source === 'google-fit'
                     ? lang === 'vi'
-                      ? 'Số liệu lấy trực tiếp từ Google Fit API.'
-                      : 'Metrics fetched from the Google Fit API.'
+                      ? (syncState.result!.metrics.steps || 0) === 0 && (syncState.result!.metrics.caloriesBurned || 0) === 0
+                        ? 'Kết nối Google Fit thành công nhưng tài khoản Google của bạn chưa có dữ liệu bước chân/calo cho ngày này. Hãy đảm bảo điện thoại hoặc đồng hồ đã đồng bộ dữ liệu vào Google Fit.'
+                        : `Số liệu lấy trực tiếp từ Google Fit API (${(syncState.result!.metrics.steps || 0).toLocaleString()} bước, ${syncState.result!.metrics.caloriesBurned || 0} kcal).`
+                      : 'Metrics fetched directly from Google Fit API.'
                     : lang === 'vi'
                       ? 'Đang dùng số liệu mô phỏng (tài khoản chưa cấp quyền Google Fit hoặc chưa có dữ liệu ngày này).'
                       : 'Using simulated metrics (Google Fit scope not granted or no data recorded for this date).'}
@@ -1105,14 +1060,6 @@ export const HealthView: React.FC<HealthViewProps> = ({
       </div>
       </>
       )}
-
-      {/* Apple Health Modal */}
-      <AppleHealthModal
-        isOpen={showAppleHealthModal}
-        onClose={() => setShowAppleHealthModal(false)}
-        onApplyAppleHealthData={handleApplyAppleHealthData}
-        selectedDate={selectedDate}
-      />
     </div>
   );
 };

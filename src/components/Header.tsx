@@ -31,7 +31,6 @@ interface HeaderProps {
   onOpenExportImport: () => void;
   onOpenCloudSync?: () => void;
   onGoogleSignIn?: () => Promise<void>;
-  onOpenAppleHealth?: () => void;
   onOpenGeminiMacro?: () => void;
   onToggleRightDrawer?: () => void;
   searchQuery: string;
@@ -58,7 +57,6 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenExportImport,
   onOpenCloudSync,
   onGoogleSignIn,
-  onOpenAppleHealth,
   onOpenGeminiMacro,
   onToggleRightDrawer,
   searchQuery,
@@ -148,18 +146,6 @@ export const Header: React.FC<HeaderProps> = ({
           <span className="hidden md:inline">{lang === 'vi' ? 'Tạo mới' : 'Create'}</span>
         </button>
 
-        {/* Apple Health & Gemini Sync button */}
-        {onOpenAppleHealth && (
-          <button
-            onClick={onOpenAppleHealth}
-            title={lang === 'vi' ? 'Đồng bộ Apple Health' : 'Sync Apple Health'}
-            className="p-2 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer hidden sm:flex items-center justify-center relative"
-          >
-            <Smartphone className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-            <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-500" />
-          </button>
-        )}
-
         {/* Gemini AI Macro Studio quick button */}
         {onOpenGeminiMacro && (
           <button
@@ -232,12 +218,12 @@ export const Header: React.FC<HeaderProps> = ({
                     <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
                     <div>
                       <p className="font-semibold text-slate-800 dark:text-slate-200">
-                        {lang === 'vi' ? 'Đồng bộ Apple Health' : 'Apple Health Synced'}
+                        {lang === 'vi' ? 'Đồng bộ Google Health' : 'Google Health Synced'}
                       </p>
                       <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
                         {lang === 'vi'
-                          ? 'Đã tải 6.345 bước chân & 8.1 giờ ngủ từ thiết bị.'
-                          : 'Loaded 6,345 steps & 8.1 hrs sleep from device.'}
+                          ? 'Đã cập nhật chỉ số bước chân & giấc ngủ vào hệ thống.'
+                          : 'Loaded steps & sleep from Google Fit.'}
                       </p>
                     </div>
                   </div>

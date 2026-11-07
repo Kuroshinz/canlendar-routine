@@ -53,9 +53,7 @@ import {
 } from './services/firestoreSync';
 import { Bell, FileText } from 'lucide-react';
 import { CalendarActionBar } from './components/CalendarActionBar';
-import { AppleHealthModal } from './components/productivity/fitness/AppleHealthModal';
 import { GeminiMacroModal } from './components/productivity/fitness/GeminiMacroModal';
-import { AppleHealthDayData } from './services/appleHealthSync';
 import { GeminiMacroItem } from './services/geminiSync';
 
 export default function App() {
@@ -206,28 +204,8 @@ export default function App() {
   const [isExportImportOpen, setIsExportImportOpen] = useState(false);
   const [isCloudSyncOpen, setIsCloudSyncOpen] = useState(false);
   const [isMultiHubOpen, setIsMultiHubOpen] = useState(false);
-  const [isAppleHealthOpen, setIsAppleHealthOpen] = useState(false);
   const [isGeminiMacroOpen, setIsGeminiMacroOpen] = useState(false);
   const [isRightDrawerOpen, setIsRightDrawerOpen] = useState(false);
-
-  const handleApplyAppleHealthData = useCallback(
-    (data: AppleHealthDayData[]) => {
-      data.forEach((item) => {
-        const existing = productivity.healthLogs.find((l) => l.date === item.date) || { date: item.date };
-        productivity.upsertHealthLog({
-          ...existing,
-          steps: item.steps ?? existing.steps,
-          waterMl: item.waterMl ?? existing.waterMl,
-          sleepHours: item.sleepHours ?? existing.sleepHours,
-          caloriesBurned: item.activeEnergyKcal ?? existing.caloriesBurned,
-          weightKg: item.weightKg ?? existing.weightKg,
-          source: 'apple_health',
-        });
-      });
-      setIsAppleHealthOpen(false);
-    },
-    [productivity.healthLogs, productivity.upsertHealthLog]
-  );
 
   const handleApplyGeminiMacros = useCallback(
     (items: GeminiMacroItem[]) => {
@@ -814,7 +792,6 @@ export default function App() {
         onViewChange={handleViewChange}
         currentView={view}
         onOpenGeminiMacro={() => setIsGeminiMacroOpen(true)}
-        onOpenAppleHealth={() => setIsAppleHealthOpen(true)}
         onOpenSettings={() => setIsShortcutsOpen(true)}
         onOpenCloudSync={() => setIsCloudSyncOpen(true)}
         onGoogleSignIn={handleGoogleSignIn}
@@ -838,7 +815,6 @@ export default function App() {
           onOpenExportImport={() => setIsExportImportOpen(true)}
           onOpenCloudSync={() => setIsCloudSyncOpen(true)}
           onGoogleSignIn={handleGoogleSignIn}
-          onOpenAppleHealth={() => setIsAppleHealthOpen(true)}
           onOpenGeminiMacro={() => setIsGeminiMacroOpen(true)}
           onToggleRightDrawer={() => setIsRightDrawerOpen((prev) => !prev)}
           userEmail={user?.email || 'admin@vortexcal.io'}
@@ -1330,14 +1306,6 @@ export default function App() {
         onNavigate={handleViewChange}
         store={productivity}
         categories={categories}
-      />
-
-      {/* Global Apple Health Sync Modal */}
-      <AppleHealthModal
-        isOpen={isAppleHealthOpen}
-        onClose={() => setIsAppleHealthOpen(false)}
-        onApplyAppleHealthData={handleApplyAppleHealthData}
-        selectedDate={formatDateString(currentDate)}
       />
 
       {/* Global Gemini AI Macro Studio Modal */}

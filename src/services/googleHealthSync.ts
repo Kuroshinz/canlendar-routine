@@ -44,11 +44,14 @@ export function isGoogleHealthConfigured(): boolean {
   return true;
 }
 
-/** Midnight (local) epoch millis for a `YYYY-MM-DD` string. */
+/** Midnight (local) epoch millis for a `YYYY-MM-DD` string, safely bounded. */
 function dayBounds(date: string): { start: number; end: number } {
   const [y, m, d] = date.split('-').map(Number);
   const start = new Date(y, m - 1, d, 0, 0, 0, 0).getTime();
-  const end = new Date(y, m - 1, d + 1, 0, 0, 0, 0).getTime();
+  const dayEnd = new Date(y, m - 1, d + 1, 0, 0, 0, 0).getTime();
+  const now = Date.now();
+  // Google Fit rejects endTimeMillis in the future; clamp to current timestamp if querying today
+  const end = Math.min(dayEnd, Math.max(start + 60_000, now));
   return { start, end };
 }
 
@@ -58,6 +61,7 @@ interface AggregateBucket {
   dataset?: Array<{
     dataSourceId?: string;
     point?: Array<{
+      dataTypeName?: string;
       value?: Array<{ intVal?: number; fpVal?: number }>;
     }>;
   }>;
@@ -89,17 +93,17 @@ export async function fetchGoogleHealthMetrics(
   const body = {
     aggregateBy: [
       { dataTypeName: 'com.google.step_count.delta' },
-      { dataTypeName: 'com.google.calories.expired' },
-      { dataTypeName: 'com.google.heart_rate.bpm' },
+      { dataTypeName: 'com.google.calories.expended' },
+      { dataTypeName: 'com.google.heart_rate.summary' },
       { dataTypeName: 'com.google.sleep.segment' },
-      { dataTypeName: 'com.google.weight' },
+      { dataTypeName: 'com.google.weight.summary' },
     ],
-    bucketByTime: { durationMillis: end - start },
+    bucketByTime: { durationMillis: Math.max(end - start, 60_000) },
     startTimeMillis: start,
     endTimeMillis: end,
   };
 
-  const res = await fetch(FITNESS_API, {
+  let res = await fetch(FITNESS_API, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -109,16 +113,50 @@ export async function fetchGoogleHealthMetrics(
     body: JSON.stringify(body),
   });
 
+  // If complex aggregate fails, retry with core steps and calories
+  if (!res.ok) {
+    const fallbackBody = {
+      aggregateBy: [
+        { dataTypeName: 'com.google.step_count.delta' },
+        { dataTypeName: 'com.google.calories.expended' },
+      ],
+      bucketByTime: { durationMillis: Math.max(end - start, 60_000) },
+      startTimeMillis: start,
+      endTimeMillis: end,
+    };
+    const fallbackRes = await fetch(FITNESS_API, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      body: JSON.stringify(fallbackBody),
+    });
+    if (fallbackRes.ok) {
+      res = fallbackRes;
+    }
+  }
+
   if (!res.ok) {
     const detail = await res.text();
     console.error('Google Fitness aggregate error:', detail);
+    let errMsg = `Google Health API Error: ${res.status}`;
+    try {
+      const parsed = JSON.parse(detail);
+      if (parsed.error?.message) {
+        errMsg += ` (${parsed.error.message})`;
+      }
+    } catch {
+      if (detail) errMsg += ` (${detail.slice(0, 100)})`;
+    }
     if (res.status === 401) {
-      throw new Error('Google Health API Error: 401 (Token hết hạn hoặc chưa cấp quyền Fitness)');
+      throw new Error(`Google Health API Error: 401 (Token hết hạn hoặc chưa cấp quyền Fitness) - ${errMsg}`);
     }
     if (res.status === 403) {
-      throw new Error('Google Health API Error: 403 (Cần bật Fitness API trên Google Cloud Console)');
+      throw new Error(`Google Health API Error: 403 (Cần bật Fitness API hoặc thêm tài khoản vào Test Users) - ${errMsg}`);
     }
-    throw new Error(`Google Health API Error: ${res.status}`);
+    throw new Error(errMsg);
   }
 
   const data = await res.json();
@@ -127,20 +165,20 @@ export async function fetchGoogleHealthMetrics(
 
   for (const bucket of buckets) {
     for (const ds of bucket.dataset || []) {
-      const id = ds.dataSourceId || '';
+      const id = ((ds.dataSourceId || '') + (ds.point?.[0]?.dataTypeName || '')).toLowerCase();
       const points = ds.point || [];
       if (id.includes('step_count')) {
         metrics.steps = Math.round(sumBucket({ dataset: [ds] }));
-      } else if (id.includes('calories.expired')) {
+      } else if (id.includes('calories.expended') || id.includes('calories')) {
         metrics.caloriesBurned = Math.round(sumBucket({ dataset: [ds] }));
-      } else if (id.includes('heart_rate.bpm')) {
+      } else if (id.includes('heart_rate')) {
         const values = points
           .map((p) => p.value?.[0]?.fpVal)
           .filter((v): v is number => typeof v === 'number');
         if (values.length > 0) {
           metrics.heartRateBpm = Math.round(values.reduce((a, b) => a + b, 0) / values.length);
         }
-      } else if (id.includes('sleep.segment')) {
+      } else if (id.includes('sleep')) {
         // Sleep segments arrive in milliseconds; convert to hours.
         metrics.sleepHours = Math.round((sumBucket({ dataset: [ds] }) / 3_600_000) * 10) / 10;
       } else if (id.includes('weight')) {
