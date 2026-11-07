@@ -393,6 +393,11 @@ export const HealthView: React.FC<HealthViewProps> = ({
       if (result.error && (result.error.includes('401') || result.error.includes('403'))) {
         clearAccessToken();
         setHasStoredToken(false);
+        // Automatically prompt fresh Google Sign-in to get valid token
+        try {
+          await handleDirectGoogleSignIn();
+          return;
+        } catch {}
       }
       applySyncResult(result);
     } catch (err: any) {
@@ -862,8 +867,10 @@ export const HealthView: React.FC<HealthViewProps> = ({
                           để làm mới phiên làm việc.
                         </p>
                       )}
-                      {!syncState.result.error.includes('403') && !syncState.result.error.includes('401') && (
-                        <p>{syncState.result.error}</p>
+                      {syncState.result.error && (
+                        <div className="p-2 rounded-lg bg-black/5 dark:bg-black/30 font-mono text-[10px] break-all border border-amber-300/40 dark:border-amber-800/40 text-amber-900 dark:text-amber-200">
+                          {syncState.result.error}
+                        </div>
                       )}
                     </div>
 
