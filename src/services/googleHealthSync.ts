@@ -36,12 +36,12 @@ const FITNESS_API = 'https://www.googleapis.com/fitness/v1/users/me/dataset:aggr
 const ENABLED_FLAG = (import.meta.env?.VITE_GOOGLE_HEALTH_ENABLED as string | undefined) || '';
 
 /**
- * Health sync is opt-in: it needs the Fitness API scope on the access token,
- * which the default calendar sign-in does not request.
+ * Health sync is active by default whenever an access token with Fitness scopes
+ * is available. Can be explicitly disabled with VITE_GOOGLE_HEALTH_ENABLED=false.
  */
 export function isGoogleHealthConfigured(): boolean {
-  if (ENABLED_FLAG === 'true' || ENABLED_FLAG === '1') return true;
-  return false;
+  if (ENABLED_FLAG === 'false' || ENABLED_FLAG === '0') return false;
+  return true;
 }
 
 /** Midnight (local) epoch millis for a `YYYY-MM-DD` string. */

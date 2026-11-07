@@ -57,7 +57,7 @@ import {
 } from '../../utils/productivityUtils';
 import { calculateDailyHealthScore } from '../../utils/fitnessMetrics';
 import { formatDateString } from '../../utils/calendarUtils';
-import { getAccessToken } from '../../services/auth';
+import { getAccessToken, googleSignIn } from '../../services/auth';
 import {
   GoogleHealthSyncResult,
   healthSourceLabel,
@@ -259,24 +259,69 @@ export const HealthView: React.FC<HealthViewProps> = ({
     );
   };
 
+  const applySyncResult = (result: GoogleHealthSyncResult) => {
+    const next: HealthDayLog = {
+      ...selectedLog,
+      date: selectedDate,
+      source: result.source === 'google-fit' ? 'google-fit' : 'mock',
+    };
+    if (typeof result.metrics.steps === 'number') next.steps = result.metrics.steps;
+    if (typeof result.metrics.caloriesBurned === 'number') next.caloriesBurned = result.metrics.caloriesBurned;
+    if (typeof result.metrics.sleepHours === 'number') next.sleepHours = result.metrics.sleepHours;
+    if (typeof result.metrics.weightKg === 'number') next.weightKg = result.metrics.weightKg;
+
+    onUpsertHealthLog(next);
+
+    if (result.metrics.weightKg && onAddBodyPoint) {
+      onAddBodyPoint({
+        date: selectedDate,
+        weightKg: result.metrics.weightKg,
+        bodyFatPct: ctgProfile.targetBodyFatPct,
+        note: result.source === 'google-fit' ? 'Đồng bộ từ Google Fit' : 'Mô phỏng Google Health',
+      });
+    }
+
+    setSyncState({ running: false, result });
+  };
+
   const handleSync = async () => {
     setSyncState({ running: true, result: null });
     try {
-      const token = await getAccessToken();
-      const result = await syncGoogleHealth({ date: selectedDate, accessToken: token });
+      let token = await getAccessToken();
+      if (!token) {
+        // 1-Click: if user not logged in yet, prompt Google Sign-In with fitness scopes
+        try {
+          const authRes = await googleSignIn();
+          token = authRes.accessToken;
+        } catch {
+          setSyncState({
+            running: false,
+            result: null,
+            message:
+              lang === 'vi'
+                ? 'Đã hủy đăng nhập Google Health.'
+                : 'Google Health sign-in cancelled.',
+          });
+          return;
+        }
+      }
 
-      const next: HealthDayLog = {
-        ...selectedLog,
-        date: selectedDate,
-        source: result.source === 'google-fit' ? 'google-fit' : 'mock',
-      };
-      if (typeof result.metrics.steps === 'number') next.steps = result.metrics.steps;
-      if (typeof result.metrics.caloriesBurned === 'number') next.caloriesBurned = result.metrics.caloriesBurned;
-      if (typeof result.metrics.sleepHours === 'number') next.sleepHours = result.metrics.sleepHours;
-      if (typeof result.metrics.weightKg === 'number') next.weightKg = result.metrics.weightKg;
+      let result = await syncGoogleHealth({ date: selectedDate, accessToken: token });
 
-      onUpsertHealthLog(next);
-      setSyncState({ running: false, result });
+      // If token expired or lacking scope, prompt quick re-auth popup
+      if (result.error && (result.error.includes('401') || result.error.includes('403'))) {
+        try {
+          const authRes = await googleSignIn();
+          result = await syncGoogleHealth({
+            date: selectedDate,
+            accessToken: authRes.accessToken,
+          });
+        } catch {
+          // ignore popup cancel
+        }
+      }
+
+      applySyncResult(result);
     } catch (err: any) {
       setSyncState({
         running: false,
@@ -428,7 +473,8 @@ export const HealthView: React.FC<HealthViewProps> = ({
           <button
             onClick={handleSync}
             disabled={syncState.running}
-            className="flex items-center gap-1.5 px-3.5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white rounded-xl text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:opacity-60 text-white rounded-xl text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+            title={lang === 'vi' ? 'Đồng bộ 1-nhấn từ Google Fit API' : '1-Click sync from Google Fit API'}
           >
             <RefreshCw className={`w-4 h-4 ${syncState.running ? 'animate-spin' : ''}`} />
             <span>
@@ -437,8 +483,8 @@ export const HealthView: React.FC<HealthViewProps> = ({
                   ? 'Đang đồng bộ...'
                   : 'Syncing...'
                 : lang === 'vi'
-                  ? 'Đồng bộ Google Health'
-                  : 'Sync with Google Health'}
+                  ? 'Đồng bộ Google Health (1-Nhấn)'
+                  : 'Sync Google Health (1-Click)'}
             </span>
           </button>
         </div>
@@ -582,8 +628,8 @@ export const HealthView: React.FC<HealthViewProps> = ({
                       ? 'Số liệu lấy trực tiếp từ Google Fit API.'
                       : 'Metrics fetched from the Google Fit API.'
                     : lang === 'vi'
-                      ? 'Chưa có kết nối Google Health thật (thiếu access token có scope Fitness hoặc biến môi trường VITE_GOOGLE_HEALTH_ENABLED). Số liệu bên dưới là mô phỏng để giao diện hoạt động đầy đủ.'
-                      : 'No real Google Health connection yet (missing a Fitness-scoped access token or VITE_GOOGLE_HEALTH_ENABLED). The numbers below are simulated so the UI stays fully usable.'}
+                      ? 'Đang dùng số liệu mô phỏng (tài khoản chưa cấp quyền Google Fit hoặc chưa có dữ liệu ngày này).'
+                      : 'Using simulated metrics (Google Fit scope not granted or no data recorded for this date).'}
                 </div>
                 {syncState.result!.error && (
                   <div className="opacity-70 mt-0.5 font-mono text-[10px]">{syncState.result!.error}</div>
