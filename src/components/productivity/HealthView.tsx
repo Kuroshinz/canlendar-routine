@@ -17,6 +17,7 @@ import {
   Utensils,
   User,
   Compass,
+  Key,
 } from 'lucide-react';
 import {
   BodyCheckPhoto,
@@ -58,6 +59,7 @@ import {
 import { calculateDailyHealthScore } from '../../utils/fitnessMetrics';
 import { formatDateString } from '../../utils/calendarUtils';
 import { getAccessToken, googleSignIn } from '../../services/auth';
+import { requestRealGoogleOAuthToken } from '../../services/realGoogleAuth';
 import {
   GoogleHealthSyncResult,
   healthSourceLabel,
@@ -284,41 +286,67 @@ export const HealthView: React.FC<HealthViewProps> = ({
     setSyncState({ running: false, result });
   };
 
-  const handleSync = async () => {
+  const handleReauthAndSync = async () => {
     setSyncState({ running: true, result: null });
     try {
-      let token = await getAccessToken();
-      if (!token) {
-        // 1-Click: if user not logged in yet, prompt Google Sign-In with fitness scopes
+      localStorage.removeItem('gcal_real_access_token');
+      let token: string | null = null;
+
+      // 1. Try GIS first if available
+      if (typeof window !== 'undefined' && window.google?.accounts?.oauth2) {
         try {
-          const authRes = await googleSignIn();
-          token = authRes.accessToken;
+          token = await requestRealGoogleOAuthToken();
+          localStorage.setItem('gcal_real_access_token', token);
         } catch {
-          setSyncState({
-            running: false,
-            result: null,
-            message:
-              lang === 'vi'
-                ? 'Đã hủy đăng nhập Google Health.'
-                : 'Google Health sign-in cancelled.',
-          });
-          return;
+          // fallback
         }
       }
 
-      let result = await syncGoogleHealth({ date: selectedDate, accessToken: token });
+      // 2. Try onGoogleSignIn prop if provided
+      if (!token && onGoogleSignIn) {
+        await onGoogleSignIn();
+        token = await getAccessToken();
+      }
 
-      // If token expired or lacking scope, prompt quick re-auth popup
-      if (result.error && (result.error.includes('401') || result.error.includes('403'))) {
-        try {
-          const authRes = await googleSignIn();
-          result = await syncGoogleHealth({
-            date: selectedDate,
-            accessToken: authRes.accessToken,
-          });
-        } catch {
-          // ignore popup cancel
-        }
+      // 3. Fallback to Firebase popup
+      if (!token) {
+        const authRes = await googleSignIn();
+        token = authRes.accessToken;
+      }
+
+      if (!token) {
+        throw new Error(
+          lang === 'vi'
+            ? 'Chưa nhận được quyền xác thực từ Google.'
+            : 'No access token received from Google.'
+        );
+      }
+
+      const result = await syncGoogleHealth({ date: selectedDate, accessToken: token });
+      applySyncResult(result);
+    } catch (err: any) {
+      setSyncState({
+        running: false,
+        result: null,
+        message: err?.message || (lang === 'vi' ? 'Đăng nhập Google thất bại' : 'Google sign-in failed'),
+      });
+    }
+  };
+
+  const handleSync = async () => {
+    setSyncState({ running: true, result: null });
+    try {
+      const token = await getAccessToken();
+      if (!token) {
+        await handleReauthAndSync();
+        return;
+      }
+
+      const result = await syncGoogleHealth({ date: selectedDate, accessToken: token });
+
+      // If token expired (401), clean stale token from storage immediately
+      if (result.error && result.error.includes('401')) {
+        localStorage.removeItem('gcal_real_access_token');
       }
 
       applySyncResult(result);
@@ -632,7 +660,21 @@ export const HealthView: React.FC<HealthViewProps> = ({
                       : 'Using simulated metrics (Google Fit scope not granted or no data recorded for this date).'}
                 </div>
                 {syncState.result!.error && (
-                  <div className="opacity-70 mt-0.5 font-mono text-[10px]">{syncState.result!.error}</div>
+                  <div className="mt-2.5 pt-2 border-t border-amber-200/80 dark:border-amber-900/60 flex flex-wrap items-center gap-2.5">
+                    <span className="opacity-90 font-mono text-[11px] text-amber-800 dark:text-amber-200">
+                      {syncState.result!.error.includes('401')
+                        ? (lang === 'vi' ? 'Phiên đăng nhập Google đã hết hạn (401 Unauthorized).' : 'Google access token expired (401 Unauthorized).')
+                        : syncState.result!.error}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleReauthAndSync}
+                      className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 active:scale-95 text-white rounded-lg text-xs font-bold shadow-xs transition-all cursor-pointer inline-flex items-center gap-1.5"
+                    >
+                      <Key className="w-3.5 h-3.5" />
+                      <span>{lang === 'vi' ? 'Đăng nhập lại để cấp quyền Google Fit' : 'Re-authenticate with Google'}</span>
+                    </button>
+                  </div>
                 )}
               </>
             )}

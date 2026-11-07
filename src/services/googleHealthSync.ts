@@ -112,6 +112,12 @@ export async function fetchGoogleHealthMetrics(
   if (!res.ok) {
     const detail = await res.text();
     console.error('Google Fitness aggregate error:', detail);
+    if (res.status === 401) {
+      throw new Error('Google Health API Error: 401 (Token hết hạn hoặc chưa cấp quyền Fitness)');
+    }
+    if (res.status === 403) {
+      throw new Error('Google Health API Error: 403 (Cần bật Fitness API trên Google Cloud Console)');
+    }
     throw new Error(`Google Health API Error: ${res.status}`);
   }
 
