@@ -202,6 +202,7 @@ export const HealthView: React.FC<HealthViewProps> = ({
 
   const [showWorkoutForm, setShowWorkoutForm] = useState(false);
   const [manualTokenInput, setManualTokenInput] = useState('');
+  const [customClientIdInput, setCustomClientIdInput] = useState(() => localStorage.getItem('gcal_custom_client_id') || '');
   const [showTokenSettings, setShowTokenSettings] = useState(false);
   const [hasStoredToken, setHasStoredToken] = useState(() => Boolean(getStoredAccessTokenSync()));
   const [syncState, setSyncState] = useState<{
@@ -307,8 +308,28 @@ export const HealthView: React.FC<HealthViewProps> = ({
     clearAccessToken();
     setHasStoredToken(false);
 
+    // 1. If user configured a custom Google OAuth Client ID, use Google Identity Services directly
+    const customId = localStorage.getItem('gcal_custom_client_id');
+    if (customId && typeof window !== 'undefined' && window.google?.accounts?.oauth2) {
+      try {
+        const gisToken = await requestRealGoogleOAuthToken(customId);
+        setAccessToken(gisToken);
+        setHasStoredToken(true);
+        const result = await syncGoogleHealth({ date: selectedDate, accessToken: gisToken });
+        applySyncResult(result);
+        return;
+      } catch (gisErr: any) {
+        setSyncState({
+          running: false,
+          result: null,
+          message: gisErr?.message || 'Đăng nhập Google với Client ID thất bại.',
+        });
+        return;
+      }
+    }
+
     try {
-      // 1. Firebase OAuth Popup with Fitness Scopes
+      // 2. Firebase OAuth Popup with Fitness Scopes
       const authRes = await googleSignIn();
       const token = authRes.accessToken;
       if (!token) {
@@ -321,7 +342,7 @@ export const HealthView: React.FC<HealthViewProps> = ({
       applySyncResult(result);
     } catch (err: any) {
       console.warn('Firebase popup sign-in failed, trying GIS:', err);
-      // 2. Fallback to GIS Token Client
+      // 3. Fallback to GIS Token Client
       if (typeof window !== 'undefined' && window.google?.accounts?.oauth2) {
         try {
           const gisToken = await requestRealGoogleOAuthToken();
@@ -591,6 +612,54 @@ export const HealthView: React.FC<HealthViewProps> = ({
             >
               {lang === 'vi' ? 'Đồng bộ bằng Token này' : 'Sync with this Token'}
             </button>
+          </div>
+
+          {/* Google OAuth Client ID config for user's own project */}
+          <div className="p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/70 dark:bg-slate-900/60 space-y-1.5">
+            <div className="flex items-center justify-between">
+              <span className="font-semibold text-[11px] text-slate-800 dark:text-slate-200">
+                {lang === 'vi' ? 'Google OAuth Client ID của bạn (Từ dự án Google Cloud cá nhân):' : 'Custom Google OAuth Client ID:'}
+              </span>
+              {customClientIdInput && (
+                <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">
+                  {lang === 'vi' ? 'Đã lưu' : 'Saved'}
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                placeholder="123456789-xxxxxxxx.apps.googleusercontent.com"
+                value={customClientIdInput}
+                onChange={(e) => {
+                  const val = e.target.value.trim();
+                  setCustomClientIdInput(val);
+                  if (val) {
+                    localStorage.setItem('gcal_custom_client_id', val);
+                  } else {
+                    localStorage.removeItem('gcal_custom_client_id');
+                  }
+                }}
+                className="flex-1 px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 font-mono text-[10px]"
+              />
+              {customClientIdInput && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCustomClientIdInput('');
+                    localStorage.removeItem('gcal_custom_client_id');
+                  }}
+                  className="px-2 py-1 text-[10px] text-rose-500 hover:text-rose-600 font-semibold cursor-pointer"
+                >
+                  {lang === 'vi' ? 'Xóa' : 'Remove'}
+                </button>
+              )}
+            </div>
+            <p className="text-[10px] opacity-75">
+              {lang === 'vi'
+                ? 'Dán Client ID từ Google Cloud Console (Credentials > OAuth 2.0 Client IDs). Ứng dụng sẽ dùng dự án này để 1-nhấn đồng bộ tự động 100%!'
+                : 'Paste Client ID from your Google Cloud Console for permanent 1-click automatic sync.'}
+            </p>
           </div>
 
           {/* Quick guide for OAuth Playground */}
