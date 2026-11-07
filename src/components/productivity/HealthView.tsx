@@ -335,10 +335,16 @@ export const HealthView: React.FC<HealthViewProps> = ({
         }
       }
 
+      const rawMsg = err?.message || '';
+      let message = rawMsg || (lang === 'vi' ? 'Đăng nhập Google thất bại hoặc cửa sổ bị đóng.' : 'Google sign-in failed or cancelled.');
+      if (rawMsg.includes('auth/unauthorized-domain')) {
+        message = 'auth/unauthorized-domain';
+      }
+
       setSyncState({
         running: false,
         result: null,
-        message: err?.message || (lang === 'vi' ? 'Đăng nhập Google thất bại hoặc cửa sổ bị đóng.' : 'Google sign-in failed or cancelled.'),
+        message,
       });
     }
   };
@@ -582,6 +588,29 @@ export const HealthView: React.FC<HealthViewProps> = ({
             </button>
           </div>
 
+          {/* Quick guide for OAuth Playground */}
+          <div className="p-2.5 rounded-xl bg-blue-100/60 dark:bg-blue-900/40 text-[11px] text-blue-900 dark:text-blue-200 space-y-1">
+            <p className="font-bold">{lang === 'vi' ? 'Cách lấy Token thật 100% trong 30 giây qua Google OAuth Playground:' : 'Quick guide to get a real token in 30 seconds:'}</p>
+            <ol className="list-decimal list-inside space-y-0.5 opacity-90 pl-1">
+              <li>
+                {lang === 'vi' ? 'Mở ' : 'Open '}
+                <a href="https://developers.google.com/oauthplayground" target="_blank" rel="noopener noreferrer" className="underline font-semibold">
+                  Google OAuth Playground
+                </a>.
+              </li>
+              <li>
+                {lang === 'vi'
+                  ? 'Tại Step 1: Chọn Fitness API v1 (tick fitness.activity.read) > Bấm Authorize APIs > Chọn tài khoản Google của bạn.'
+                  : 'In Step 1: Select Fitness API v1 > Click Authorize APIs > Choose your Google Account.'}
+              </li>
+              <li>
+                {lang === 'vi'
+                  ? 'Tại Step 2: Bấm Exchange authorization code for tokens > Copy mã Access token (ya29...) > Dán vào ô trên và bấm Đồng bộ!'
+                  : 'In Step 2: Click Exchange authorization code for tokens > Copy Access token (ya29...) > Paste above and click Sync!'}
+              </li>
+            </ol>
+          </div>
+
           <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-blue-200/60 dark:border-blue-900/40">
             <button
               type="button"
@@ -743,7 +772,56 @@ export const HealthView: React.FC<HealthViewProps> = ({
               )}
               <div className="flex-1 min-w-0">
                 {syncState.message ? (
-                  <div className="font-semibold">{syncState.message}</div>
+                  <div className="space-y-2">
+                    <div className="font-bold text-sm text-amber-950 dark:text-amber-100">
+                      {syncState.message.includes('auth/unauthorized-domain')
+                        ? 'Tên miền chưa được ủy quyền trong Firebase (auth/unauthorized-domain)'
+                        : 'Không thể đăng nhập Google'}
+                    </div>
+
+                    <div className="text-[11px] leading-relaxed opacity-95 space-y-1.5 text-amber-900 dark:text-amber-200">
+                      {syncState.message.includes('auth/unauthorized-domain') ? (
+                        <>
+                          <p>
+                            • <strong>Nếu bạn đang dùng <code>127.0.0.1</code>:</strong> Hãy đổi URL trên thanh địa chỉ trình duyệt thành{' '}
+                            <strong className="underline text-blue-700 dark:text-blue-300">
+                              http://localhost:{typeof window !== 'undefined' ? window.location.port || '5173' : '5173'}
+                            </strong>{' '}
+                            rồi thử lại. Firebase mặc định cho phép <code>localhost</code> nhưng không tự động mở <code>127.0.0.1</code>.
+                          </p>
+                          <p>
+                            • <strong>Nếu bạn triển khai web (Vercel / domain riêng):</strong> Truy cập Firebase Console &gt; Authentication &gt; Settings &gt; Authorized domains để thêm tên miền hiện tại vào danh sách.
+                          </p>
+                          <p>
+                            • <strong>Cách chắc chắn 100% nạp dữ liệu thật ngay bây giờ:</strong> Bấm nút <strong>"Dán Access Token thủ công"</strong> bên dưới. Lấy token từ Google OAuth Playground dán vào để đồng bộ ngay mà không phụ thuộc vào domain!
+                          </p>
+                        </>
+                      ) : (
+                        <p>{syncState.message}</p>
+                      )}
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-amber-200/70 dark:border-amber-900/50">
+                      <button
+                        type="button"
+                        onClick={() => setShowTokenSettings(true)}
+                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1.5"
+                      >
+                        <Key className="w-3.5 h-3.5" />
+                        <span>{lang === 'vi' ? 'Dán Access Token thủ công (Lấy dữ liệu thật ngay)' : 'Paste Access Token'}</span>
+                      </button>
+
+                      <a
+                        href="https://console.firebase.google.com/project/gen-lang-client-0937047341/authentication/settings"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-3.5 py-2 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-semibold shadow-xs transition-all inline-flex items-center gap-1.5"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                        <span>Firebase Console (Cài đặt tên miền)</span>
+                      </a>
+                    </div>
+                  </div>
                 ) : syncState.result?.error ? (
                   <div className="space-y-2">
                     <div className="font-bold text-sm text-amber-950 dark:text-amber-100">
