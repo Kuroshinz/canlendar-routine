@@ -18,6 +18,9 @@ import {
   User,
   Compass,
   Key,
+  ExternalLink,
+  AlertTriangle,
+  Sparkles,
 } from 'lucide-react';
 import {
   BodyCheckPhoto,
@@ -65,6 +68,7 @@ import {
   healthSourceLabel,
   isGoogleHealthConfigured,
   syncGoogleHealth,
+  mockGoogleHealthMetrics,
 } from '../../services/googleHealthSync';
 import { InBodyTab } from './fitness/InBodyTab';
 import { TrainingTab } from './fitness/TrainingTab';
@@ -356,6 +360,28 @@ export const HealthView: React.FC<HealthViewProps> = ({
     }
   };
 
+  const handleApplySmartSimulation = () => {
+    const mock = mockGoogleHealthMetrics(selectedDate);
+    applySyncResult({
+      source: 'mock',
+      metrics: {
+        ...mock,
+        steps: Math.max(mock.steps || 7500, 8200),
+        caloriesBurned: Math.max(mock.caloriesBurned || 1900, 2150),
+        sleepHours: 7.8,
+        weightKg: ctgProfile.targetWeightKg || mock.weightKg || 66.5,
+      },
+    });
+    setSyncState({
+      running: false,
+      result: null,
+      message:
+        lang === 'vi'
+          ? 'Đã áp dụng bộ chỉ số sức khỏe thông minh (bước chân, calo, giấc ngủ, cân nặng)!'
+          : 'Applied smart health metrics for today!',
+    });
+  };
+
   const handleSubmitWorkout = (e: React.FormEvent) => {
     e.preventDefault();
     if (!woName.trim()) return;
@@ -451,6 +477,15 @@ export const HealthView: React.FC<HealthViewProps> = ({
             onChange={(e) => setSelectedDate(e.target.value)}
             className="text-xs px-2.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200"
           />
+          <button
+            type="button"
+            onClick={handleApplySmartSimulation}
+            className="flex items-center gap-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+            title={lang === 'vi' ? 'Nạp nhanh bộ dữ liệu sức khỏe mô phỏng thực tế' : 'Fill realistic smart fitness data'}
+          >
+            <Sparkles className="w-4 h-4" />
+            <span className="hidden sm:inline">{lang === 'vi' ? 'Dữ liệu thông minh' : 'Smart Data'}</span>
+          </button>
           <button
             onClick={handleSync}
             disabled={syncState.running}
@@ -615,20 +650,62 @@ export const HealthView: React.FC<HealthViewProps> = ({
                       : 'Using simulated metrics (Google Fit scope not granted or no data recorded for this date).'}
                 </div>
                 {syncState.result!.error && (
-                  <div className="mt-2.5 pt-2 border-t border-amber-200/80 dark:border-amber-900/60 flex flex-wrap items-center gap-2.5">
-                    <span className="opacity-90 font-mono text-[11px] text-amber-800 dark:text-amber-200">
-                      {syncState.result!.error.includes('401')
-                        ? (lang === 'vi' ? 'Phiên đăng nhập Google đã hết hạn (401 Unauthorized).' : 'Google access token expired (401 Unauthorized).')
-                        : syncState.result!.error}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={handleReauthAndSync}
-                      className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 active:scale-95 text-white rounded-lg text-xs font-bold shadow-xs transition-all cursor-pointer inline-flex items-center gap-1.5"
-                    >
-                      <Key className="w-3.5 h-3.5" />
-                      <span>{lang === 'vi' ? 'Đăng nhập lại để cấp quyền Google Fit' : 'Re-authenticate with Google'}</span>
-                    </button>
+                  <div className="mt-3 pt-3 border-t border-amber-200/80 dark:border-amber-900/60 space-y-2.5">
+                    <div className="flex items-start gap-2 text-amber-900 dark:text-amber-200 text-xs font-medium leading-relaxed">
+                      <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="font-bold">
+                          {syncState.result?.enableApiUrl
+                            ? (lang === 'vi'
+                                ? 'Dự án Google Cloud của bạn chưa BẬT Fitness API (Mã dự án: 755336412189)'
+                                : 'Fitness API is disabled in your Google Cloud project (755336412189)')
+                            : syncState.result!.error.includes('401')
+                              ? (lang === 'vi' ? 'Phiên đăng nhập Google đã hết hạn (401 Unauthorized).' : 'Google access token expired (401 Unauthorized).')
+                              : syncState.result!.error}
+                        </p>
+                        <p className="text-[11px] opacity-85 mt-0.5">
+                          {syncState.result?.enableApiUrl
+                            ? (lang === 'vi'
+                                ? 'Google yêu cầu nhấn nút "BẬT" (ENABLE) tại đúng dự án Google Cloud bạn đang dùng. Bạn có thể nhấn mở link bên dưới, hoặc chọn "Bỏ qua & Dùng dữ liệu thông minh" để dùng app ngay!'
+                                : 'Google requires you to click "ENABLE" in your Google Cloud project. You can click the link below, or click "Skip & Use Smart Data" to proceed immediately!')
+                            : (lang === 'vi'
+                                ? 'Vui lòng bấm đăng nhập lại để làm mới token và cấp quyền Google Fit.'
+                                : 'Please re-authenticate to refresh token and grant Google Fit permissions.')}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2 pt-1">
+                      {syncState.result?.enableApiUrl ? (
+                        <a
+                          href={syncState.result.enableApiUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white rounded-xl text-xs font-bold shadow-xs transition-all inline-flex items-center gap-1.5"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5" />
+                          <span>{lang === 'vi' ? '1. Mở trang Google Cloud để BẬT API (1-Click)' : '1. Open Google Cloud to Enable API'}</span>
+                        </a>
+                      ) : null}
+
+                      <button
+                        type="button"
+                        onClick={handleApplySmartSimulation}
+                        className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white rounded-xl text-xs font-bold shadow-xs transition-all cursor-pointer inline-flex items-center gap-1.5"
+                      >
+                        <Sparkles className="w-3.5 h-3.5" />
+                        <span>{lang === 'vi' ? '2. Bỏ qua & Dùng dữ liệu thông minh' : '2. Skip & Use Smart Data'}</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleReauthAndSync}
+                        className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 active:scale-95 text-white rounded-xl text-xs font-semibold shadow-xs transition-all cursor-pointer inline-flex items-center gap-1.5"
+                      >
+                        <Key className="w-3.5 h-3.5" />
+                        <span>{lang === 'vi' ? 'Thử lại sau khi đã Bật' : 'Retry after Enabling'}</span>
+                      </button>
+                    </div>
                   </div>
                 )}
               </>
@@ -782,6 +859,12 @@ export const HealthView: React.FC<HealthViewProps> = ({
                   +{delta} ml
                 </button>
               ))}
+              <button
+                onClick={() => patchLog({ steps: Math.max(0, (selectedLog.steps || 0) + 1000) })}
+                className="flex-1 text-[11px] font-semibold px-2 py-1.5 rounded-lg border border-blue-200 dark:border-blue-900 bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-950/70 cursor-pointer"
+              >
+                +1.000 {lang === 'vi' ? 'bước' : 'steps'}
+              </button>
               <button
                 onClick={() => patchLog({ waterMl: 0 })}
                 className="text-[11px] font-semibold px-2 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"

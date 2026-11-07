@@ -29,6 +29,8 @@ export interface GoogleHealthSyncResult {
   metrics: GoogleHealthMetrics;
   /** Present when the real API was attempted and failed. */
   error?: string;
+  /** Direct link to Google Cloud console to enable Fitness API if returned in error */
+  enableApiUrl?: string;
 }
 
 const FITNESS_API = 'https://www.googleapis.com/fitness/v1/users/me/dataset:aggregate';
@@ -236,10 +238,14 @@ export async function syncGoogleHealth(opts: {
     const metrics = await fetchGoogleHealthMetrics(accessToken, date);
     return { source: 'google-fit', metrics };
   } catch (err: any) {
+    const errorMsg = err?.message || 'Google Health sync failed';
+    const match = errorMsg.match(/(https:\/\/console\.(?:developers\.)?google\.com\/[^\s)]+)/);
+    const enableApiUrl = match ? match[1] : undefined;
     return {
       source: 'mock',
       metrics: mockGoogleHealthMetrics(date),
-      error: err?.message || 'Google Health sync failed',
+      error: errorMsg,
+      enableApiUrl,
     };
   }
 }
