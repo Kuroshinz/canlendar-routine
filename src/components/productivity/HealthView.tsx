@@ -849,7 +849,7 @@ export const HealthView: React.FC<HealthViewProps> = ({
                   <div className="space-y-2">
                     <div className="font-bold text-sm text-amber-950 dark:text-amber-100">
                       {syncState.message.includes('auth/unauthorized-domain')
-                        ? 'Tên miền chưa được ủy quyền trong Firebase (auth/unauthorized-domain)'
+                        ? 'Cần Client ID của bạn để kích hoạt Đồng bộ 1-Nhấn tự động trên VortexCal'
                         : 'Không thể đăng nhập Google'}
                     </div>
 
@@ -857,17 +857,10 @@ export const HealthView: React.FC<HealthViewProps> = ({
                       {syncState.message.includes('auth/unauthorized-domain') ? (
                         <>
                           <p>
-                            • <strong>Nếu bạn đang dùng <code>127.0.0.1</code>:</strong> Hãy đổi URL trên thanh địa chỉ trình duyệt thành{' '}
-                            <strong className="underline text-blue-700 dark:text-blue-300">
-                              http://localhost:{typeof window !== 'undefined' ? window.location.port || '5173' : '5173'}
-                            </strong>{' '}
-                            rồi thử lại. Firebase mặc định cho phép <code>localhost</code> nhưng không tự động mở <code>127.0.0.1</code>.
+                            • <strong>Để bấm 1-Nhấn tự động vĩnh viễn:</strong> Google yêu cầu bạn tạo <strong>Mã ứng dụng OAuth (Client ID)</strong> trên dự án cá nhân của bạn (nơi bạn đã bật Fitness API) và thêm tên miền <code>https://vortexcal.vercel.app</code> vào. Bấm nút <strong>"Cấu hình Client ID (Để 1-Click tự động)"</strong> bên dưới để dán vào một lần duy nhất!
                           </p>
                           <p>
-                            • <strong>Nếu bạn triển khai web (Vercel / domain riêng):</strong> Truy cập Firebase Console &gt; Authentication &gt; Settings &gt; Authorized domains để thêm tên miền hiện tại vào danh sách.
-                          </p>
-                          <p>
-                            • <strong>Cách chắc chắn 100% nạp dữ liệu thật ngay bây giờ:</strong> Bấm nút <strong>"Dán Access Token thủ công"</strong> bên dưới. Lấy token từ Google OAuth Playground dán vào để đồng bộ ngay mà không phụ thuộc vào domain!
+                            • <strong>Nếu muốn lấy dữ liệu thật ngay tức thì:</strong> Bấm nút <strong>"Dán Access Token thủ công"</strong> bên dưới. Lấy token từ Google OAuth Playground dán vào để đồng bộ ngay lập tức 100%!
                           </p>
                         </>
                       ) : (
@@ -879,20 +872,29 @@ export const HealthView: React.FC<HealthViewProps> = ({
                       <button
                         type="button"
                         onClick={() => setShowTokenSettings(true)}
+                        className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1.5"
+                      >
+                        <Key className="w-3.5 h-3.5" />
+                        <span>{lang === 'vi' ? 'Cấu hình Client ID của bạn (Để 1-Click tự động)' : 'Configure Client ID'}</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setShowTokenSettings(true)}
                         className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1.5"
                       >
                         <Key className="w-3.5 h-3.5" />
-                        <span>{lang === 'vi' ? 'Dán Access Token thủ công (Lấy dữ liệu thật ngay)' : 'Paste Access Token'}</span>
+                        <span>{lang === 'vi' ? 'Dán Access Token thủ công (Lấy số liệu ngay)' : 'Paste Access Token'}</span>
                       </button>
 
                       <a
-                        href="https://console.firebase.google.com/project/gen-lang-client-0937047341/authentication/settings"
+                        href="https://console.cloud.google.com/apis/credentials"
                         target="_blank"
                         rel="noopener noreferrer"
                         className="px-3.5 py-2 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-semibold shadow-xs transition-all inline-flex items-center gap-1.5"
                       >
                         <ExternalLink className="w-3.5 h-3.5" />
-                        <span>Firebase Console (Cài đặt tên miền)</span>
+                        <span>Google Cloud Credentials</span>
                       </a>
                     </div>
                   </div>
