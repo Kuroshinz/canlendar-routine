@@ -911,14 +911,14 @@ export const HealthView: React.FC<HealthViewProps> = ({
                     <div className="text-[11px] leading-relaxed opacity-95 space-y-1.5 text-amber-900 dark:text-amber-200">
                       {syncState.result.error.includes('Fitness API has not been used in project') ? (
                         <>
-                          <p className="font-semibold text-rose-700 dark:text-rose-300">
-                            👉 Bạn đã bật API cho dự án cũ (755336412189), nhưng dự án Google Cloud chính thức của VortexCal là: <strong>853617678894</strong>!
+                          <p className="font-bold text-rose-700 dark:text-rose-300">
+                            👉 Bạn kiểm tra thấy đã Bật rồi là CHÍNH XÁC, nhưng bạn đang Bật trên Dự án Google Cloud cá nhân của bạn, trong khi web đang dùng Client ID mẫu của dự án 853617678894!
                           </p>
                           <p>
-                            • <strong>Chỉ cần 1 bước duy nhất:</strong> Bấm nút màu xanh <strong>"Mở trang Bật Fitness API (Dự án 853617678894)"</strong> bên dưới &gt; Bấm nút <strong>BẬT (ENABLE)</strong> trên Google Cloud.
+                            • <strong>Để web dùng đúng dự án của bạn (chạy tự động 1-click vĩnh viễn):</strong> Trong trang Google Cloud Console của bạn &gt; Bấm vào <strong>Credentials</strong> (ở cột menu bên trái) &gt; Copy mã <strong>Client ID</strong> &gt; Bấm nút <strong>"Cấu hình Client ID"</strong> bên dưới dán vào là xong!
                           </p>
                           <p>
-                            • Sau khi bấm BẬT, quay lại web này bấm lại nút <strong>"Đồng bộ Google Health (1-Nhấn)"</strong> là dữ liệu thật sẽ tự động nạp vào ngay tức thì 100%!
+                            • <strong>Hoặc lấy dữ liệu thật ngay bây giờ:</strong> Bấm nút <strong>"Dán Access Token thủ công"</strong> lấy token dán vào để đồng bộ ngay tức thì!
                           </p>
                         </>
                       ) : syncState.result.error.includes('403') ? (
@@ -951,17 +951,23 @@ export const HealthView: React.FC<HealthViewProps> = ({
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-amber-200/70 dark:border-amber-900/50">
-                      {syncState.result?.enableApiUrl ? (
-                        <a
-                          href={syncState.result.enableApiUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white rounded-xl text-xs font-bold shadow-xs transition-all inline-flex items-center gap-1.5"
-                        >
-                          <ExternalLink className="w-3.5 h-3.5" />
-                          <span>Mở trang Bật Fitness API (Dự án 853617678894)</span>
-                        </a>
-                      ) : null}
+                      <button
+                        type="button"
+                        onClick={() => setShowTokenSettings(true)}
+                        className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white rounded-xl text-xs font-bold shadow-xs transition-all cursor-pointer inline-flex items-center gap-1.5"
+                      >
+                        <Key className="w-3.5 h-3.5" />
+                        <span>Cấu hình Client ID của bạn (Để 1-Click tự động)</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setShowTokenSettings(true)}
+                        className="px-3.5 py-2 bg-amber-200/60 hover:bg-amber-200 dark:bg-amber-900/60 dark:hover:bg-amber-900 text-amber-900 dark:text-amber-100 rounded-xl text-xs font-semibold transition-all cursor-pointer inline-flex items-center gap-1.5"
+                      >
+                        <Key className="w-3.5 h-3.5" />
+                        <span>{lang === 'vi' ? 'Dán Access Token thủ công' : 'Paste Access Token'}</span>
+                      </button>
 
                       <button
                         type="button"
@@ -974,15 +980,6 @@ export const HealthView: React.FC<HealthViewProps> = ({
                             ? 'Đăng nhập Google cấp quyền mới (1-Nhấn)'
                             : 'Re-authenticate with Google & Fetch Real Data'}
                         </span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setShowTokenSettings(true)}
-                        className="px-3.5 py-2 bg-amber-200/60 hover:bg-amber-200 dark:bg-amber-900/60 dark:hover:bg-amber-900 text-amber-900 dark:text-amber-100 rounded-xl text-xs font-semibold transition-all cursor-pointer inline-flex items-center gap-1.5"
-                      >
-                        <Key className="w-3.5 h-3.5" />
-                        <span>{lang === 'vi' ? 'Dán Access Token thủ công' : 'Paste Access Token'}</span>
                       </button>
                     </div>
                   </div>
