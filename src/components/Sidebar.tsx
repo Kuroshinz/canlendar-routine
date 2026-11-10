@@ -301,8 +301,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
             <p className="text-[11px] leading-relaxed text-slate-600 dark:text-slate-300 mb-3 font-medium">
               {lang === 'vi'
-                ? 'Nhập Prompt Macro bữa ăn & đồng bộ Google Health tự động.'
-                : 'Structured meal macro prompt & Google Health sync.'}
+                ? 'Nhập Prompt Macro bữa ăn & tự theo dõi chỉ số sức khỏe cá nhân.'
+                : 'Structured meal macro prompt & personal health tracking.'}
             </p>
 
             <button
