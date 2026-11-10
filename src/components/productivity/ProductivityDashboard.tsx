@@ -77,6 +77,9 @@ export interface ProductivityDashboardProps {
   onToggleHabit?: (id: string, dateStr: string) => void;
   onScheduleTask?: (taskId: string, dateStr: string, startTime: string, endTime: string) => void;
   currentUser?: { displayName?: string | null; email?: string | null; photoURL?: string | null } | null;
+  onOpenLifeCopilot?: () => void;
+  onQuickAddWater?: (ml: number) => void;
+  onOpenMacroModal?: () => void;
 }
 
 export const ProductivityDashboard: React.FC<ProductivityDashboardProps> = ({
@@ -98,6 +101,9 @@ export const ProductivityDashboard: React.FC<ProductivityDashboardProps> = ({
   onToggleHabit,
   onScheduleTask,
   currentUser,
+  onOpenLifeCopilot,
+  onQuickAddWater,
+  onOpenMacroModal,
 }) => {
   const today = formatDateString(new Date());
   const monthPrefix = monthPrefixOf(new Date());
@@ -341,6 +347,39 @@ export const ProductivityDashboard: React.FC<ProductivityDashboardProps> = ({
     ];
   }, [chartMetric]);
 
+  // Life Mastery Index calculation & 4 Pillars
+  const currentHour = new Date().getHours();
+  const timeGreeting =
+    currentHour < 12 ? 'Chào buổi sáng' : currentHour < 18 ? 'Chào buổi chiều' : 'Chào buổi tối';
+  const userNameDisplay = currentUser?.displayName || 'Bạn';
+
+  const lifePillars = useMemo(() => {
+    const taskCount = openTasks.length + completedTasksToday.length;
+    const taskRate = taskCount > 0 ? completedTasksToday.length / taskCount : 0.6;
+    const taskPts = Math.round(taskRate * 25);
+
+    const activeHabits = habits.length;
+    const completedHabits = habits.filter((h) => h.completedDates?.includes(today)).length;
+    const habitRate = activeHabits > 0 ? completedHabits / activeHabits : 0.6;
+    const habitPts = Math.round(habitRate * 25);
+
+    const healthPts = Math.round(((todayHealthScore?.score || 70) / 100) * 25);
+
+    const budgetRate = budgetStatus.percent <= 100 ? 1 : Math.max(0, 1 - (budgetStatus.percent - 100) / 100);
+    const financePts = Math.round(budgetRate * 25);
+
+    const total = Math.min(100, Math.max(0, taskPts + habitPts + healthPts + financePts));
+    return {
+      total,
+      taskPts,
+      habitPts,
+      healthPts,
+      financePts,
+      completedHabits,
+      activeHabits,
+    };
+  }, [openTasks.length, completedTasksToday.length, habits, today, todayHealthScore?.score, budgetStatus.percent]);
+
   return (
     <div className="space-y-6 select-none font-sans max-w-7xl mx-auto">
       {/* ----------------------------------------------------------------- */}
@@ -374,6 +413,135 @@ export const ProductivityDashboard: React.FC<ProductivityDashboardProps> = ({
             <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
             <span>Health Score: {todayHealthScore.score}/100</span>
           </button>
+        </div>
+      </div>
+
+      {/* ----------------------------------------------------------------- */}
+      {/* 1B. LIFE COMMAND CENTER & EXECUTIVE BRIEFING HERO                 */}
+      {/* ----------------------------------------------------------------- */}
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-950 border border-indigo-500/30 p-5 sm:p-6 text-white shadow-xl">
+        <div className="absolute top-0 right-0 -mt-10 -mr-10 w-64 h-64 bg-violet-600/20 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 left-1/3 -mb-10 w-64 h-64 bg-blue-600/15 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+          {/* Left Greeting & Contextual Advice */}
+          <div className="space-y-3 max-w-2xl">
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="text-[11px] font-bold uppercase tracking-wider text-indigo-300">
+                Trung Tâm Chỉ Huy Cuộc Sống (Life Command Center)
+              </span>
+            </div>
+
+            <h3 className="text-lg sm:text-2xl font-black tracking-tight text-white">
+              {timeGreeting}, {userNameDisplay}!
+            </h3>
+
+            <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+              Hôm nay bạn có <strong className="text-white font-mono">{todayEvents.length} sự kiện</strong>,{' '}
+              <strong className="text-white font-mono">{openTasks.length} nhiệm vụ</strong> cần hoàn tất, và{' '}
+              đã hoàn thành <strong className="text-emerald-300 font-mono">{lifePillars.completedHabits}/{lifePillars.activeHabits} thói quen</strong>.
+            </p>
+
+            {/* Next Best Action Chips */}
+            <div className="pt-1 flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={onOpenLifeCopilot}
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-bold text-xs shadow-md shadow-indigo-500/30 cursor-pointer transition-all hover:scale-105 active:scale-95"
+              >
+                <Sparkles className="w-3.5 h-3.5 animate-pulse" />
+                <span>Hỏi Siêu Trợ Lý AI</span>
+                <kbd className="hidden sm:inline-block px-1.5 py-0.2 rounded bg-white/20 text-[9px] font-mono">
+                  ⌘K
+                </kbd>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => onQuickAddWater?.(250)}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-sky-300 hover:text-white font-semibold text-xs border border-white/10 transition-colors cursor-pointer"
+                title="Ghi nhận uống thêm 250ml nước"
+              >
+                <Droplets className="w-3.5 h-3.5 text-sky-400" />
+                <span>+250ml Nước</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={onOpenMacroModal}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-orange-300 hover:text-white font-semibold text-xs border border-white/10 transition-colors cursor-pointer"
+                title="Mở bảng nhập nhanh bữa ăn bằng Prompt Macro"
+              >
+                <Utensils className="w-3.5 h-3.5 text-orange-400" />
+                <span>Nhập Prompt Bữa Ăn</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => onNavigate('focus')}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-purple-300 hover:text-white font-semibold text-xs border border-white/10 transition-colors cursor-pointer"
+                title="Bắt đầu 25 phút Pomodoro Deep Work"
+              >
+                <Timer className="w-3.5 h-3.5 text-purple-400" />
+                <span>25p Pomodoro</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => onNavigate('health')}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-emerald-300 hover:text-white font-semibold text-xs border border-white/10 transition-colors cursor-pointer"
+                title="Chuyển sang Giáo án buổi tập"
+              >
+                <Dumbbell className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Buổi Tập Kháng Lực</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Right Radial Life Mastery Gauge */}
+          <div className="flex items-center gap-4 bg-white/5 border border-white/10 rounded-2xl p-4 self-stretch lg:self-auto justify-between lg:justify-start">
+            <div className="relative w-20 h-20 shrink-0">
+              <svg className="w-20 h-20 -rotate-90" viewBox="0 0 80 80">
+                <circle cx="40" cy="40" r="34" stroke="rgba(255,255,255,0.1)" strokeWidth="6" fill="none" />
+                <circle
+                  cx="40"
+                  cy="40"
+                  r="34"
+                  stroke="#8b5cf6"
+                  strokeWidth="6"
+                  fill="none"
+                  strokeDasharray={`${(lifePillars.total / 100) * 213.6} 213.6`}
+                  strokeLinecap="round"
+                  className="transition-all duration-700"
+                />
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+                <span className="text-base font-black font-mono leading-none text-white">
+                  {lifePillars.total}
+                </span>
+                <span className="text-[8px] uppercase font-bold text-indigo-300 mt-0.5">/ 100</span>
+              </div>
+            </div>
+
+            <div className="space-y-1.5 min-w-[140px]">
+              <div>
+                <div className="text-[10px] font-bold uppercase tracking-wider text-indigo-300">
+                  Chỉ Số Cân Bằng (Mastery)
+                </div>
+                <div className="text-xs font-bold text-white">
+                  {lifePillars.total >= 80 ? '🌟 Đỉnh Cao Phong Độ' : lifePillars.total >= 60 ? '⚡ Tiến Độ Rất Tốt' : '🎯 Đang Khởi Động'}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[10px] text-slate-300 pt-1 border-t border-white/10 font-mono">
+                <div>Việc: {lifePillars.taskPts}/25</div>
+                <div>Thói quen: {lifePillars.habitPts}/25</div>
+                <div>Thể chất: {lifePillars.healthPts}/25</div>
+                <div>Tài chính: {lifePillars.financePts}/25</div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 

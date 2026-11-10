@@ -55,6 +55,7 @@ import { Bell, FileText } from 'lucide-react';
 import { CalendarActionBar } from './components/CalendarActionBar';
 import { GeminiMacroModal } from './components/productivity/fitness/GeminiMacroModal';
 import { GeminiMacroItem } from './services/geminiSync';
+import { LifeCopilotModal } from './components/productivity/LifeCopilotModal';
 
 export default function App() {
   // 1. Language state
@@ -205,6 +206,7 @@ export default function App() {
   const [isCloudSyncOpen, setIsCloudSyncOpen] = useState(false);
   const [isMultiHubOpen, setIsMultiHubOpen] = useState(false);
   const [isGeminiMacroOpen, setIsGeminiMacroOpen] = useState(false);
+  const [isLifeCopilotOpen, setIsLifeCopilotOpen] = useState(false);
   const [isRightDrawerOpen, setIsRightDrawerOpen] = useState(false);
 
   const handleApplyGeminiMacros = useCallback(
@@ -513,6 +515,12 @@ export default function App() {
   // Keyboard shortcuts listener
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && (e.key === 'k' || e.key === 'K')) {
+        e.preventDefault();
+        setIsLifeCopilotOpen((v) => !v);
+        return;
+      }
+
       const target = e.target as HTMLElement;
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
         return;
@@ -525,6 +533,7 @@ export default function App() {
         setIsShortcutsOpen(false);
         setIsExportImportOpen(false);
         setIsCloudSyncOpen(false);
+        setIsLifeCopilotOpen(false);
         setMiniPopover((prev) => ({ ...prev, isOpen: false }));
         setDayPlanner((prev) => ({ ...prev, isOpen: false }));
         cancelDnD();
@@ -816,6 +825,7 @@ export default function App() {
           onOpenCloudSync={() => setIsCloudSyncOpen(true)}
           onGoogleSignIn={handleGoogleSignIn}
           onOpenGeminiMacro={() => setIsGeminiMacroOpen(true)}
+          onOpenLifeCopilot={() => setIsLifeCopilotOpen(true)}
           onToggleRightDrawer={() => setIsRightDrawerOpen((prev) => !prev)}
           userEmail={user?.email || 'admin@vortexcal.io'}
           userName={user?.displayName || undefined}
@@ -970,6 +980,18 @@ export default function App() {
                     productivity.updateTask(taskId, { dueDate: dateStr, startTime, endTime });
                   }}
                   currentUser={user}
+                  onOpenLifeCopilot={() => setIsLifeCopilotOpen(true)}
+                  onQuickAddWater={(ml) => {
+                    const today = todayString();
+                    const existing = productivity.healthLogs.find((l) => l.date === today);
+                    productivity.upsertHealthLog({
+                      ...(existing || { date: today, source: 'manual' }),
+                      waterMl: (existing?.waterMl || 0) + ml,
+                      date: today,
+                      source: 'manual',
+                    });
+                  }}
+                  onOpenMacroModal={() => setIsGeminiMacroOpen(true)}
                 />
               )}
 
@@ -1314,6 +1336,18 @@ export default function App() {
         onClose={() => setIsGeminiMacroOpen(false)}
         onApplyGeminiMacros={handleApplyGeminiMacros}
         selectedDate={formatDateString(currentDate)}
+      />
+
+      {/* Global Life Copilot AI Assistant Modal */}
+      <LifeCopilotModal
+        isOpen={isLifeCopilotOpen}
+        onClose={() => setIsLifeCopilotOpen(false)}
+        lang={lang}
+        store={productivity}
+        events={allEvents}
+        onAddEvent={handleSaveEvent}
+        onNavigate={handleViewChange}
+        currentDate={currentDate}
       />
     </div>
   );

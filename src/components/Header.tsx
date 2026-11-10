@@ -32,6 +32,7 @@ interface HeaderProps {
   onOpenCloudSync?: () => void;
   onGoogleSignIn?: () => Promise<void>;
   onOpenGeminiMacro?: () => void;
+  onOpenLifeCopilot?: () => void;
   onToggleRightDrawer?: () => void;
   searchQuery: string;
   onSearchChange: (query: string) => void;
@@ -58,6 +59,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenCloudSync,
   onGoogleSignIn,
   onOpenGeminiMacro,
+  onOpenLifeCopilot,
   onToggleRightDrawer,
   searchQuery,
   onSearchChange,
@@ -232,6 +234,19 @@ export const Header: React.FC<HeaderProps> = ({
             </>
           )}
         </div>
+
+        {/* Life Copilot AI Button */}
+        <button
+          onClick={onOpenLifeCopilot}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-violet-600 via-indigo-600 to-blue-600 hover:from-violet-500 hover:to-blue-500 text-white font-bold text-xs shadow-md shadow-indigo-500/20 cursor-pointer transition-all hover:scale-105 active:scale-95"
+          title="Siêu Trợ Lý Cuộc Sống (⌘K / Ctrl + K)"
+        >
+          <Sparkles className="w-3.5 h-3.5 animate-pulse" />
+          <span className="hidden sm:inline">Trợ Lý AI</span>
+          <kbd className="hidden md:inline-block px-1.5 py-0.2 rounded bg-white/20 text-[9px] font-mono">
+            ⌘K
+          </kbd>
+        </button>
 
         {/* Language switch */}
         <button
