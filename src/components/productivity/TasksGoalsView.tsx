@@ -18,6 +18,9 @@ import {
   Sunrise,
   Sun,
   Sunset,
+  LayoutGrid,
+  Sparkles,
+  AlertCircle,
 } from 'lucide-react';
 import {
   GoalItem,
@@ -108,6 +111,82 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
   const [habitColor, setHabitColor] = useState('#039BE5');
 
   const today = formatDateString(new Date());
+
+  // --- View Mode & Quick Input
+  const [viewMode, setViewMode] = useState<'list' | 'matrix'>('list');
+  const [quickTitle, setQuickTitle] = useState('');
+  const [quickPriority, setQuickPriority] = useState<TaskPriority>('medium');
+  const [quickDueOption, setQuickDueOption] = useState<'today' | 'tomorrow' | 'none'>('today');
+
+  const handleQuickAddTask = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!quickTitle.trim()) return;
+    const dueDate =
+      quickDueOption === 'today'
+        ? today
+        : quickDueOption === 'tomorrow'
+          ? (() => {
+              const d = new Date();
+              d.setDate(d.getDate() + 1);
+              return formatDateString(d);
+            })()
+          : undefined;
+
+    onAddTask({
+      title: quickTitle.trim(),
+      priority: quickPriority,
+      categoryId: categories[0]?.id || 'tasks',
+      dueDate,
+      status: 'todo',
+    });
+    setQuickTitle('');
+  };
+
+  const weekDays = useMemo(() => {
+    const now = new Date();
+    const day = now.getDay();
+    const mondayDiff = day === 0 ? -6 : 1 - day;
+    const monday = new Date(now);
+    monday.setDate(now.getDate() + mondayDiff);
+
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + i);
+      const dateStr = formatDateString(d);
+      const dayNameVi = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'][i];
+      const dayNameEn = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][i];
+      return {
+        dateStr,
+        dayNum: d.getDate(),
+        dayName: lang === 'vi' ? dayNameVi : dayNameEn,
+        isToday: dateStr === today,
+      };
+    });
+  }, [today, lang]);
+
+  const matrixQuadrants = useMemo(() => {
+    const q1: TaskItem[] = []; // Do First (Urgent & Important)
+    const q2: TaskItem[] = []; // Schedule (Not Urgent but Important)
+    const q3: TaskItem[] = []; // Delegate (Urgent but Not Important)
+    const q4: TaskItem[] = []; // Eliminate (Not Urgent & Not Important)
+
+    tasks.forEach((t) => {
+      const isUrgent = Boolean(t.dueDate && t.dueDate <= today);
+      const isImportant = t.priority === 'high' || Boolean(t.goalId);
+
+      if (isUrgent && isImportant) {
+        q1.push(t);
+      } else if (!isUrgent && isImportant) {
+        q2.push(t);
+      } else if (isUrgent && !isImportant) {
+        q3.push(t);
+      } else {
+        q4.push(t);
+      }
+    });
+
+    return { q1, q2, q3, q4 };
+  }, [tasks, today]);
 
   // --- New task form state
   const [formTitle, setFormTitle] = useState('');
@@ -313,53 +392,438 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
         {/* Tasks column */}
         <div className="xl:col-span-7 space-y-4">
-          {/* Filters */}
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="bg-gray-200/80 dark:bg-gray-800 p-1 rounded-xl flex text-xs font-semibold">
-              {STATUS_TABS.map((tab) => (
+          {/* Quick Task Input Bar */}
+          <form
+            onSubmit={handleQuickAddTask}
+            className="bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200 dark:border-slate-800 p-2.5 shadow-xs flex flex-wrap sm:flex-nowrap items-center gap-2"
+          >
+            <div className="flex items-center gap-2 flex-1 min-w-[200px]">
+              <Plus className="w-4 h-4 text-blue-500 shrink-0 ml-1.5" />
+              <input
+                type="text"
+                value={quickTitle}
+                onChange={(e) => setQuickTitle(e.target.value)}
+                placeholder={
+                  lang === 'vi'
+                    ? 'Thêm nhanh việc cần làm... (Gõ tên việc rồi nhấn Enter)'
+                    : 'Quick add task... (Type and press Enter)'
+                }
+                className="w-full text-xs bg-transparent border-none outline-none text-gray-800 dark:text-gray-100 placeholder:text-gray-400"
+              />
+            </div>
+
+            <div className="flex items-center gap-1.5 shrink-0">
+              <div className="flex bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg text-[10px] font-semibold">
                 <button
-                  key={tab.id}
-                  onClick={() => setStatusFilter(tab.id)}
-                  className={`px-2.5 py-1.5 rounded-lg transition-all cursor-pointer ${
-                    statusFilter === tab.id
-                      ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-xs'
-                      : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100'
+                  type="button"
+                  onClick={() => setQuickPriority('high')}
+                  className={`px-2 py-1 rounded-md transition-all cursor-pointer ${
+                    quickPriority === 'high'
+                      ? 'bg-rose-500 text-white shadow-xs'
+                      : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'
                   }`}
                 >
-                  {lang === 'vi' ? tab.labelVi : tab.labelEn}
+                  🔴 {lang === 'vi' ? 'Gấp' : 'High'}
                 </button>
-              ))}
+                <button
+                  type="button"
+                  onClick={() => setQuickPriority('medium')}
+                  className={`px-2 py-1 rounded-md transition-all cursor-pointer ${
+                    quickPriority === 'medium'
+                      ? 'bg-amber-500 text-white shadow-xs'
+                      : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'
+                  }`}
+                >
+                  🟡 {lang === 'vi' ? 'Vừa' : 'Med'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setQuickPriority('low')}
+                  className={`px-2 py-1 rounded-md transition-all cursor-pointer ${
+                    quickPriority === 'low'
+                      ? 'bg-slate-400 text-white shadow-xs'
+                      : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'
+                  }`}
+                >
+                  🟢 {lang === 'vi' ? 'Nhẹ' : 'Low'}
+                </button>
+              </div>
+
+              <div className="flex bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg text-[10px] font-semibold">
+                <button
+                  type="button"
+                  onClick={() => setQuickDueOption('today')}
+                  className={`px-2 py-1 rounded-md transition-all cursor-pointer ${
+                    quickDueOption === 'today'
+                      ? 'bg-blue-600 text-white shadow-xs'
+                      : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'
+                  }`}
+                >
+                  {lang === 'vi' ? 'Hôm nay' : 'Today'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setQuickDueOption('tomorrow')}
+                  className={`px-2 py-1 rounded-md transition-all cursor-pointer ${
+                    quickDueOption === 'tomorrow'
+                      ? 'bg-blue-600 text-white shadow-xs'
+                      : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'
+                  }`}
+                >
+                  {lang === 'vi' ? 'Ngày mai' : 'Tmrw'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setQuickDueOption('none')}
+                  className={`px-2 py-1 rounded-md transition-all cursor-pointer ${
+                    quickDueOption === 'none'
+                      ? 'bg-blue-600 text-white shadow-xs'
+                      : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'
+                  }`}
+                >
+                  {lang === 'vi' ? 'Không hạn' : 'No date'}
+                </button>
+              </div>
+
+              <button
+                type="submit"
+                disabled={!quickTitle.trim()}
+                className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+              >
+                {lang === 'vi' ? 'Thêm' : 'Add'}
+              </button>
+            </div>
+          </form>
+
+          {/* View Mode Toggle & Filters */}
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="bg-gray-200/80 dark:bg-gray-800 p-1 rounded-xl flex text-xs font-semibold">
+              <button
+                onClick={() => setViewMode('list')}
+                className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer ${
+                  viewMode === 'list'
+                    ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-xs'
+                    : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100'
+                }`}
+              >
+                <ListChecks className="w-3.5 h-3.5" />
+                <span>{lang === 'vi' ? 'Danh sách' : 'List'}</span>
+              </button>
+              <button
+                onClick={() => setViewMode('matrix')}
+                className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer ${
+                  viewMode === 'matrix'
+                    ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-xs'
+                    : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100'
+                }`}
+              >
+                <LayoutGrid className="w-3.5 h-3.5" />
+                <span>{lang === 'vi' ? 'Ma trận Eisenhower' : 'Eisenhower Matrix'}</span>
+              </button>
             </div>
 
-            <select
-              value={priorityFilter}
-              onChange={(e) => setPriorityFilter(e.target.value as TaskPriority | 'all')}
-              className="text-xs px-2.5 py-1.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200"
-            >
-              <option value="all">{lang === 'vi' ? 'Mọi ưu tiên' : 'All priorities'}</option>
-              <option value="high">{lang === 'vi' ? 'Cao' : 'High'}</option>
-              <option value="medium">{lang === 'vi' ? 'Trung bình' : 'Medium'}</option>
-              <option value="low">{lang === 'vi' ? 'Thấp' : 'Low'}</option>
-            </select>
+            {viewMode === 'list' && (
+              <div className="flex flex-wrap items-center gap-2 flex-1 justify-end">
+                <div className="bg-gray-200/80 dark:bg-gray-800 p-1 rounded-xl flex text-xs font-semibold">
+                  {STATUS_TABS.map((tab) => (
+                    <button
+                      key={tab.id}
+                      onClick={() => setStatusFilter(tab.id)}
+                      className={`px-2 py-1 rounded-lg transition-all cursor-pointer text-[11px] ${
+                        statusFilter === tab.id
+                          ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-xs'
+                          : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100'
+                      }`}
+                    >
+                      {lang === 'vi' ? tab.labelVi : tab.labelEn}
+                    </button>
+                  ))}
+                </div>
 
-            <input
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder={lang === 'vi' ? 'Tìm công việc...' : 'Search tasks...'}
-              className="flex-1 min-w-32 text-xs px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
-            />
+                <select
+                  value={priorityFilter}
+                  onChange={(e) => setPriorityFilter(e.target.value as TaskPriority | 'all')}
+                  className="text-xs px-2.5 py-1.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200"
+                >
+                  <option value="all">{lang === 'vi' ? 'Mọi ưu tiên' : 'All priorities'}</option>
+                  <option value="high">{lang === 'vi' ? 'Cao' : 'High'}</option>
+                  <option value="medium">{lang === 'vi' ? 'Trung bình' : 'Medium'}</option>
+                  <option value="low">{lang === 'vi' ? 'Thấp' : 'Low'}</option>
+                </select>
+
+                <input
+                  type="text"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder={lang === 'vi' ? 'Tìm công việc...' : 'Search tasks...'}
+                  className="w-32 lg:w-40 text-xs px-2.5 py-1.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
+                />
+              </div>
+            )}
           </div>
 
-          {/* Task list */}
-          {filteredTasks.length === 0 ? (
-            <div className="bg-white dark:bg-[#131b2e] rounded-2xl border border-dashed border-gray-300 dark:border-gray-700 p-10 text-center">
-              <ListChecks className="w-8 h-8 text-gray-300 dark:text-gray-600 mx-auto mb-2" />
-              <p className="text-xs text-gray-400">
-                {lang === 'vi' ? 'Không có công việc nào phù hợp bộ lọc.' : 'No tasks match this filter.'}
-              </p>
+          {/* Eisenhower Matrix View */}
+          {viewMode === 'matrix' ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Q1: Do First */}
+              <div className="bg-rose-50/40 dark:bg-rose-950/20 border border-rose-300/80 dark:border-rose-900/60 rounded-2xl p-4 flex flex-col min-h-[220px]">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse" />
+                    <h4 className="text-xs font-bold text-rose-700 dark:text-rose-300 uppercase tracking-wider">
+                      {lang === 'vi' ? 'Q1: Làm Ngay (Khẩn cấp & Quan trọng)' : 'Q1: Do First (Urgent & Important)'}
+                    </h4>
+                  </div>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-rose-200/60 dark:bg-rose-900/40 text-rose-800 dark:text-rose-200 font-bold">
+                    {matrixQuadrants.q1.length}
+                  </span>
+                </div>
+                <p className="text-[10px] text-gray-500 dark:text-gray-400 mb-3">
+                  {lang === 'vi' ? 'Hạn hôm nay/quá hạn & ưu tiên cao. Cần giải quyết ngay lập tức.' : 'Due today/overdue & high priority. Do right away.'}
+                </p>
+                <div className="space-y-1.5 flex-1 overflow-y-auto max-h-64">
+                  {matrixQuadrants.q1.length === 0 ? (
+                    <div className="text-[11px] text-gray-400 italic text-center py-6">
+                      {lang === 'vi' ? 'Không có việc khẩn cấp!' : 'No urgent tasks!'}
+                    </div>
+                  ) : (
+                    matrixQuadrants.q1.map((t) => (
+                      <div
+                        key={t.id}
+                        className="bg-white dark:bg-[#131b2e] p-2.5 rounded-xl border border-rose-200/50 dark:border-rose-900/40 flex items-center justify-between gap-2 text-xs shadow-2xs"
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <button
+                            type="button"
+                            onClick={() => onSetTaskStatus(t.id, t.status === 'completed' ? 'todo' : 'completed')}
+                            className="cursor-pointer shrink-0"
+                          >
+                            {t.status === 'completed' ? (
+                              <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                            ) : (
+                              <Circle className="w-4 h-4 text-gray-300 dark:text-gray-600 hover:text-emerald-500" />
+                            )}
+                          </button>
+                          <span className={`truncate font-medium ${t.status === 'completed' ? 'line-through text-gray-400' : 'text-gray-800 dark:text-gray-100'}`}>
+                            {t.title}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          {onStartFocus && t.status !== 'completed' && (
+                            <button
+                              onClick={() => onStartFocus(t.id)}
+                              className="p-1 rounded text-violet-600 hover:bg-violet-50 dark:hover:bg-violet-950/40 cursor-pointer"
+                              title={lang === 'vi' ? 'Bắt đầu Focus' : 'Start Focus'}
+                            >
+                              <Timer className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                          <button
+                            onClick={() => onDeleteTask(t.id)}
+                            className="p-1 text-gray-400 hover:text-rose-600 cursor-pointer"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              {/* Q2: Schedule */}
+              <div className="bg-blue-50/40 dark:bg-blue-950/20 border border-blue-300/80 dark:border-blue-900/60 rounded-2xl p-4 flex flex-col min-h-[220px]">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-blue-500" />
+                    <h4 className="text-xs font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wider">
+                      {lang === 'vi' ? 'Q2: Lên Kế Hoạch (Quan trọng, Chưa gấp)' : 'Q2: Schedule (Important, Not Urgent)'}
+                    </h4>
+                  </div>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-blue-200/60 dark:bg-blue-900/40 text-blue-800 dark:text-blue-200 font-bold">
+                    {matrixQuadrants.q2.length}
+                  </span>
+                </div>
+                <p className="text-[10px] text-gray-500 dark:text-gray-400 mb-3">
+                  {lang === 'vi' ? 'Mục tiêu dài hạn, phát triển bản thân và dự án chiến lược.' : 'Long-term goals and strategic deep work.'}
+                </p>
+                <div className="space-y-1.5 flex-1 overflow-y-auto max-h-64">
+                  {matrixQuadrants.q2.length === 0 ? (
+                    <div className="text-[11px] text-gray-400 italic text-center py-6">
+                      {lang === 'vi' ? 'Trống' : 'Empty'}
+                    </div>
+                  ) : (
+                    matrixQuadrants.q2.map((t) => (
+                      <div
+                        key={t.id}
+                        className="bg-white dark:bg-[#131b2e] p-2.5 rounded-xl border border-blue-200/50 dark:border-blue-900/40 flex items-center justify-between gap-2 text-xs shadow-2xs"
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <button
+                            type="button"
+                            onClick={() => onSetTaskStatus(t.id, t.status === 'completed' ? 'todo' : 'completed')}
+                            className="cursor-pointer shrink-0"
+                          >
+                            {t.status === 'completed' ? (
+                              <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                            ) : (
+                              <Circle className="w-4 h-4 text-gray-300 dark:text-gray-600 hover:text-emerald-500" />
+                            )}
+                          </button>
+                          <span className={`truncate font-medium ${t.status === 'completed' ? 'line-through text-gray-400' : 'text-gray-800 dark:text-gray-100'}`}>
+                            {t.title}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          {onStartFocus && t.status !== 'completed' && (
+                            <button
+                              onClick={() => onStartFocus(t.id)}
+                              className="p-1 rounded text-violet-600 hover:bg-violet-50 dark:hover:bg-violet-950/40 cursor-pointer"
+                              title={lang === 'vi' ? 'Bắt đầu Focus' : 'Start Focus'}
+                            >
+                              <Timer className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                          <button
+                            onClick={() => onDeleteTask(t.id)}
+                            className="p-1 text-gray-400 hover:text-rose-600 cursor-pointer"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              {/* Q3: Delegate / Quick */}
+              <div className="bg-amber-50/40 dark:bg-amber-950/20 border border-amber-300/80 dark:border-amber-900/60 rounded-2xl p-4 flex flex-col min-h-[220px]">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+                    <h4 className="text-xs font-bold text-amber-700 dark:text-amber-300 uppercase tracking-wider">
+                      {lang === 'vi' ? 'Q3: Xử Lý Nhanh (Gấp, Ít quan trọng)' : 'Q3: Delegate (Urgent, Not Important)'}
+                    </h4>
+                  </div>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-200/60 dark:bg-amber-900/40 text-amber-800 dark:text-amber-200 font-bold">
+                    {matrixQuadrants.q3.length}
+                  </span>
+                </div>
+                <p className="text-[10px] text-gray-500 dark:text-gray-400 mb-3">
+                  {lang === 'vi' ? 'Việc lặt vặt, phản hồi tin nhắn hoặc ủy thác nếu có thể.' : 'Interfering tasks or quick operational items.'}
+                </p>
+                <div className="space-y-1.5 flex-1 overflow-y-auto max-h-64">
+                  {matrixQuadrants.q3.length === 0 ? (
+                    <div className="text-[11px] text-gray-400 italic text-center py-6">
+                      {lang === 'vi' ? 'Trống' : 'Empty'}
+                    </div>
+                  ) : (
+                    matrixQuadrants.q3.map((t) => (
+                      <div
+                        key={t.id}
+                        className="bg-white dark:bg-[#131b2e] p-2.5 rounded-xl border border-amber-200/50 dark:border-amber-900/40 flex items-center justify-between gap-2 text-xs shadow-2xs"
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <button
+                            type="button"
+                            onClick={() => onSetTaskStatus(t.id, t.status === 'completed' ? 'todo' : 'completed')}
+                            className="cursor-pointer shrink-0"
+                          >
+                            {t.status === 'completed' ? (
+                              <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                            ) : (
+                              <Circle className="w-4 h-4 text-gray-300 dark:text-gray-600 hover:text-emerald-500" />
+                            )}
+                          </button>
+                          <span className={`truncate font-medium ${t.status === 'completed' ? 'line-through text-gray-400' : 'text-gray-800 dark:text-gray-100'}`}>
+                            {t.title}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            onClick={() => onDeleteTask(t.id)}
+                            className="p-1 text-gray-400 hover:text-rose-600 cursor-pointer"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              {/* Q4: Eliminate */}
+              <div className="bg-slate-50/40 dark:bg-slate-900/30 border border-slate-300/80 dark:border-slate-800 rounded-2xl p-4 flex flex-col min-h-[220px]">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-slate-400" />
+                    <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                      {lang === 'vi' ? 'Q4: Cân Nhắc Hủy (Không gấp, Không quan trọng)' : 'Q4: Eliminate (Not Urgent, Not Important)'}
+                    </h4>
+                  </div>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-slate-200/60 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold">
+                    {matrixQuadrants.q4.length}
+                  </span>
+                </div>
+                <p className="text-[10px] text-gray-500 dark:text-gray-400 mb-3">
+                  {lang === 'vi' ? 'Việc gây xao nhãng, nên trì hoãn hoặc loại bỏ.' : 'Time-wasters or non-essential backlog.'}
+                </p>
+                <div className="space-y-1.5 flex-1 overflow-y-auto max-h-64">
+                  {matrixQuadrants.q4.length === 0 ? (
+                    <div className="text-[11px] text-gray-400 italic text-center py-6">
+                      {lang === 'vi' ? 'Trống' : 'Empty'}
+                    </div>
+                  ) : (
+                    matrixQuadrants.q4.map((t) => (
+                      <div
+                        key={t.id}
+                        className="bg-white dark:bg-[#131b2e] p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2 text-xs shadow-2xs"
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <button
+                            type="button"
+                            onClick={() => onSetTaskStatus(t.id, t.status === 'completed' ? 'todo' : 'completed')}
+                            className="cursor-pointer shrink-0"
+                          >
+                            {t.status === 'completed' ? (
+                              <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                            ) : (
+                              <Circle className="w-4 h-4 text-gray-300 dark:text-gray-600 hover:text-emerald-500" />
+                            )}
+                          </button>
+                          <span className={`truncate font-medium ${t.status === 'completed' ? 'line-through text-gray-400' : 'text-gray-800 dark:text-gray-100'}`}>
+                            {t.title}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            onClick={() => onDeleteTask(t.id)}
+                            className="p-1 text-gray-400 hover:text-rose-600 cursor-pointer"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
             </div>
-          ) : (
+          ) : null}
+
+          {/* Task list (only in list view) */}
+          {viewMode === 'list' && (
+            <>
+              {filteredTasks.length === 0 ? (
+                <div className="bg-white dark:bg-[#131b2e] rounded-2xl border border-dashed border-gray-300 dark:border-gray-700 p-10 text-center">
+                  <ListChecks className="w-8 h-8 text-gray-300 dark:text-gray-600 mx-auto mb-2" />
+                  <p className="text-xs text-gray-400">
+                    {lang === 'vi' ? 'Không có công việc nào phù hợp bộ lọc.' : 'No tasks match this filter.'}
+                  </p>
+                </div>
+              ) : (
             <div className="space-y-2">
               {filteredTasks.map((task) => {
                 const cat = categoryOf(task.categoryId);
@@ -600,6 +1064,8 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
               })}
             </div>
           )}
+          </>
+        )}
         </div>
 
         {/* Goals column */}
@@ -709,67 +1175,94 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
                 return (
                   <div
                     key={habit.id}
-                    className="bg-white dark:bg-[#131b2e] p-3 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex items-center justify-between gap-2"
+                    className="bg-white dark:bg-[#131b2e] p-3 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col gap-2"
                   >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <button
-                        type="button"
-                        onClick={() => onToggleHabit?.(habit.id, today)}
-                        className="cursor-pointer shrink-0"
-                      >
-                        {isDone ? (
-                          <CheckCircle2 className="w-4 h-4 text-emerald-500 fill-emerald-100 dark:fill-emerald-950" />
-                        ) : (
-                          <Circle className="w-4 h-4 text-gray-300 dark:text-gray-600 hover:text-amber-500" />
-                        )}
-                      </button>
-                      <div className="min-w-0">
-                        <p
-                          className={`text-xs font-semibold truncate ${
-                            isDone
-                              ? 'line-through text-gray-400 dark:text-gray-500 font-normal'
-                              : 'text-gray-800 dark:text-gray-100'
-                          }`}
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <button
+                          type="button"
+                          onClick={() => onToggleHabit?.(habit.id, today)}
+                          className="cursor-pointer shrink-0"
                         >
-                          {habit.title}
-                        </p>
-                        <span className="text-[10px] text-gray-400">
-                          {habit.timeOfDay === 'morning'
-                            ? lang === 'vi'
-                              ? 'Buổi sáng'
-                              : 'Morning'
-                            : habit.timeOfDay === 'afternoon'
-                            ? lang === 'vi'
-                              ? 'Buổi chiều'
-                              : 'Afternoon'
-                            : habit.timeOfDay === 'evening'
-                            ? lang === 'vi'
-                              ? 'Buổi tối'
-                              : 'Evening'
-                            : lang === 'vi'
-                            ? 'Cả ngày'
-                            : 'Anytime'}
-                        </span>
+                          {isDone ? (
+                            <CheckCircle2 className="w-4 h-4 text-emerald-500 fill-emerald-100 dark:fill-emerald-950" />
+                          ) : (
+                            <Circle className="w-4 h-4 text-gray-300 dark:text-gray-600 hover:text-amber-500" />
+                          )}
+                        </button>
+                        <div className="min-w-0">
+                          <p
+                            className={`text-xs font-semibold truncate ${
+                              isDone
+                                ? 'line-through text-gray-400 dark:text-gray-500 font-normal'
+                                : 'text-gray-800 dark:text-gray-100'
+                            }`}
+                          >
+                            {habit.title}
+                          </p>
+                          <span className="text-[10px] text-gray-400">
+                            {habit.timeOfDay === 'morning'
+                              ? lang === 'vi'
+                                ? 'Buổi sáng'
+                                : 'Morning'
+                              : habit.timeOfDay === 'afternoon'
+                              ? lang === 'vi'
+                                ? 'Buổi chiều'
+                                : 'Afternoon'
+                              : habit.timeOfDay === 'evening'
+                              ? lang === 'vi'
+                                ? 'Buổi tối'
+                                : 'Evening'
+                              : lang === 'vi'
+                              ? 'Cả ngày'
+                              : 'Anytime'}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        {streak > 0 && (
+                          <span className="flex items-center gap-0.5 text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded-full">
+                            <Flame className="w-3 h-3 text-amber-500 fill-amber-500" />
+                            <span>{streak}d</span>
+                          </span>
+                        )}
+                        {onDeleteHabit && (
+                          <button
+                            type="button"
+                            onClick={() => onDeleteHabit(habit.id)}
+                            className="p-1 text-gray-300 hover:text-rose-500 rounded cursor-pointer"
+                            title={lang === 'vi' ? 'Xoá thói quen' : 'Delete habit'}
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2 shrink-0">
-                      {streak > 0 && (
-                        <span className="flex items-center gap-0.5 text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded-full">
-                          <Flame className="w-3 h-3 text-amber-500 fill-amber-500" />
-                          <span>{streak}d</span>
-                        </span>
-                      )}
-                      {onDeleteHabit && (
-                        <button
-                          type="button"
-                          onClick={() => onDeleteHabit(habit.id)}
-                          className="p-1 text-gray-300 hover:text-rose-500 rounded cursor-pointer"
-                          title={lang === 'vi' ? 'Xoá thói quen' : 'Delete habit'}
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      )}
+                    {/* 7-Day Weekly Streak Grid */}
+                    <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between gap-1">
+                      {weekDays.map((d) => {
+                        const done = isHabitDoneOn(habit, d.dateStr);
+                        return (
+                          <button
+                            key={d.dateStr}
+                            type="button"
+                            onClick={() => onToggleHabit?.(habit.id, d.dateStr)}
+                            className={`flex-1 flex flex-col items-center justify-center py-1 rounded-lg text-[9px] transition-all cursor-pointer ${
+                              done
+                                ? 'bg-emerald-500 text-white font-bold shadow-xs'
+                                : d.isToday
+                                  ? 'bg-blue-500/15 text-blue-600 dark:text-blue-400 font-bold border border-blue-500/30'
+                                  : 'bg-slate-100 dark:bg-slate-800/70 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
+                            }`}
+                            title={`${d.dayName} (${d.dateStr})`}
+                          >
+                            <span className="scale-90 opacity-80">{d.dayName}</span>
+                            <span className="text-[10px] font-mono mt-0.5">{d.dayNum}</span>
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
                 );

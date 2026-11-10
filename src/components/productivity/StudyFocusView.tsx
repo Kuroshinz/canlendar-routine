@@ -14,6 +14,11 @@ import {
   BarChart3,
   Volume2,
   Headphones,
+  Brain,
+  Quote,
+  Sparkles,
+  MessageSquare,
+  X,
 } from 'lucide-react';
 import {
   FocusMode,
@@ -47,6 +52,59 @@ interface StudyFocusViewProps {
   onStartTask?: (taskId: string) => void;
 }
 
+export type ScientificIntervalId = 'pomo25' | 'deep50' | 'ultradian90';
+
+export interface ScientificInterval {
+  id: ScientificIntervalId;
+  nameVi: string;
+  nameEn: string;
+  focus: number;
+  shortBreak: number;
+  longBreak: number;
+  descVi: string;
+  descEn: string;
+}
+
+export const SCIENTIFIC_INTERVALS: ScientificInterval[] = [
+  {
+    id: 'pomo25',
+    nameVi: '🍅 25 / 5 Pomodoro',
+    nameEn: '🍅 25 / 5 Pomodoro',
+    focus: 25,
+    shortBreak: 5,
+    longBreak: 15,
+    descVi: 'Ngắn gọn, dễ bắt đầu, chống trì hoãn tức thì',
+    descEn: 'Bite-sized, low friction, beats procrastination',
+  },
+  {
+    id: 'deep50',
+    nameVi: '🧠 50 / 10 Deep Work',
+    nameEn: '🧠 50 / 10 Deep Work',
+    focus: 50,
+    shortBreak: 10,
+    longBreak: 20,
+    descVi: 'Chuẩn vàng cho lập trình, nghiên cứu & viết lách',
+    descEn: 'Gold standard for coding & deep analysis',
+  },
+  {
+    id: 'ultradian90',
+    nameVi: '⚡ 90 / 20 Ultradian',
+    nameEn: '⚡ 90 / 20 Ultradian',
+    focus: 90,
+    shortBreak: 20,
+    longBreak: 30,
+    descVi: 'Đỉnh cao sinh học não bộ 90 phút trước khi hạ dopamine',
+    descEn: 'Natural 90-min biological peak concentration cycle',
+  },
+];
+
+export const ZEN_QUOTES = [
+  { vi: 'Sự tập trung là siêu năng lực lớn nhất trong một thế giới xao nhãng.', en: 'Focus is the ultimate superpower in an age of distraction.' },
+  { vi: 'Làm việc sâu không chỉ tạo ra kết quả kiệt xuất, mà còn đem lại sự an tĩnh nội tâm.', en: 'Deep work produces elite output and deep mental calm.' },
+  { vi: 'Mỗi phút bạn toàn tâm toàn ý hôm nay là nền móng cho thành tựu ngày mai.', en: 'Every minute of unbroken concentration today builds tomorrow’s peak.' },
+  { vi: 'Đừng bận rộn vì hình thức, hãy tĩnh lặng và làm nên những điều phi thường.', en: 'Be still and accomplish the extraordinary.' },
+];
+
 const PHASE_SECONDS: Record<PomodoroPhase, number> = {
   focus: 25 * 60,
   shortBreak: 5 * 60,
@@ -62,6 +120,7 @@ const PHASE_META: Record<PomodoroPhase, { labelVi: string; labelEn: string; colo
 interface PersistedTimer {
   mode: FocusMode;
   phase: PomodoroPhase;
+  intervalId?: ScientificIntervalId;
   countdownMinutes: number;
   linkedTaskId: string;
   /** Seconds left, captured at the moment the timer was paused. */
@@ -78,6 +137,7 @@ interface PersistedTimer {
 const DEFAULT_TIMER: PersistedTimer = {
   mode: 'pomodoro',
   phase: 'focus',
+  intervalId: 'pomo25',
   countdownMinutes: 30,
   linkedTaskId: '',
   remaining: PHASE_SECONDS.focus,
@@ -137,8 +197,38 @@ export const StudyFocusView: React.FC<StudyFocusViewProps> = ({
     setAmbientVolume(v);
   };
 
+  const [quoteIndex] = useState(() => Math.floor(Math.random() * ZEN_QUOTES.length));
+  const [reflectionModal, setReflectionModal] = useState<{
+    durationSeconds: number;
+    completed: boolean;
+    reflectionText: string;
+  } | null>(null);
+
+  const activeInterval = useMemo(() => {
+    return SCIENTIFIC_INTERVALS.find((i) => i.id === timer.intervalId) || SCIENTIFIC_INTERVALS[0];
+  }, [timer.intervalId]);
+
+  const getIntervalSeconds = (p: PomodoroPhase, intv: ScientificInterval = activeInterval) => {
+    if (p === 'focus') return intv.focus * 60;
+    if (p === 'shortBreak') return intv.shortBreak * 60;
+    return intv.longBreak * 60;
+  };
+
+  const handleSelectInterval = (nextId: ScientificIntervalId) => {
+    const nextInterval = SCIENTIFIC_INTERVALS.find((i) => i.id === nextId) || SCIENTIFIC_INTERVALS[0];
+    const newSeconds = getIntervalSeconds(timer.phase, nextInterval);
+
+    setTimer((prev) => ({
+      ...prev,
+      intervalId: nextId,
+      running: false,
+      runStartedAt: null,
+      remaining: newSeconds,
+    }));
+  };
+
   const { mode, phase, countdownMinutes, linkedTaskId, running, soundOn, completedPomodoros } = timer;
-  const phaseSeconds = mode === 'pomodoro' ? PHASE_SECONDS[phase] : countdownMinutes * 60;
+  const phaseSeconds = mode === 'pomodoro' ? getIntervalSeconds(phase) : countdownMinutes * 60;
   const liveSeconds =
     running && timer.runStartedAt ? Math.max(0, Math.floor((now - timer.runStartedAt) / 1000)) : 0;
   const remaining = mode === 'stopwatch' ? 0 : Math.max(0, timer.remaining - liveSeconds);
@@ -158,22 +248,43 @@ export const StudyFocusView: React.FC<StudyFocusViewProps> = ({
     linkedTask?.title ||
     (lang === 'vi' ? 'Phiên học không gắn công việc' : 'Unlinked focus session');
 
-  // Persist a finished session through one path so history stays consistent.
-  const saveSession = (durationSeconds: number, completed: boolean) => {
-    if (durationSeconds < 30) return;
+  // Trigger reflection modal before committing session
+  const handleFinishAndReflect = (durationSeconds: number, completed: boolean) => {
+    if (durationSeconds < 30) {
+      reset();
+      return;
+    }
+    setReflectionModal({
+      durationSeconds,
+      completed,
+      reflectionText: '',
+    });
+  };
+
+  const handleSaveReflection = (customNote?: string) => {
+    if (!reflectionModal) return;
+    const { durationSeconds, completed, reflectionText } = reflectionModal;
+    const note = customNote !== undefined ? customNote : reflectionText;
     const endedAt = Date.now();
+    const finalLabel = note.trim()
+      ? `${sessionLabel} — 📝 ${note.trim()}`
+      : sessionLabel;
+
     onAddSession({
       id: `fs-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       mode,
       phase: mode === 'pomodoro' ? phase : undefined,
       taskId: linkedTaskId || undefined,
       goalId: linkedGoal?.id,
-      label: sessionLabel,
+      label: finalLabel,
       startedAt: endedAt - durationSeconds * 1000,
       endedAt,
       durationSeconds,
       completed,
     });
+
+    setReflectionModal(null);
+    reset();
   };
 
   // --- Ticking engine -------------------------------------------------------
@@ -191,14 +302,14 @@ export const StudyFocusView: React.FC<StudyFocusViewProps> = ({
     if (!running || mode === 'stopwatch' || remaining > 0) return;
 
     if (soundOn) playNotificationSound();
-    saveSession(phaseSeconds, true);
+    handleFinishAndReflect(phaseSeconds, true);
 
     if (mode === 'pomodoro') {
       const nextPhase: PomodoroPhase = phase === 'focus' ? 'shortBreak' : 'focus';
       setTimer((prev) => ({
         ...prev,
         phase: nextPhase,
-        remaining: PHASE_SECONDS[nextPhase],
+        remaining: getIntervalSeconds(nextPhase),
         runStartedAt: Date.now(),
         completedPomodoros: prev.completedPomodoros + (phase === 'focus' ? 1 : 0),
       }));
@@ -210,8 +321,6 @@ export const StudyFocusView: React.FC<StudyFocusViewProps> = ({
   }, [remaining, running, mode, phase]);
 
   const start = () => {
-    // Starting work on a task that is still "todo" flips it to in-progress so the
-    // board matches what the clock is actually doing.
     if (linkedTask && linkedTask.status === 'todo') onStartTask?.(linkedTask.id);
     setTimer((prev) => ({ ...prev, running: true, runStartedAt: Date.now() }));
   };
@@ -232,7 +341,7 @@ export const StudyFocusView: React.FC<StudyFocusViewProps> = ({
       runStartedAt: null,
       remaining:
         prev.mode === 'pomodoro'
-          ? PHASE_SECONDS[prev.phase]
+          ? getIntervalSeconds(prev.phase)
           : prev.mode === 'countdown'
           ? prev.countdownMinutes * 60
           : prev.remaining,
@@ -240,8 +349,7 @@ export const StudyFocusView: React.FC<StudyFocusViewProps> = ({
     }));
 
   const stopAndSave = () => {
-    saveSession(mode === 'stopwatch' ? elapsed : Math.max(0, phaseSeconds - remaining), false);
-    reset();
+    handleFinishAndReflect(mode === 'stopwatch' ? elapsed : Math.max(0, phaseSeconds - remaining), false);
   };
 
   const switchMode = (next: FocusMode) =>
@@ -252,7 +360,7 @@ export const StudyFocusView: React.FC<StudyFocusViewProps> = ({
       runStartedAt: null,
       remaining:
         next === 'pomodoro'
-          ? PHASE_SECONDS[prev.phase]
+          ? getIntervalSeconds(prev.phase)
           : next === 'countdown'
           ? prev.countdownMinutes * 60
           : 0,
@@ -265,7 +373,7 @@ export const StudyFocusView: React.FC<StudyFocusViewProps> = ({
       phase: next,
       running: false,
       runStartedAt: null,
-      remaining: PHASE_SECONDS[next],
+      remaining: getIntervalSeconds(next),
     }));
 
   const selectCountdown = (minutes: number) =>
@@ -340,6 +448,39 @@ export const StudyFocusView: React.FC<StudyFocusViewProps> = ({
           );
         })}
       </div>
+
+      {/* Scientific Interval Presets for Pomodoro */}
+      {mode === 'pomodoro' && (
+        <div className="w-full max-w-sm mb-3.5">
+          <div className="flex items-center gap-1.5 mb-1.5 px-0.5">
+            <Brain className="w-3.5 h-3.5 text-blue-500" />
+            <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              {lang === 'vi' ? 'Phác đồ nhịp sinh học' : 'Scientific Focus Protocol'}
+            </span>
+          </div>
+          <div className="grid grid-cols-3 gap-1.5">
+            {SCIENTIFIC_INTERVALS.map((intv) => (
+              <button
+                key={intv.id}
+                type="button"
+                onClick={() => handleSelectInterval(intv.id)}
+                className={`p-2 rounded-xl border text-left flex flex-col justify-between transition-all cursor-pointer ${
+                  activeInterval.id === intv.id
+                    ? 'bg-blue-50 dark:bg-blue-950/40 border-blue-500 text-blue-700 dark:text-blue-300 shadow-2xs font-semibold'
+                    : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 text-gray-700 dark:text-gray-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                }`}
+              >
+                <span className="text-[11px] font-bold leading-tight truncate">
+                  {lang === 'vi' ? intv.nameVi : intv.nameEn}
+                </span>
+                <span className="text-[9px] text-gray-400 mt-1 line-clamp-1">
+                  {lang === 'vi' ? intv.descVi : intv.descEn}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Phase selector for pomodoro */}
       {mode === 'pomodoro' && (
@@ -573,6 +714,74 @@ export const StudyFocusView: React.FC<StudyFocusViewProps> = ({
     </div>
   );
 
+  const renderReflectionModal = () => {
+    if (!reflectionModal) return null;
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+        <div className="bg-white dark:bg-[#131b2e] w-full max-w-md rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-5 animate-in zoom-in-95 duration-150">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-amber-500" />
+              <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                {lang === 'vi' ? 'Tổng Kết & Thu Hoạch Phiên Học' : 'Session Harvest & Reflection'}
+              </h3>
+            </div>
+            <button
+              onClick={() => {
+                setReflectionModal(null);
+                reset();
+              }}
+              className="p-1 text-gray-400 hover:text-gray-600 rounded-lg cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          <p className="text-xs text-gray-600 dark:text-gray-300 mb-3">
+            🎉 {lang === 'vi' ? 'Chúc mừng bạn vừa hoàn thành phiên tập trung' : 'Great job completing your focus session'} ({formatDuration(reflectionModal.durationSeconds)})!
+          </p>
+
+          <div className="mb-4">
+            <label className="block text-[11px] font-semibold text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wider">
+              {lang === 'vi' ? 'Bạn đã làm được gì trong phiên này?' : 'What did you accomplish in this session?'}
+            </label>
+            <textarea
+              rows={3}
+              value={reflectionModal.reflectionText}
+              onChange={(e) =>
+                setReflectionModal((prev) => (prev ? { ...prev, reflectionText: e.target.value } : null))
+              }
+              placeholder={
+                lang === 'vi'
+                  ? 'Ví dụ: Đã đọc xong 20 trang sách, giải 5 bài toán khó, fix lỗi thanh toán...'
+                  : 'e.g. Read 20 pages, solved 5 problem sets, refactored checkout...'
+              }
+              className="w-full text-xs p-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-slate-900 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+            />
+          </div>
+
+          <div className="flex items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => handleSaveReflection('')}
+              className="px-3.5 py-2 text-xs font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-xl cursor-pointer"
+            >
+              {lang === 'vi' ? 'Bỏ qua ghi chú' : 'Skip note'}
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSaveReflection()}
+              className="px-4 py-2 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-xs cursor-pointer flex items-center gap-1.5"
+            >
+              <CheckCircle2 className="w-4 h-4" />
+              <span>{lang === 'vi' ? 'Lưu thu hoạch' : 'Save & Record'}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   // --- Zen mode: full-screen minimal timer ---------------------------------
   if (zen) {
     return (
@@ -587,11 +796,15 @@ export const StudyFocusView: React.FC<StudyFocusViewProps> = ({
           </button>
         </div>
 
+        {/* Inspirational quote */}
+        <div className="max-w-md text-center mb-6 opacity-75 flex items-center justify-center gap-2 px-4 text-xs italic text-gray-300">
+          <Quote className="w-3.5 h-3.5 shrink-0 text-blue-400" />
+          <span>{lang === 'vi' ? ZEN_QUOTES[quoteIndex].vi : ZEN_QUOTES[quoteIndex].en}</span>
+        </div>
+
         <p className="text-xs uppercase tracking-[0.3em] text-gray-500 mb-3">
           {mode === 'pomodoro'
-            ? lang === 'vi'
-              ? PHASE_META[phase].labelVi
-              : PHASE_META[phase].labelEn
+            ? `${lang === 'vi' ? PHASE_META[phase].labelVi : PHASE_META[phase].labelEn} · ${activeInterval.nameVi}`
             : mode === 'stopwatch'
             ? lang === 'vi'
               ? 'Bấm giờ'
@@ -601,12 +814,12 @@ export const StudyFocusView: React.FC<StudyFocusViewProps> = ({
             : 'Countdown'}
         </p>
 
-        <div className="text-[92px] leading-none font-mono font-bold text-gray-100 tabular-nums">
+        <div className="text-[96px] leading-none font-mono font-bold text-gray-100 tabular-nums drop-shadow-md">
           {formatDuration(displaySeconds)}
         </div>
 
         {linkedTask && (
-          <p className="text-sm text-gray-400 mt-4 max-w-lg text-center">{linkedTask.title}</p>
+          <p className="text-sm text-gray-300 mt-4 max-w-lg text-center font-medium">{linkedTask.title}</p>
         )}
 
         <div className="flex items-center gap-3 mt-10">
@@ -623,6 +836,15 @@ export const StudyFocusView: React.FC<StudyFocusViewProps> = ({
           >
             <RotateCcw className="w-4 h-4" />
           </button>
+          {running && (
+            <button
+              onClick={stopAndSave}
+              className="p-3.5 rounded-full bg-emerald-600/80 hover:bg-emerald-600 text-white cursor-pointer"
+              title={lang === 'vi' ? 'Dừng & ghi nhận' : 'Stop & save'}
+            >
+              <CheckCircle2 className="w-4 h-4" />
+            </button>
+          )}
           <button
             onClick={handleToggleAmbient}
             title={lang === 'vi' ? 'Bật/tắt âm thanh nền' : 'Toggle ambient sound'}
@@ -633,6 +855,36 @@ export const StudyFocusView: React.FC<StudyFocusViewProps> = ({
             <Headphones className="w-4 h-4" />
           </button>
         </div>
+
+        {/* Ambient controls inside Zen */}
+        <div className="mt-8 flex flex-col items-center gap-2">
+          <div className="flex items-center gap-1.5 bg-white/5 border border-white/10 rounded-full px-3 py-1.5">
+            {AMBIENT_TRACKS.map((trk) => (
+              <button
+                key={trk.id}
+                onClick={() => handleSelectTrack(trk.id)}
+                className={`px-2.5 py-1 rounded-full text-[10px] cursor-pointer transition-colors ${
+                  ambientTrack === trk.id ? 'bg-violet-600 text-white font-bold' : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                {trk.emoji} {lang === 'vi' ? trk.labelVi : trk.labelEn}
+              </button>
+            ))}
+            {ambientPlaying && (
+              <input
+                type="range"
+                min={0}
+                max={1}
+                step={0.05}
+                value={ambientVol}
+                onChange={(e) => handleChangeVolume(Number(e.target.value))}
+                className="w-16 accent-violet-500 h-1 bg-white/20 rounded-lg cursor-pointer ml-1"
+              />
+            )}
+          </div>
+        </div>
+
+        {renderReflectionModal()}
       </div>
     );
   }
@@ -762,6 +1014,8 @@ export const StudyFocusView: React.FC<StudyFocusViewProps> = ({
           )}
         </div>
       </div>
+
+      {renderReflectionModal()}
     </div>
   );
 };

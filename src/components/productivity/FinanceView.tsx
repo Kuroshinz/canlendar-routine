@@ -15,6 +15,10 @@ import {
   ArrowDownCircle,
   ArrowUpCircle,
   Download,
+  Zap,
+  ShieldCheck,
+  Flame,
+  CheckCircle2,
 } from 'lucide-react';
 import {
   BudgetSettings,
@@ -70,6 +74,29 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
   const [query, setQuery] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [showBudgetEditor, setShowBudgetEditor] = useState(false);
+  const [quickBanner, setQuickBanner] = useState<string | null>(null);
+
+  const QUICK_EXPENSE_PRESETS = [
+    { label: '☕ Cà phê (35k)', amount: 35000, category: 'food' as FinanceCategoryId, title: 'Cà phê sáng' },
+    { label: '🍚 Cơm trưa (45k)', amount: 45000, category: 'food' as FinanceCategoryId, title: 'Cơm trưa văn phòng' },
+    { label: '⛽ Đổ xăng (70k)', amount: 70000, category: 'transport' as FinanceCategoryId, title: 'Đổ xăng xe máy' },
+    { label: '🛒 Siêu thị (150k)', amount: 150000, category: 'shopping' as FinanceCategoryId, title: 'Siêu thị nhu yếu phẩm' },
+    { label: '🥤 Trà sữa (40k)', amount: 40000, category: 'food' as FinanceCategoryId, title: 'Trà sữa chiều' },
+    { label: '🚗 Grab/Be (50k)', amount: 50000, category: 'transport' as FinanceCategoryId, title: 'Di chuyển Grab/Be' },
+  ];
+
+  const handleApplyQuickExpense = (p: typeof QUICK_EXPENSE_PRESETS[0]) => {
+    onAddTransaction({
+      title: p.title,
+      amount: p.amount,
+      type: 'expense',
+      category: p.category,
+      date: today,
+      note: 'Ghi nhanh 1-chạm',
+    });
+    setQuickBanner(`Đã ghi nhận chi tiêu "${p.title}" (-${formatMoney(p.amount, budget.currency)})!`);
+    setTimeout(() => setQuickBanner(null), 3500);
+  };
 
   // --- Quick add form state
   const [formType, setFormType] = useState<TransactionType>('expense');
@@ -86,6 +113,31 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
     () => computeBudgetStatus(monthSummary.expense, budget.monthlyLimit),
     [monthSummary.expense, budget.monthlyLimit]
   );
+
+  const burnRateAnalysis = useMemo(() => {
+    const [y, m] = monthPrefix.split('-').map(Number);
+    const now = new Date();
+    const isCurrentMonth = now.getFullYear() === y && now.getMonth() + 1 === m;
+    const totalDaysInMonth = new Date(y, m, 0).getDate();
+    const currentDay = isCurrentMonth ? now.getDate() : totalDaysInMonth;
+    const daysRemaining = isCurrentMonth ? Math.max(1, totalDaysInMonth - currentDay + 1) : 1;
+
+    const remainingBudget = Math.max(0, budget.monthlyLimit - monthSummary.expense);
+    const safeDailySpend = Math.round(remainingBudget / daysRemaining);
+
+    const actualDailyAverage = currentDay > 0 ? Math.round(monthSummary.expense / currentDay) : 0;
+    const isOverPaced = actualDailyAverage * totalDaysInMonth > budget.monthlyLimit && budget.monthlyLimit > 0;
+
+    return {
+      totalDaysInMonth,
+      currentDay,
+      daysRemaining,
+      remainingBudget,
+      safeDailySpend,
+      actualDailyAverage,
+      isOverPaced,
+    };
+  }, [monthPrefix, budget.monthlyLimit, monthSummary.expense]);
 
   const categoryRows = useMemo(() => expenseByCategory(transactions, monthPrefix), [transactions, monthPrefix]);
   const cashFlow = useMemo(() => dailyCashFlow(transactions, monthPrefix), [transactions, monthPrefix]);
@@ -354,6 +406,111 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
             </button>
           </form>
         )}
+      </div>
+
+      {/* Quick Toast Banner */}
+      {quickBanner && (
+        <div className="mb-4 px-4 py-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 text-xs font-semibold flex items-center gap-2 animate-in fade-in duration-200">
+          <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+          <span>{quickBanner}</span>
+        </div>
+      )}
+
+      {/* Smart Safe Spending & Burn Rate Advisor */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+        <div className="md:col-span-2 bg-gradient-to-r from-emerald-500/10 via-teal-500/5 to-transparent border border-emerald-500/20 rounded-2xl p-4 flex flex-col justify-between">
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-emerald-500" />
+              <span className="text-xs font-bold text-gray-800 dark:text-gray-100 uppercase tracking-wider">
+                {lang === 'vi' ? 'Hạn Mức Chi Tiêu An Toàn Mỗi Ngày' : 'Safe Daily Spending Allowance'}
+              </span>
+            </div>
+            <span className="text-[10px] px-2 py-0.5 rounded-md font-semibold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+              {lang === 'vi' ? `Còn ${burnRateAnalysis.daysRemaining} ngày` : `${burnRateAnalysis.daysRemaining} days left`}
+            </span>
+          </div>
+
+          <div className="flex items-baseline gap-2 my-1">
+            <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400">
+              {formatMoney(burnRateAnalysis.safeDailySpend, budget.currency)}
+            </span>
+            <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">
+              /{lang === 'vi' ? 'ngày an toàn' : 'day safe'}
+            </span>
+          </div>
+
+          <div className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">
+            {lang === 'vi'
+              ? `Nếu mỗi ngày chỉ chi tối đa mức này, bạn sẽ hoàn toàn không vượt ngân sách ${formatMoney(budget.monthlyLimit, budget.currency)} vào cuối tháng.`
+              : `Spending up to this amount daily guarantees you stay within your ${formatMoney(budget.monthlyLimit, budget.currency)} monthly limit.`}
+          </div>
+        </div>
+
+        <div className={`border rounded-2xl p-4 flex flex-col justify-between ${
+          burnRateAnalysis.isOverPaced
+            ? 'bg-amber-500/10 border-amber-500/30'
+            : 'bg-blue-500/10 border-blue-500/30'
+        }`}>
+          <div className="flex items-center gap-1.5 text-xs font-bold">
+            <Flame className={`w-4 h-4 ${burnRateAnalysis.isOverPaced ? 'text-amber-500' : 'text-blue-500'}`} />
+            <span className={burnRateAnalysis.isOverPaced ? 'text-amber-700 dark:text-amber-300' : 'text-blue-700 dark:text-blue-300'}>
+              {lang === 'vi' ? 'Tốc Độ Tiêu Dùng (Burn Rate)' : 'Monthly Burn Rate'}
+            </span>
+          </div>
+
+          <div className="my-1">
+            <div className="text-xs text-gray-500 dark:text-gray-400">
+              {lang === 'vi' ? 'Trung bình thực tế:' : 'Actual daily avg:'}
+            </div>
+            <div className="text-lg font-bold text-gray-800 dark:text-gray-100">
+              {formatMoney(burnRateAnalysis.actualDailyAverage, budget.currency)}
+              <span className="text-xs font-normal text-gray-400">/{lang === 'vi' ? 'ngày' : 'day'}</span>
+            </div>
+          </div>
+
+          <div className="text-[10px] font-medium leading-relaxed">
+            {burnRateAnalysis.isOverPaced ? (
+              <span className="text-amber-600 dark:text-amber-400 font-semibold">
+                ⚠️ {lang === 'vi' ? 'Đang tiêu nhanh hơn hạn mức dự kiến!' : 'Pacing faster than target limit!'}
+              </span>
+            ) : (
+              <span className="text-emerald-600 dark:text-emerald-400 font-semibold">
+                ✨ {lang === 'vi' ? 'Tiến độ tiêu dùng rất cân đối và ổn định.' : 'Healthy and sustainable pacing.'}
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Quick 1-Tap Expense Strip */}
+      <div className="bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200 dark:border-slate-800 p-3.5 mb-6 shadow-xs">
+        <div className="flex items-center justify-between gap-2 mb-2.5">
+          <div className="flex items-center gap-1.5 text-xs font-bold text-gray-700 dark:text-gray-300">
+            <Zap className="w-3.5 h-3.5 text-amber-500" />
+            <span>{lang === 'vi' ? 'Ghi Nhanh Chi Tiêu Thường Ngày (1-Chạm)' : 'Quick 1-Tap Frequent Expenses'}</span>
+          </div>
+          <span className="text-[10px] text-gray-400">
+            {lang === 'vi' ? 'Bấm để ghi nhận tức thì vào hôm nay' : 'Tap to log instantly for today'}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+          {QUICK_EXPENSE_PRESETS.map((preset) => (
+            <button
+              key={preset.title}
+              onClick={() => handleApplyQuickExpense(preset)}
+              className="px-3 py-2 rounded-xl text-xs font-medium bg-slate-50 dark:bg-slate-800/80 hover:bg-emerald-500/10 hover:border-emerald-500/30 border border-slate-200 dark:border-slate-700 text-gray-800 dark:text-gray-200 transition-all text-left flex flex-col justify-between group active:scale-95 cursor-pointer"
+            >
+              <span className="font-semibold text-gray-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors truncate">
+                {preset.label}
+              </span>
+              <span className="text-[10px] text-gray-400 mt-1 font-mono">
+                {formatMoneyCompact(preset.amount, budget.currency)}
+              </span>
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Quick add form */}
