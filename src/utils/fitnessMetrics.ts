@@ -656,6 +656,15 @@ export const EXERCISES: Exercise[] = [
   { id: 'hanging-leg-raise', name: 'Hanging Leg Raise', muscle: 'core', equipment: 'Bodyweight', cue: 'Không đung đưa' },
   { id: 'plank', name: 'Plank', muscle: 'core', equipment: 'Bodyweight', cue: 'Siết bụng, mông ngang vai' },
   { id: 'treadmill', name: 'Treadmill', muscle: 'cardio', equipment: 'Machine', cue: 'Nhịp đều, thở mũi' },
+  { id: 'hip-thrust', name: 'Barbell Hip Thrust', muscle: 'legs', equipment: 'Barbell', cue: 'Tựa lưng ghế, siết đỉnh mông 1 giây, cằm gập nhẹ' },
+  { id: 'bulgarian-split-squat', name: 'Bulgarian Split Squat', muscle: 'legs', equipment: 'Dumbbell', cue: 'Chân sau kê ghế, dồn trọng tâm chân trước' },
+  { id: 'incline-barbell-press', name: 'Incline Barbell Press', muscle: 'chest', equipment: 'Barbell', cue: 'Ghế nghiêng 30-45 độ, hạ tạ chạm ngực trên' },
+  { id: 'chest-dips', name: 'Chest Dips', muscle: 'chest', equipment: 'Bodyweight', cue: 'Hơi đổ người ra trước 15 độ, mở rộng cùi chỏ nhẹ' },
+  { id: 'cable-lateral-raise', name: 'Cable Lateral Raise', muscle: 'shoulders', equipment: 'Cable', cue: 'Kéo dây ngang vai, duy trì kháng lực liên tục' },
+  { id: 'rear-delt-fly', name: 'Rear Delt Fly', muscle: 'shoulders', equipment: 'Dumbbell', cue: 'Cúi người gập hông, mở rộng hai cánh tay ép vai sau' },
+  { id: 'incline-db-curl', name: 'Incline Dumbbell Curl', muscle: 'arms', equipment: 'Dumbbell', cue: 'Ghế 45 độ, căng dãn tối đa bắp tay trước' },
+  { id: 'skull-crusher', name: 'Skull Crusher', muscle: 'arms', equipment: 'Barbell', cue: 'Hạ tạ về đỉnh đầu, cố định cùi chỏ vuông góc' },
+  { id: 'straight-arm-pulldown', name: 'Straight Arm Pulldown', muscle: 'back', equipment: 'Cable', cue: 'Tay thẳng khóa nhẹ khớp, kéo ép cơ xô sát người' },
 ];
 
 export const exerciseById = (id: string, customList: Exercise[] = []): Exercise | undefined =>
@@ -886,8 +895,168 @@ export const generateSplitSessions = (template: RoutineSplitTemplate): PlannedSe
           ],
         },
       ];
+    case 'glute_lower':
+      return [
+        {
+          id: 'gl-day-1',
+          weekIndex: 0,
+          dayIndex: 0,
+          title: 'Glute Power & Hinge (Mông Cực Đại & Đùi Sau)',
+          dayOfWeek: 'Thứ 2',
+          prescriptions: [
+            { exerciseId: 'hip-thrust', sets: 4, reps: '8-10', rpe: 8, restSeconds: 120 },
+            { exerciseId: 'romanian-deadlift', sets: 4, reps: '8-10', rpe: 8, restSeconds: 90 },
+            { exerciseId: 'bulgarian-split-squat', sets: 3, reps: '10-12', rpe: 8, restSeconds: 90 },
+            { exerciseId: 'leg-curl', sets: 3, reps: '12-15', rpe: 9, restSeconds: 60 },
+            { exerciseId: 'cable-crunch', sets: 3, reps: '12-15', rpe: 8, restSeconds: 60 },
+          ],
+        },
+        {
+          id: 'gl-day-2',
+          weekIndex: 0,
+          dayIndex: 1,
+          title: 'Upper Body Toning (Thân Trên Thon Gọn & Vai Săn)',
+          dayOfWeek: 'Thứ 3',
+          prescriptions: [
+            { exerciseId: 'lat-pulldown', sets: 4, reps: '10-12', rpe: 8, restSeconds: 75 },
+            { exerciseId: 'incline-db-press', sets: 3, reps: '10-12', rpe: 8, restSeconds: 75 },
+            { exerciseId: 'cable-lateral-raise', sets: 4, reps: '12-15', rpe: 9, restSeconds: 60 },
+            { exerciseId: 'straight-arm-pulldown', sets: 3, reps: '12-15', rpe: 8, restSeconds: 60 },
+            { exerciseId: 'triceps-pushdown', sets: 3, reps: '12-15', rpe: 9, restSeconds: 60 },
+          ],
+        },
+        {
+          id: 'gl-day-3',
+          weekIndex: 0,
+          dayIndex: 3,
+          title: 'Quad & Glute Hypertrophy (Đùi Trước & Mông)',
+          dayOfWeek: 'Thứ 5',
+          prescriptions: [
+            { exerciseId: 'back-squat', sets: 4, reps: '8-10', rpe: 8, restSeconds: 120 },
+            { exerciseId: 'leg-press', sets: 4, reps: '10-12', rpe: 8, restSeconds: 90 },
+            { exerciseId: 'hip-thrust', sets: 3, reps: '10-12', rpe: 9, restSeconds: 90 },
+            { exerciseId: 'calf-raise', sets: 4, reps: '12-15', rpe: 9, restSeconds: 60 },
+            { exerciseId: 'hanging-leg-raise', sets: 3, reps: '12-15', rpe: 8, restSeconds: 60 },
+          ],
+        },
+        {
+          id: 'gl-day-4',
+          weekIndex: 0,
+          dayIndex: 4,
+          title: 'Full Body Circuit & Core (Toàn Thân & Vòng Eo)',
+          dayOfWeek: 'Thứ 6',
+          prescriptions: [
+            { exerciseId: 'bulgarian-split-squat', sets: 3, reps: '12-15', rpe: 8, restSeconds: 75 },
+            { exerciseId: 'seated-cable-row', sets: 3, reps: '10-12', rpe: 8, restSeconds: 75 },
+            { exerciseId: 'face-pull', sets: 3, reps: '12-15', rpe: 9, restSeconds: 60 },
+            { exerciseId: 'plank', sets: 3, reps: '45-60s', rpe: 8, restSeconds: 60 },
+            { exerciseId: 'treadmill', sets: 1, reps: '20 min', rpe: 7, restSeconds: 60 },
+          ],
+        },
+      ];
   }
 };
+
+// ---------------------------------------------------------------------------
+// Adaptive Mesocycle Periodization Models
+// ---------------------------------------------------------------------------
+
+export interface MesocyclePhaseInfo {
+  phase: number;
+  nameVi: string;
+  nameEn: string;
+  durationWeeks: string;
+  intensityRpe: string;
+  volumeTarget: string;
+  repsRange: string;
+  color: string;
+  descriptionVi: string;
+  nutritionTipVi: string;
+}
+
+export const MESOCYCLE_PHASES: MesocyclePhaseInfo[] = [
+  {
+    phase: 1,
+    nameVi: 'Giai Đoạn 1: Tích Lũy Dung Tích (Accumulation)',
+    nameEn: 'Phase 1: Volume Accumulation',
+    durationWeeks: 'Tuần 1 - 4',
+    intensityRpe: 'RPE 7 - 8',
+    volumeTarget: '12 - 16 hiệp / nhóm cơ / tuần',
+    repsRange: '10 - 15 reps',
+    color: '#0ea5e9',
+    descriptionVi: 'Xây dựng nền tảng kích thước cơ bắp, rèn luyện kỹ thuật cơ bản và chuẩn bị sức bền cho các đợt tăng tải kế tiếp.',
+    nutritionTipVi: 'Duy trì lượng đạm cao (2.0g/kg), nạp đủ carb trước và sau tập để tối ưu glycogen cơ bắp.',
+  },
+  {
+    phase: 2,
+    nameVi: 'Giai Đoạn 2: Quá Tải Lũy Tiến (Progressive Overload)',
+    nameEn: 'Phase 2: Intensification',
+    durationWeeks: 'Tuần 5 - 8',
+    intensityRpe: 'RPE 8 - 9',
+    volumeTarget: '14 - 18 hiệp / nhóm cơ / tuần',
+    repsRange: '6 - 10 reps',
+    color: '#f59e0b',
+    descriptionVi: 'Tăng trọng lượng tạ thêm 2.5 - 5% hoặc cố gắng thêm 1-2 reps mỗi buổi. Kích thích tối đa các sợi cơ co giật nhanh.',
+    nutritionTipVi: 'Nếu bulking hãy giữ thặng dư nhẹ +200-300 kcal. Nếu cutting hãy giữ protein 2.2-2.4g/kg để chống mất cơ.',
+  },
+  {
+    phase: 3,
+    nameVi: 'Giai Đoạn 3: Đỉnh Cao Kích Thích (Peak & Definition)',
+    nameEn: 'Phase 3: Peak Hypertrophy',
+    durationWeeks: 'Tuần 9 - 11',
+    intensityRpe: 'RPE 9 - 10',
+    volumeTarget: '16 - 20 hiệp / nhóm cơ / tuần',
+    repsRange: '8 - 12 reps (áp dụng Drop-set)',
+    color: '#ff6025',
+    descriptionVi: 'Đạt ngưỡng kích hoạt cơ tối đa, sử dụng drop-set và superset ở hiệp cuối để vắt kiệt sợi cơ và gia tăng độ dày thớ cơ.',
+    nutritionTipVi: 'Uống đủ 2.5 - 3 lít nước hàng ngày và bổ sung điện giải trong suốt các buổi tập cường độ cao.',
+  },
+  {
+    phase: 4,
+    nameVi: 'Giai Đoạn 4: Xả Tải Chủ Động (Deload Recovery)',
+    nameEn: 'Phase 4: Active Deload',
+    durationWeeks: 'Tuần 12',
+    intensityRpe: 'RPE 6 - 7',
+    volumeTarget: '6 - 8 hiệp / nhóm cơ / tuần (giảm 50%)',
+    repsRange: '8 - 10 reps (tạ nhẹ hơn 30%)',
+    color: '#10b981',
+    descriptionVi: 'Hạ tải trọng để phục hồi thần kinh trung ương (CNS), khớp và gân cơ. Ngăn ngừa hội chứng quá tải (Overtraining).',
+    nutritionTipVi: 'Đưa calo về mức cân bằng duy trì (Maintenance), ngủ đủ 8 tiếng để cơ thể tái tạo mô cơ hoàn chỉnh.',
+  },
+];
+
+/**
+ * Recommends intelligent progressive overload based on previous performance
+ */
+export function calculateProgressiveOverload(
+  lastWeightKg: number,
+  lastReps: number,
+  targetRepsRange: string = '8-10'
+): { nextWeightKg: number; nextReps: number; tipVi: string; type: 'weight' | 'reps' } {
+  const parts = targetRepsRange.split('-').map((s) => parseInt(s.trim()));
+  const maxRepTarget = parts.length > 1 ? parts[1] : 10;
+  const minRepTarget = parts[0] || 8;
+
+  if (lastReps >= maxRepTarget) {
+    // Reached top of rep range -> Add weight
+    const increment = lastWeightKg >= 60 ? 2.5 : 1.25;
+    const nextWeight = lastWeightKg + increment;
+    return {
+      nextWeightKg: nextWeight,
+      nextReps: minRepTarget,
+      tipVi: `Đã hoàn thành mốc ${lastReps} reps! Tăng +${increment}kg lên ${nextWeight}kg với mục tiêu ${minRepTarget} reps.`,
+      type: 'weight',
+    };
+  } else {
+    // Add 1 rep at current weight (Double Progression)
+    return {
+      nextWeightKg: lastWeightKg,
+      nextReps: lastReps + 1,
+      tipVi: `Giữ mức tạ ${lastWeightKg}kg và cố gắng đạt ${lastReps + 1} reps (+1 rep overload).`,
+      type: 'reps',
+    };
+  }
+}
 
 // ---------------------------------------------------------------------------
 // 7. US Navy Body Fat Calculator (Thước Dây Hải Quân Mỹ)

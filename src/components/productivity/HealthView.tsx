@@ -487,6 +487,7 @@ export const HealthView: React.FC<HealthViewProps> = ({
           onUpdateNutritionSettings={onUpdateNutritionSettings}
           onUpdateProfile={onUpdateCtgProfile}
           onNavigateTab={(tab) => setActiveSubTab(tab as SubTab)}
+          onApplySplitTemplate={onApplySplitTemplate}
         />
       )}
 
@@ -524,6 +525,8 @@ export const HealthView: React.FC<HealthViewProps> = ({
           onUpdatePlannedSession={onUpdatePlannedSession}
           onDeletePlannedSession={onDeletePlannedSession}
           onScheduleSessionToCalendar={onScheduleSessionToCalendar}
+          onUpsertHealthLog={onUpsertHealthLog}
+          healthLogs={healthLogs}
         />
       )}
 

@@ -386,7 +386,7 @@ export interface Exercise {
   isCustom?: boolean;
 }
 
-export type RoutineSplitTemplate = 'ppl' | 'upper_lower' | 'arnold' | 'fullbody' | 'custom';
+export type RoutineSplitTemplate = 'ppl' | 'upper_lower' | 'arnold' | 'fullbody' | 'glute_lower' | 'custom';
 
 export interface SavedRoadmap {
   id: string;

@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import {
   Exercise,
+  HealthDayLog,
   MUSCLE_COLOR,
   MUSCLE_LABEL,
   MuscleGroup,
@@ -40,6 +41,7 @@ import {
   EXERCISES,
   calculate1RM,
   calculateBarbellPlates,
+  calculateProgressiveOverload,
   exerciseById,
   gymCalories,
   personalRecords,
@@ -70,6 +72,8 @@ interface TrainingTabProps {
   onUpdatePlannedSession?: (session: PlannedSession) => void;
   onDeletePlannedSession?: (id: string) => void;
   onScheduleSessionToCalendar?: (title: string, date: string, color: string) => void;
+  onUpsertHealthLog?: (log: HealthDayLog) => void;
+  healthLogs?: HealthDayLog[];
 }
 
 const SPORT_OPTIONS: SportType[] = [
@@ -102,6 +106,8 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
   onUpdatePlannedSession,
   onDeletePlannedSession,
   onScheduleSessionToCalendar,
+  onUpsertHealthLog,
+  healthLogs,
 }) => {
   const [scheduledBanner, setScheduledBanner] = useState<string | null>(null);
   const [showSportModal, setShowSportModal] = useState(false);
@@ -350,6 +356,24 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
     }
   };
 
+  const handleCopyPrevSet = (exerciseId: string, setIndex: number) => {
+    if (!activeSession || setIndex <= 0) return;
+    const prevKey = `${exerciseId}-${setIndex - 1}`;
+    const prev = activeSession.sets[prevKey];
+    if (prev) {
+      handleUpdateSet(exerciseId, setIndex, prev.weightKg, prev.reps);
+    }
+  };
+
+  const handleApplyQuickScale = (exerciseId: string, setIndex: number, factor: number) => {
+    if (!activeSession) return;
+    const key = `${exerciseId}-${setIndex}`;
+    const cur = activeSession.sets[key];
+    const baseWeight = cur?.weightKg || 40;
+    const newWeight = Math.max(2.5, Math.round((baseWeight * factor) * 2) / 2);
+    handleUpdateSet(exerciseId, setIndex, newWeight, cur?.reps || 10);
+  };
+
   const handleFinishActiveSession = () => {
     if (!activeSession) return;
     const today = todayString();
@@ -367,6 +391,8 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
         };
       });
 
+    const burnedKcal = activeWorkoutStats.kcal || 250;
+
     onLogWorkoutSession({
       date: today,
       sessionId: activeSession.planned.id,
@@ -383,8 +409,20 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
           rpe: p.rpe,
         }))
       ),
-      note: `Tập trực tiếp với đồng hồ nghỉ: ${Math.round(elapsedSeconds / 60)} phút, hoàn thành ${sets.length} hiệp.`,
+      note: `Tập trực tiếp với đồng hồ nghỉ: ${Math.round(elapsedSeconds / 60)} phút, hoàn thành ${sets.length} hiệp, đốt ~${burnedKcal} kcal.`,
     });
+
+    // Auto-sync burned calories to Health Day Log
+    if (onUpsertHealthLog) {
+      const existing = (healthLogs || []).find((l) => l.date === today);
+      const prevBurn = existing?.caloriesBurned || 0;
+      onUpsertHealthLog({
+        ...(existing || { date: today, source: 'manual' }),
+        caloriesBurned: prevBurn + burnedKcal,
+        date: today,
+        source: 'manual',
+      });
+    }
 
     if (autoScheduleOnFinish && onScheduleSessionToCalendar) {
       onScheduleSessionToCalendar(activeSession.planned.title, today, '#2563EB');
@@ -392,7 +430,7 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
 
     setActiveSession(null);
     setRestSecondsLeft(null);
-    setScheduledBanner(`Xuất sắc! Đã hoàn thành và lưu buổi tập "${activeSession.planned.title}"!`);
+    setScheduledBanner(`Xuất sắc! Đã hoàn thành buổi tập "${activeSession.planned.title}" (+${burnedKcal} kcal tiêu hao)!`);
     setTimeout(() => setScheduledBanner(null), 4000);
   };
 
@@ -487,6 +525,8 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
       }))
     );
 
+    const burnedKcal = gymCalories(sets, userWeightKg) || 220;
+
     onLogWorkoutSession({
       date: today,
       sessionId: session.id,
@@ -497,7 +537,18 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
       note: 'Hoàn thành theo giáo án thể hình cá nhân.',
     });
 
-    setScheduledBanner(`Đã ghi nhận hoàn thành buổi tập "${session.title}"!`);
+    if (onUpsertHealthLog) {
+      const existing = (healthLogs || []).find((l) => l.date === today);
+      const prevBurn = existing?.caloriesBurned || 0;
+      onUpsertHealthLog({
+        ...(existing || { date: today, source: 'manual' }),
+        caloriesBurned: prevBurn + burnedKcal,
+        date: today,
+        source: 'manual',
+      });
+    }
+
+    setScheduledBanner(`Đã ghi nhận hoàn thành buổi tập "${session.title}" (+${burnedKcal} kcal tiêu hao)!`);
     setTimeout(() => setScheduledBanner(null), 4000);
   };
 
@@ -506,6 +557,8 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
     const dur = Number(sportDuration);
     if (!dur || dur <= 0) return;
 
+    const burnedKcal = sportCalories({ type: sportType, durationMin: dur } as SportSession, userWeightKg) || 160;
+
     onAddSportSession({
       date: sportDate,
       type: sportType,
@@ -513,9 +566,20 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
       note: sportNote.trim() || undefined,
     });
 
+    if (onUpsertHealthLog) {
+      const existing = (healthLogs || []).find((l) => l.date === sportDate);
+      const prevBurn = existing?.caloriesBurned || 0;
+      onUpsertHealthLog({
+        ...(existing || { date: sportDate, source: 'manual' }),
+        caloriesBurned: prevBurn + burnedKcal,
+        date: sportDate,
+        source: 'manual',
+      });
+    }
+
     setShowSportModal(false);
     setSportNote('');
-    setScheduledBanner(`Đã thêm buổi "${SPORT_LABEL[sportType]}" (${dur} phút)!`);
+    setScheduledBanner(`Đã thêm buổi "${SPORT_LABEL[sportType]}" (${dur} phút, +${burnedKcal} kcal)!`);
     setTimeout(() => setScheduledBanner(null), 4000);
   };
 
@@ -626,6 +690,7 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
             { id: 'upper_lower' as const, label: 'Upper / Lower (UL)', desc: '4 buổi: Thân Trên / Thân Dưới' },
             { id: 'arnold' as const, label: 'Arnold Split', desc: '6 buổi: Ngực+Lưng / Vai+Tay / Chân' },
             { id: 'fullbody' as const, label: 'Full Body', desc: '3 buổi: Toàn Thân A / B / C' },
+            { id: 'glute_lower' as const, label: 'Glute & Lower Focus', desc: '4 buổi: Mông, Đùi Sau, Đùi Trước & Eo' },
           ].map((s) => (
             <button
               key={s.id}
@@ -1433,6 +1498,7 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
                 const ex = getExercise(pres.exerciseId);
                 const color = ex ? MUSCLE_COLOR[ex.muscle as MuscleGroup] : '#2563EB';
                 const curPr = prs[pres.exerciseId];
+                const overloadRec = curPr ? calculateProgressiveOverload(curPr.weightKg, curPr.reps, pres.reps) : null;
 
                 return (
                   <div
@@ -1471,6 +1537,14 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
                       </div>
                     </div>
 
+                    {/* Progressive Overload Advisor */}
+                    {overloadRec && (
+                      <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-orange-500/10 border border-orange-500/25 text-[11px] text-orange-700 dark:text-orange-300">
+                        <Zap className="w-3.5 h-3.5 text-orange-500 shrink-0" />
+                        <span className="font-semibold leading-tight">{overloadRec.tipVi}</span>
+                      </div>
+                    )}
+
                     {/* Sets Table */}
                     <div className="space-y-1.5">
                       {Array.from({ length: pres.sets }).map((_, sIdx) => {
@@ -1491,9 +1565,41 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
                                 : 'bg-white dark:bg-gray-800 border-slate-200 dark:border-gray-700'
                             }`}
                           >
-                            <span className="text-xs font-bold text-gray-500 w-12 shrink-0">
-                              Hiệp {sIdx + 1}
-                            </span>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <span className="text-xs font-bold text-gray-500 w-11">
+                                Hiệp {sIdx + 1}
+                              </span>
+                              {!setItem.completed && (
+                                <div className="hidden sm:flex items-center gap-1">
+                                  {sIdx > 0 && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleCopyPrevSet(pres.exerciseId, sIdx)}
+                                      className="px-1.5 py-0.5 rounded text-[9px] font-semibold bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-650 text-gray-600 dark:text-gray-300 cursor-pointer transition-colors"
+                                      title="Lấy số tạ & reps của hiệp trước"
+                                    >
+                                      📋 Lặp
+                                    </button>
+                                  )}
+                                  <button
+                                    type="button"
+                                    onClick={() => handleApplyQuickScale(pres.exerciseId, sIdx, 0.8)}
+                                    className="px-1.5 py-0.5 rounded text-[9px] font-semibold bg-orange-100 dark:bg-orange-950/40 hover:bg-orange-200 text-orange-700 dark:text-orange-300 cursor-pointer transition-colors"
+                                    title="Drop-set giảm 20% tạ"
+                                  >
+                                    🔥 -20%
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleApplyQuickScale(pres.exerciseId, sIdx, 0.6)}
+                                    className="px-1.5 py-0.5 rounded text-[9px] font-semibold bg-blue-100 dark:bg-blue-950/40 hover:bg-blue-200 text-blue-700 dark:text-blue-300 cursor-pointer transition-colors"
+                                    title="Hiệp khởi động giảm 40% tạ"
+                                  >
+                                    🏋️ Khởi động
+                                  </button>
+                                </div>
+                              )}
+                            </div>
 
                             <div className="flex items-center gap-2 flex-1 justify-center">
                               <div className="flex items-center gap-1">

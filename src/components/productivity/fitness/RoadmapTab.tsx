@@ -24,8 +24,8 @@ import {
   Layers,
   Utensils,
 } from 'lucide-react';
-import { CtgProfile, Goal, NutritionSettings, SavedRoadmap, Sex } from '../../../types/productivity';
-import { ffmi, leanMassKg, fatMassKg, tdee, calorieTarget, macroTargets } from '../../../utils/fitnessMetrics';
+import { CtgProfile, Goal, NutritionSettings, RoutineSplitTemplate, SavedRoadmap, Sex } from '../../../types/productivity';
+import { ffmi, leanMassKg, fatMassKg, tdee, calorieTarget, macroTargets, MESOCYCLE_PHASES } from '../../../utils/fitnessMetrics';
 
 interface RoadmapTabProps {
   profile: CtgProfile;
@@ -37,6 +37,7 @@ interface RoadmapTabProps {
   onUpdateNutritionSettings?: (patch: Partial<NutritionSettings>) => void;
   onUpdateProfile: (patch: Partial<CtgProfile>) => void;
   onNavigateTab?: (tab: 'inbody' | 'training' | 'nutrition' | 'profile') => void;
+  onApplySplitTemplate?: (template: RoutineSplitTemplate) => void;
 }
 
 // VortexCal Standards & Classification criteria from AI analyzer algorithm
@@ -95,6 +96,7 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
   onUpdateNutritionSettings,
   onUpdateProfile,
   onNavigateTab,
+  onApplySplitTemplate,
 }) => {
   // Input form state initialized from profile
   const [sex, setSex] = useState<Sex>(profile.sex || 'male');
@@ -215,6 +217,51 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
       `Đã áp dụng lộ trình: Mục tiêu ${analysis.effectiveGoal === 'cut' ? 'Giảm mỡ' : analysis.effectiveGoal === 'bulk' ? 'Tăng cơ' : 'Duy trì'} (${analysis.projectedWeightKg}kg / ${analysis.projectedBodyfatPct}% mỡ). Mục tiêu Calo và Giáo án đã được tự động điều chỉnh!`
     );
     setTimeout(() => setAppliedBanner(null), 6000);
+  };
+
+  const handleApplyRoadmapAndCreateSplit = () => {
+    let recommendedSplit: RoutineSplitTemplate = 'upper_lower';
+    let splitName = 'Upper / Lower (4 ngày/tuần)';
+    if (sex === 'female' && (userGoal === 'maintain' || userGoal === 'cut')) {
+      recommendedSplit = 'glute_lower';
+      splitName = 'Glute & Lower Focus (4 ngày/tuần)';
+    } else if (analysis.effectiveGoal === 'bulk') {
+      recommendedSplit = 'ppl';
+      splitName = 'PPL Hypertrophy (5 ngày/tuần)';
+    } else if (analysis.effectiveGoal === 'cut') {
+      recommendedSplit = 'upper_lower';
+      splitName = 'Upper / Lower Sức Mạnh & Cắt Nét (4 ngày/tuần)';
+    } else {
+      recommendedSplit = 'arnold';
+      splitName = 'Arnold Classic Split (6 ngày/tuần)';
+    }
+
+    onUpdateProfile({
+      sex,
+      heightCm: hNum,
+      targetWeightKg: analysis.projectedWeightKg,
+      targetBodyFatPct: analysis.projectedBodyfatPct,
+      goal: analysis.effectiveGoal,
+    });
+
+    onUpdateNutritionSettings?.({
+      overrides: {
+        ...(nutritionSettings?.overrides || {}),
+        [analysis.effectiveGoal]: {
+          kcal: customMacroKcal,
+          protein: currentActiveMacros.protein,
+          carbs: currentActiveMacros.carbs,
+          fat: currentActiveMacros.fat,
+        },
+      },
+    });
+
+    onApplySplitTemplate?.(recommendedSplit);
+
+    setAppliedBanner(
+      `Đã kích hoạt toàn diện: Mục tiêu ${analysis.effectiveGoal === 'cut' ? 'Giảm mỡ' : analysis.effectiveGoal === 'bulk' ? 'Tăng cơ' : 'Duy trì'} (${analysis.projectedWeightKg}kg / ${analysis.projectedBodyfatPct}% mỡ) · Kích hoạt giáo án "${splitName}" · Dinh dưỡng ${customMacroKcal} kcal!`
+    );
+    setTimeout(() => setAppliedBanner(null), 10000);
   };
 
   const handleSelectMacroPreset = (preset: MacroPreset) => {
@@ -372,14 +419,22 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
             </p>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
             <button
               type="button"
               onClick={handleApplyRoadmap}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-xs font-bold transition-all shadow-md cursor-pointer hover:shadow-orange-500/20"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-white/20 hover:bg-white/10 text-white text-xs font-semibold transition-all cursor-pointer"
             >
-              <CheckCircle2 className="w-4 h-4" />
-              <span>Áp dụng vào hồ sơ cá nhân</span>
+              <CheckCircle2 className="w-3.5 h-3.5 text-blue-400" />
+              <span>Chỉ áp dụng hồ sơ</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleApplyRoadmapAndCreateSplit}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-orange-600 hover:bg-orange-500 text-white text-xs font-bold transition-all shadow-md cursor-pointer hover:shadow-orange-500/30"
+            >
+              <Zap className="w-4 h-4" />
+              <span>⚡ Kích Hoạt Lộ Trình & Giáo Án</span>
             </button>
           </div>
         </div>
@@ -390,8 +445,18 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
         <div className="rounded-2xl border border-emerald-500/40 bg-emerald-950/40 p-4 text-xs text-emerald-200 flex items-start gap-3 animate-fadeIn">
           <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
           <div className="flex-1">
-            <div className="font-bold text-sm text-white">Cập nhật lộ trình thành công!</div>
-            <div className="mt-0.5 text-emerald-200/90">{appliedBanner}</div>
+            <div className="font-bold text-sm text-white">Cập nhật lộ trình & giáo án thành công!</div>
+            <div className="mt-0.5 text-emerald-200/90 leading-relaxed">{appliedBanner}</div>
+            {onNavigateTab && (
+              <button
+                type="button"
+                onClick={() => onNavigateTab('training')}
+                className="mt-2.5 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs cursor-pointer shadow-xs transition-colors"
+              >
+                <span>Chuyển Sang Xem Giáo Án Buổi Tập</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -918,13 +983,97 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
               <button
                 type="button"
                 onClick={handleApplyRoadmap}
-                className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-xs font-bold transition-all shadow-md cursor-pointer flex items-center justify-center gap-2"
+                className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-white/20 hover:bg-white/10 text-white text-xs font-semibold transition-all cursor-pointer flex items-center justify-center gap-2"
               >
-                <CheckCircle2 className="w-4 h-4" />
-                <span>Áp Dụng Lộ Trình Này Vào Hệ Thống</span>
+                <CheckCircle2 className="w-4 h-4 text-blue-400" />
+                <span>Chỉ Lưu Hồ Sơ</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleApplyRoadmapAndCreateSplit}
+                className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-orange-600 hover:bg-orange-500 text-white text-xs font-bold transition-all shadow-md cursor-pointer flex items-center justify-center gap-2"
+              >
+                <Zap className="w-4 h-4" />
+                <span>⚡ Kích Hoạt Lộ Trình & Khởi Tạo Giáo Án</span>
               </button>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* 4-Phase Mesocycle Periodization Roadmap */}
+      <div className="bg-[#0b101b] rounded-3xl border border-white/10 p-5 sm:p-6 shadow-xl space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/10 pb-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-orange-500/20 text-orange-400 flex items-center justify-center shrink-0">
+              <Layers className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                Chu Kỳ Phân Kỳ Huấn Luyện 12 Tuần (Mesocycle Periodization)
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-orange-500/20 text-orange-400 border border-orange-500/30">
+                  Chuẩn Khoa Học
+                </span>
+              </h3>
+              <p className="text-xs text-white/50 mt-0.5">
+                Quy luật tăng tải luân phiên giúp cơ bắp phá vỡ ngưỡng chững (Plateau) và liên tục phát triển bền vững
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleApplyRoadmapAndCreateSplit}
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-orange-400 text-xs font-bold transition-colors cursor-pointer border border-orange-500/30"
+          >
+            <Zap className="w-3.5 h-3.5" />
+            <span>Đồng bộ ngay vào lịch tập</span>
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3.5 pt-1">
+          {MESOCYCLE_PHASES.map((p) => (
+            <div
+              key={p.phase}
+              className="p-4 rounded-2xl border border-white/10 bg-[#131b2e]/80 flex flex-col justify-between space-y-3 hover:border-orange-500/40 transition-colors"
+            >
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <span
+                    className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full font-mono"
+                    style={{ backgroundColor: `${p.color}22`, color: p.color }}
+                  >
+                    {p.durationWeeks}
+                  </span>
+                  <span className="text-[10px] font-bold text-white/40">GĐ {p.phase}</span>
+                </div>
+
+                <h4 className="text-xs font-bold text-white leading-snug">{p.nameVi}</h4>
+                <p className="text-[11px] text-white/60 mt-1 leading-relaxed">{p.descriptionVi}</p>
+              </div>
+
+              <div className="space-y-1.5 pt-2 border-t border-white/5 text-[10px]">
+                <div className="flex items-center justify-between text-white/70">
+                  <span>Cường độ:</span>
+                  <span className="font-bold font-mono text-white" style={{ color: p.color }}>
+                    {p.intensityRpe}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-white/70">
+                  <span>Khối lượng/tuần:</span>
+                  <span className="font-semibold text-white/90">{p.volumeTarget}</span>
+                </div>
+                <div className="flex items-center justify-between text-white/70">
+                  <span>Khoảng Reps:</span>
+                  <span className="font-mono text-amber-400">{p.repsRange}</span>
+                </div>
+                <div className="mt-1 p-2 rounded-lg bg-black/30 text-white/60 text-[10px] italic">
+                  💡 {p.nutritionTipVi}
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
