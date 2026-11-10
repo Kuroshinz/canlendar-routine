@@ -133,6 +133,7 @@ export interface Transaction {
 
 export interface BudgetSettings {
   monthlyLimit: number;
+  initialBalance?: number;
   categoryLimits: Partial<Record<FinanceCategoryId, number>>;
   currency: 'VND' | 'USD';
 }
@@ -261,6 +262,7 @@ export const TASK_STATUS_META: Record<
 
 export const DEFAULT_BUDGET: BudgetSettings = {
   monthlyLimit: 15000000,
+  initialBalance: 0,
   categoryLimits: {},
   currency: 'VND',
 };

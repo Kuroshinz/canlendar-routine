@@ -110,7 +110,10 @@ export interface ProductivityStore {
   // Finance
   transactions: Transaction[];
   addTransaction: (tx: Omit<Transaction, 'id' | 'createdAt'>) => void;
+  updateTransaction: (id: string, patch: Partial<Transaction>) => void;
   deleteTransaction: (id: string) => void;
+  clearAllTransactions: () => void;
+  setRealStartingBalance: (realBalance: number) => void;
   budget: BudgetSettings;
   updateBudget: (patch: Partial<BudgetSettings>) => void;
   monthSummary: (monthPrefix?: string) => FinanceSummary;
@@ -428,6 +431,15 @@ export function useProductivityStore(): ProductivityStore {
     [setTransactions]
   );
 
+  const updateTransaction = useCallback(
+    (id: string, patch: Partial<Transaction>) => {
+      setTransactions((prev) =>
+        prev.map((t) => (t.id === id ? { ...t, ...patch } : t))
+      );
+    },
+    [setTransactions]
+  );
+
   const deleteTransaction = useCallback(
     (id: string) => {
       setTransactions((prev) => prev.filter((t) => t.id !== id));
@@ -435,11 +447,29 @@ export function useProductivityStore(): ProductivityStore {
     [setTransactions]
   );
 
+  const clearAllTransactions = useCallback(() => {
+    setTransactions([]);
+  }, [setTransactions]);
+
   const updateBudget = useCallback(
     (patch: Partial<BudgetSettings>) => {
       setBudget((prev) => ({ ...prev, ...patch }));
     },
     [setBudget]
+  );
+
+  const setRealStartingBalance = useCallback(
+    (realBalance: number) => {
+      const netTx = transactions.reduce(
+        (acc, t) => acc + (t.type === 'income' ? t.amount : -t.amount),
+        0
+      );
+      setBudget((prev) => ({
+        ...prev,
+        initialBalance: realBalance - netTx,
+      }));
+    },
+    [transactions, setBudget]
   );
 
   const monthSummary = useCallback(
@@ -915,7 +945,10 @@ export function useProductivityStore(): ProductivityStore {
     deleteSession,
     transactions,
     addTransaction,
+    updateTransaction,
     deleteTransaction,
+    clearAllTransactions,
+    setRealStartingBalance,
     budget,
     updateBudget,
     monthSummary,

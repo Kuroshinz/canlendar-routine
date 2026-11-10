@@ -19,6 +19,9 @@ import {
   ShieldCheck,
   Flame,
   CheckCircle2,
+  Pencil,
+  RefreshCw,
+  Check,
 } from 'lucide-react';
 import {
   BudgetSettings,
@@ -45,8 +48,11 @@ interface FinanceViewProps {
   budget: BudgetSettings;
   lang: 'vi' | 'en';
   onAddTransaction: (tx: Omit<Transaction, 'id' | 'createdAt'>) => void;
+  onUpdateTransaction?: (id: string, patch: Partial<Transaction>) => void;
   onDeleteTransaction: (id: string) => void;
   onUpdateBudget: (patch: Partial<BudgetSettings>) => void;
+  onClearAllTransactions?: () => void;
+  onSetRealStartingBalance?: (realBalance: number) => void;
 }
 
 const categoryMeta = (id: FinanceCategoryId) =>
@@ -64,8 +70,11 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
   budget,
   lang,
   onAddTransaction,
+  onUpdateTransaction,
   onDeleteTransaction,
   onUpdateBudget,
+  onClearAllTransactions,
+  onSetRealStartingBalance,
 }) => {
   const today = formatDateString(new Date());
 
@@ -75,6 +84,12 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
   const [showForm, setShowForm] = useState(false);
   const [showBudgetEditor, setShowBudgetEditor] = useState(false);
   const [quickBanner, setQuickBanner] = useState<string | null>(null);
+
+  // Real Balance & Edit State
+  const [showBalanceModal, setShowBalanceModal] = useState(false);
+  const [realBalanceDraft, setRealBalanceDraft] = useState('');
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+  const [clearDemoConfirm, setClearDemoConfirm] = useState(false);
 
   const QUICK_EXPENSE_PRESETS = [
     { label: '☕ Cà phê (35k)', amount: 35000, category: 'food' as FinanceCategoryId, title: 'Cà phê sáng' },
@@ -113,6 +128,58 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
     () => computeBudgetStatus(monthSummary.expense, budget.monthlyLimit),
     [monthSummary.expense, budget.monthlyLimit]
   );
+
+  const realTotalBalance = useMemo(() => {
+    return (budget.initialBalance || 0) + allTime.balance;
+  }, [budget.initialBalance, allTime.balance]);
+
+  const handleOpenBalanceModal = () => {
+    setRealBalanceDraft(String(realTotalBalance));
+    setShowBalanceModal(true);
+  };
+
+  const handleSaveRealBalance = (e: React.FormEvent) => {
+    e.preventDefault();
+    const target = Number(realBalanceDraft.replace(/[^\d.-]/g, ''));
+    if (!Number.isFinite(target)) return;
+
+    if (onSetRealStartingBalance) {
+      onSetRealStartingBalance(target);
+    } else {
+      onUpdateBudget({ initialBalance: target - allTime.balance });
+    }
+    setShowBalanceModal(false);
+    setQuickBanner(
+      lang === 'vi'
+        ? `Đã cập nhật số dư thực tế thành ${formatMoney(target, budget.currency)}!`
+        : `Real balance updated to ${formatMoney(target, budget.currency)}!`
+    );
+    setTimeout(() => setQuickBanner(null), 3500);
+  };
+
+  const handleStartEditTransaction = (tx: Transaction) => {
+    setEditingTransaction(tx);
+    setFormTitle(tx.title);
+    setFormAmount(String(tx.amount));
+    setFormType(tx.type);
+    setFormCategory(tx.category);
+    setFormDate(tx.date);
+    setFormNote(tx.note || '');
+    setShowForm(true);
+  };
+
+  const handleConfirmClearDemo = () => {
+    if (onClearAllTransactions) {
+      onClearAllTransactions();
+    }
+    setClearDemoConfirm(false);
+    setQuickBanner(
+      lang === 'vi'
+        ? 'Đã xóa toàn bộ dữ liệu mẫu! Sổ sách đã sẵn sàng cho dữ liệu thật của bạn.'
+        : 'Demo data cleared! Ledger ready for your real data.'
+    );
+    setTimeout(() => setQuickBanner(null), 4000);
+  };
 
   const burnRateAnalysis = useMemo(() => {
     const [y, m] = monthPrefix.split('-').map(Number);
@@ -161,15 +228,33 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
     const amount = Number(formAmount.replace(/[^\d.]/g, ''));
     if (!formTitle.trim() || !Number.isFinite(amount) || amount <= 0) return;
 
-    onAddTransaction({
-      title: formTitle.trim(),
-      amount,
-      type: formType,
-      category: formCategory,
-      date: formDate || today,
-      note: formNote.trim() || undefined,
-    });
+    if (editingTransaction && onUpdateTransaction) {
+      onUpdateTransaction(editingTransaction.id, {
+        title: formTitle.trim(),
+        amount,
+        type: formType,
+        category: formCategory,
+        date: formDate || today,
+        note: formNote.trim() || undefined,
+      });
+      setQuickBanner(
+        lang === 'vi'
+          ? `Đã cập nhật giao dịch "${formTitle.trim()}"!`
+          : `Updated transaction "${formTitle.trim()}"!`
+      );
+      setTimeout(() => setQuickBanner(null), 3000);
+    } else {
+      onAddTransaction({
+        title: formTitle.trim(),
+        amount,
+        type: formType,
+        category: formCategory,
+        date: formDate || today,
+        note: formNote.trim() || undefined,
+      });
+    }
 
+    setEditingTransaction(null);
     setFormTitle('');
     setFormAmount('');
     setFormNote('');
@@ -217,11 +302,19 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
 
   const summaryCards = [
     {
-      label: lang === 'vi' ? 'Số dư tổng' : 'Total balance',
-      value: formatMoney(allTime.balance, budget.currency),
-      hint: lang === 'vi' ? 'Tất cả giao dịch' : 'All transactions',
+      label: lang === 'vi' ? 'Số dư thực tế ví / bank' : 'Real Wallet / Bank Balance',
+      value: formatMoney(realTotalBalance, budget.currency),
+      hint:
+        budget.initialBalance
+          ? lang === 'vi'
+            ? `Gốc: ${formatMoneyCompact(budget.initialBalance, budget.currency)} · Bấm để đổi`
+            : `Base: ${formatMoneyCompact(budget.initialBalance, budget.currency)} · Tap to edit`
+          : lang === 'vi'
+          ? 'Chạm để đặt số dư thực ➔'
+          : 'Tap to set real balance ➔',
       icon: Wallet,
       cls: 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/40',
+      action: handleOpenBalanceModal,
     },
     {
       label: lang === 'vi' ? 'Thu nhập tháng' : 'Monthly income',
@@ -262,12 +355,12 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
           </div>
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
             {lang === 'vi'
-              ? 'Theo dõi thu chi, hạn mức ngân sách và dòng tiền theo tháng.'
-              : 'Track income, spending, budgets and monthly cash flow.'}
+              ? 'Theo dõi thu chi, số dư thực tế và hạn mức ngân sách theo tháng.'
+              : 'Track income, spending, real wallet balance and monthly budget.'}
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <div className="flex items-center bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-xl overflow-hidden">
             <button
               onClick={() => setMonthPrefix((p) => shiftMonth(p, -1))}
@@ -289,7 +382,31 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
           </div>
 
           <button
+            onClick={handleOpenBalanceModal}
+            className="flex items-center gap-1.5 px-3 py-2 bg-blue-50 dark:bg-blue-950/50 hover:bg-blue-100 dark:hover:bg-blue-900/40 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 rounded-xl text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+            title={lang === 'vi' ? 'Đặt số dư thực tế trong ví/tài khoản' : 'Set real bank balance'}
+          >
+            <Wallet className="w-4 h-4" />
+            <span>{lang === 'vi' ? 'Đặt số dư ví' : 'Set balance'}</span>
+          </button>
+
+          {transactions.length > 0 && onClearAllTransactions && (
+            <button
+              onClick={() => setClearDemoConfirm(true)}
+              className="flex items-center gap-1.5 px-2.5 py-2 bg-slate-100 hover:bg-rose-50 hover:text-rose-600 dark:bg-slate-800 dark:hover:bg-rose-950/40 text-gray-500 dark:text-gray-400 rounded-xl text-xs font-medium transition-colors cursor-pointer"
+              title={lang === 'vi' ? 'Xóa toàn bộ dữ liệu mẫu ban đầu để bắt đầu sổ sách thực tế của bạn' : 'Clear demo data'}
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              <span>{lang === 'vi' ? 'Xóa dữ liệu mẫu' : 'Clear demo'}</span>
+            </button>
+          )}
+
+          <button
             onClick={() => {
+              setEditingTransaction(null);
+              setFormTitle('');
+              setFormAmount('');
+              setFormNote('');
               setFormType('expense');
               setFormCategory('food');
               setShowForm((v) => !v);
@@ -309,20 +426,40 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
           return (
             <div
               key={card.label}
-              className="bg-white dark:bg-[#131b2e] p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex items-center gap-3"
+              onClick={card.action}
+              className={`bg-white dark:bg-[#131b2e] p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex items-center justify-between gap-3 ${
+                card.action
+                  ? 'cursor-pointer hover:border-blue-400 dark:hover:border-blue-500 transition-all group/card'
+                  : ''
+              }`}
             >
-              <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${card.cls}`}>
-                <Icon className="w-4.5 h-4.5" />
-              </div>
-              <div className="min-w-0">
-                <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider truncate">
-                  {card.label}
+              <div className="flex items-center gap-3 min-w-0">
+                <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${card.cls}`}>
+                  <Icon className="w-4.5 h-4.5" />
                 </div>
-                <div className="text-base font-bold text-gray-900 dark:text-gray-100 truncate">
-                  {card.value}
+                <div className="min-w-0">
+                  <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider truncate flex items-center gap-1">
+                    <span>{card.label}</span>
+                    {card.action && <Pencil className="w-2.5 h-2.5 text-blue-500 opacity-0 group-hover/card:opacity-100 transition-opacity" />}
+                  </div>
+                  <div className="text-base font-bold text-gray-900 dark:text-gray-100 truncate">
+                    {card.value}
+                  </div>
+                  <div className="text-[10px] text-gray-400 truncate">{card.hint}</div>
                 </div>
-                <div className="text-[10px] text-gray-400 truncate">{card.hint}</div>
               </div>
+              {card.action && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    card.action();
+                  }}
+                  className="px-2 py-1 rounded-lg text-[10px] font-semibold bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/60 text-blue-600 dark:text-blue-300 shrink-0 cursor-pointer"
+                >
+                  {lang === 'vi' ? 'Chỉnh' : 'Edit'}
+                </button>
+              )}
             </div>
           );
         })}
@@ -513,19 +650,32 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
         </div>
       </div>
 
-      {/* Quick add form */}
+      {/* Quick add / edit form */}
       {showForm && (
         <form
           onSubmit={handleSubmit}
-          className="bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs p-4 mb-6"
+          className="bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs p-4 mb-6 animate-in fade-in duration-150"
         >
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-              {lang === 'vi' ? 'Thêm nhanh khoản thu / chi' : 'Quick add income / expense'}
+            <h3 className="text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+              {editingTransaction ? (
+                <>
+                  <Pencil className="w-3.5 h-3.5 text-blue-500" />
+                  <span>{lang === 'vi' ? 'Chỉnh sửa giao dịch' : 'Edit transaction'}</span>
+                </>
+              ) : (
+                <>
+                  <Plus className="w-3.5 h-3.5 text-emerald-500" />
+                  <span>{lang === 'vi' ? 'Thêm nhanh khoản thu / chi' : 'Quick add income / expense'}</span>
+                </>
+              )}
             </h3>
             <button
               type="button"
-              onClick={() => setShowForm(false)}
+              onClick={() => {
+                setEditingTransaction(null);
+                setShowForm(false);
+              }}
               className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-[#242931] text-gray-400 cursor-pointer"
             >
               <X className="w-4 h-4" />
@@ -566,16 +716,18 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
               placeholder={lang === 'vi' ? 'Nội dung (VD: Cà phê sáng)' : 'Title (e.g. Morning coffee)'}
               value={formTitle}
               onChange={(e) => setFormTitle(e.target.value)}
+              required
             />
 
             <input
               type="number"
               min={0}
               step={1000}
-              className="md:col-span-2 text-xs px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
+              className="md:col-span-2 text-xs px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 font-mono"
               placeholder={lang === 'vi' ? 'Số tiền' : 'Amount'}
               value={formAmount}
               onChange={(e) => setFormAmount(e.target.value)}
+              required
             />
 
             <select
@@ -598,18 +750,38 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
             />
 
             <input
-              className="md:col-span-9 text-xs px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
+              className="md:col-span-8 text-xs px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
               placeholder={lang === 'vi' ? 'Ghi chú (không bắt buộc)' : 'Note (optional)'}
               value={formNote}
               onChange={(e) => setFormNote(e.target.value)}
             />
 
-            <button
-              type="submit"
-              className="md:col-span-3 px-3 py-2 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer"
-            >
-              {lang === 'vi' ? 'Lưu giao dịch' : 'Save transaction'}
-            </button>
+            <div className="md:col-span-4 flex items-center gap-2">
+              <button
+                type="submit"
+                className="flex-1 px-3 py-2 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer shadow-xs transition-colors"
+              >
+                {editingTransaction
+                  ? lang === 'vi'
+                    ? 'Cập nhật'
+                    : 'Update'
+                  : lang === 'vi'
+                  ? 'Lưu giao dịch'
+                  : 'Save transaction'}
+              </button>
+              {editingTransaction && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingTransaction(null);
+                    setShowForm(false);
+                  }}
+                  className="px-3 py-2 rounded-lg text-xs font-semibold border border-gray-300 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer"
+                >
+                  {lang === 'vi' ? 'Hủy' : 'Cancel'}
+                </button>
+              )}
+            </div>
           </div>
         </form>
       )}
@@ -691,13 +863,24 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
                       {isIncome ? '+' : '−'}
                       {formatMoney(tx.amount, budget.currency)}
                     </span>
-                    <button
-                      onClick={() => onDeleteTransaction(tx.id)}
-                      className="p-1 rounded-lg text-gray-300 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-                      aria-label={lang === 'vi' ? 'Xóa giao dịch' : 'Delete transaction'}
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                    <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                      {onUpdateTransaction && (
+                        <button
+                          onClick={() => handleStartEditTransaction(tx)}
+                          className="p-1 rounded-lg text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/40 cursor-pointer transition-colors"
+                          title={lang === 'vi' ? 'Sửa giao dịch' : 'Edit transaction'}
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                      <button
+                        onClick={() => onDeleteTransaction(tx.id)}
+                        className="p-1 rounded-lg text-gray-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 cursor-pointer transition-colors"
+                        title={lang === 'vi' ? 'Xóa giao dịch' : 'Delete transaction'}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
                 );
               })}
@@ -774,6 +957,133 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Set Real Balance Modal */}
+      {showBalanceModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+          <div className="bg-white dark:bg-[#131b2e] w-full max-w-md rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-5 animate-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Wallet className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                  {lang === 'vi' ? 'Thiết Lập Số Dư Thực Tế Ví / Tài Khoản' : 'Set Real Wallet / Bank Balance'}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowBalanceModal(false)}
+                className="p-1 text-gray-400 hover:text-gray-600 rounded-lg cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-4 leading-relaxed">
+              {lang === 'vi'
+                ? 'Nhập đúng số tiền bạn đang thực sự có trong ví hoặc tài khoản ngân hàng. Hệ thống sẽ căn chỉnh chuẩn xác để số dư hiển thị khớp 100% với đời thực của bạn.'
+                : 'Enter the exact amount of money you currently have in your wallet/bank. The app will sync your balance to reflect your real-life net worth.'}
+            </p>
+
+            <form onSubmit={handleSaveRealBalance}>
+              <div className="mb-3">
+                <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">
+                  {lang === 'vi' ? 'Số dư hiện có lúc này' : 'Current real balance'}
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    step={1000}
+                    value={realBalanceDraft}
+                    onChange={(e) => setRealBalanceDraft(e.target.value)}
+                    className="w-full text-lg font-bold font-mono px-3 py-2.5 rounded-xl border border-blue-400 dark:border-blue-600 bg-white dark:bg-slate-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                    placeholder="VD: 25000000"
+                    autoFocus
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-gray-400">
+                    {budget.currency}
+                  </span>
+                </div>
+                {Number(realBalanceDraft) > 0 && (
+                  <p className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 mt-1 font-mono">
+                    ≈ {formatMoney(Number(realBalanceDraft), budget.currency)}
+                  </p>
+                )}
+              </div>
+
+              {/* Quick Preset Buttons */}
+              <div className="mb-4">
+                <span className="text-[10px] text-gray-400 block mb-1">
+                  {lang === 'vi' ? 'Chọn nhanh:' : 'Quick presets:'}
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  {[0, 1000000, 5000000, 10000000, 20000000, 50000000].map((val) => (
+                    <button
+                      key={val}
+                      type="button"
+                      onClick={() => setRealBalanceDraft(String(val))}
+                      className="px-2.5 py-1 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-blue-950/40 cursor-pointer"
+                    >
+                      {formatMoneyCompact(val, budget.currency)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setShowBalanceModal(false)}
+                  className="px-3.5 py-2 text-xs font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-xl cursor-pointer"
+                >
+                  {lang === 'vi' ? 'Hủy' : 'Cancel'}
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-xs cursor-pointer flex items-center gap-1.5"
+                >
+                  <Check className="w-4 h-4" />
+                  <span>{lang === 'vi' ? 'Cập Nhật Số Dư' : 'Update Balance'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Confirm Clear Demo Data Modal */}
+      {clearDemoConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+          <div className="bg-white dark:bg-[#131b2e] w-full max-w-sm rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-5 animate-in zoom-in-95 duration-150">
+            <div className="flex items-center gap-2 text-rose-600 dark:text-rose-400 mb-2">
+              <AlertTriangle className="w-5 h-5" />
+              <h3 className="text-sm font-bold">
+                {lang === 'vi' ? 'Xóa Dữ Liệu Mẫu Để Dùng Thật?' : 'Clear Demo Data to Start Real?'}
+              </h3>
+            </div>
+            <p className="text-xs text-gray-600 dark:text-gray-300 mb-4 leading-relaxed">
+              {lang === 'vi'
+                ? 'Thao tác này sẽ xóa tất cả các giao dịch mẫu ban đầu và giải phóng sổ sách. Bạn có thể nhập số dư thực tế và bắt đầu ghi nhận các khoản thu chi có thật của mình.'
+                : 'This will delete all sample transactions so you can start clean with your real wallet balance and actual transactions.'}
+            </p>
+            <div className="flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setClearDemoConfirm(false)}
+                className="px-3 py-1.5 text-xs font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-100 rounded-lg cursor-pointer"
+              >
+                {lang === 'vi' ? 'Giữ lại' : 'Keep'}
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmClearDemo}
+                className="px-3.5 py-1.5 text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white rounded-lg shadow-xs cursor-pointer"
+              >
+                {lang === 'vi' ? 'Xóa mẫu & Bắt đầu thật' : 'Clear & Start Real'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -1061,8 +1061,11 @@ export default function App() {
                   budget={productivity.budget}
                   lang={lang}
                   onAddTransaction={productivity.addTransaction}
+                  onUpdateTransaction={productivity.updateTransaction}
                   onDeleteTransaction={productivity.deleteTransaction}
                   onUpdateBudget={productivity.updateBudget}
+                  onClearAllTransactions={productivity.clearAllTransactions}
+                  onSetRealStartingBalance={productivity.setRealStartingBalance}
                 />
               )}
 
