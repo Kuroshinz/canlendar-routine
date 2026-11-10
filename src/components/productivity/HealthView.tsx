@@ -17,6 +17,9 @@ import {
   User,
   Compass,
   Sparkles,
+  Zap,
+  TrendingDown,
+  TrendingUp,
 } from 'lucide-react';
 import {
   BodyCheckPhoto,
@@ -55,8 +58,11 @@ import {
   weightTrend,
   workoutMinutesThisWeek,
 } from '../../utils/productivityUtils';
-import { calculateDailyHealthScore } from '../../utils/fitnessMetrics';
+import { calculateDailyHealthScore, tdee, calorieTarget, macroTargets } from '../../utils/fitnessMetrics';
 import { formatDateString } from '../../utils/calendarUtils';
+import { GeminiMacroModal } from './fitness/GeminiMacroModal';
+import { GeminiMacroItem } from '../../services/geminiSync';
+import { FoodItem, MealSlot } from '../../types/productivity';
 import { InBodyTab } from './fitness/InBodyTab';
 import { TrainingTab } from './fitness/TrainingTab';
 import { NutritionTab } from './fitness/NutritionTab';
@@ -183,6 +189,40 @@ export const HealthView: React.FC<HealthViewProps> = ({
   );
 
   const [showWorkoutForm, setShowWorkoutForm] = useState(false);
+  const [showMacroPromptModal, setShowMacroPromptModal] = useState(false);
+
+  // Compute daily totals from meals
+  const dayMealTotals = useMemo(() => {
+    let kcal = 0;
+    let protein = 0;
+    let carbs = 0;
+    let fat = 0;
+    for (const m of (meals || [])) {
+      if (m.date === selectedDate) {
+        for (const it of m.items) {
+          kcal += it.kcal || 0;
+          protein += it.protein || 0;
+          carbs += it.carbs || 0;
+          fat += it.fat || 0;
+        }
+      }
+    }
+    return {
+      kcal: Math.round(kcal),
+      protein: Math.round(protein * 10) / 10,
+      carbs: Math.round(carbs * 10) / 10,
+      fat: Math.round(fat * 10) / 10,
+    };
+  }, [meals, selectedDate]);
+
+  // Merge manual log with auto meal totals if manual is unpopulated
+  const effectiveLog = useMemo((): HealthDayLog => ({
+    ...selectedLog,
+    caloriesIn: selectedLog.caloriesIn ?? (dayMealTotals.kcal > 0 ? dayMealTotals.kcal : undefined),
+    protein: selectedLog.protein ?? (dayMealTotals.protein > 0 ? dayMealTotals.protein : undefined),
+    carbs: selectedLog.carbs ?? (dayMealTotals.carbs > 0 ? dayMealTotals.carbs : undefined),
+    fat: selectedLog.fat ?? (dayMealTotals.fat > 0 ? dayMealTotals.fat : undefined),
+  }), [selectedLog, dayMealTotals]);
 
   // --- Workout form state
   const [woName, setWoName] = useState('');
@@ -196,22 +236,74 @@ export const HealthView: React.FC<HealthViewProps> = ({
   const trend = useMemo(() => weightTrend(healthLogs, 30), [healthLogs]);
   const weeklyWorkoutMinutes = useMemo(() => workoutMinutesThisWeek(workouts), [workouts]);
 
-  const currentBmi = bmi(selectedLog.weightKg || 0, healthProfile.heightCm);
-  const macros = macroPercentages(selectedLog.protein || 0, selectedLog.carbs || 0, selectedLog.fat || 0);
-  const macroTotal = macroCalories(selectedLog.protein || 0, selectedLog.carbs || 0, selectedLog.fat || 0);
+  const currentBmi = bmi(effectiveLog.weightKg || 0, healthProfile.heightCm);
+  const macros = macroPercentages(effectiveLog.protein || 0, effectiveLog.carbs || 0, effectiveLog.fat || 0);
+  const macroTotal = macroCalories(effectiveLog.protein || 0, effectiveLog.carbs || 0, effectiveLog.fat || 0);
 
   const healthScore = useMemo(() => {
     return calculateDailyHealthScore(
-      selectedLog,
+      effectiveLog,
       healthProfile.dailySteps || 8000,
       healthProfile.dailyWaterMl || 2500,
       2000,
       140
     );
-  }, [selectedLog, healthProfile]);
+  }, [effectiveLog, healthProfile]);
+
+  // Macro Ring geometry
+  const pCal = (effectiveLog.protein || 0) * 4;
+  const cCal = (effectiveLog.carbs || 0) * 4;
+  const fCal = (effectiveLog.fat || 0) * 9;
+  const sumCal = pCal + cCal + fCal || 1;
+  const ringCircumference = 2 * Math.PI * 34; // ~213.6
+  const pLen = (pCal / sumCal) * ringCircumference;
+  const cLen = (cCal / sumCal) * ringCircumference;
+  const fLen = (fCal / sumCal) * ringCircumference;
+
+  // Energy balance calculation (TDEE + workout burn vs calories in)
+  const effectiveWeight = effectiveLog.weightKg || ctgProfile.targetWeightKg || 65;
+  const estimatedTdee = tdee(ctgProfile, effectiveWeight);
+  const totalBurned = estimatedTdee + (effectiveLog.caloriesBurned || 0);
+  const currentIn = effectiveLog.caloriesIn || 0;
+  const netEnergy = currentIn > 0 ? currentIn - totalBurned : null;
+
+  const targetCalories = calorieTarget(estimatedTdee, ctgProfile.goal);
+  const targets = macroTargets(targetCalories, effectiveWeight, ctgProfile.goal, nutritionSettings);
+  const targetProteinG = targets.protein;
+  const targetFatG = targets.fat;
+  const targetCarbsG = targets.carbs;
 
   const patchLog = (patch: Partial<HealthDayLog>) => {
     onUpsertHealthLog({ ...selectedLog, ...patch, date: selectedDate, source: 'manual' });
+  };
+
+  const handleApplyMacroPrompt = (items: GeminiMacroItem[]) => {
+    if (!onAddMealLog) return;
+    const grouped: Partial<Record<MealSlot, FoodItem[]>> = {};
+    for (const it of items) {
+      if (!grouped[it.slot]) grouped[it.slot] = [];
+      grouped[it.slot]!.push({
+        name: it.name,
+        amount: it.amount,
+        unit: it.unit,
+        kcal: it.kcal,
+        protein: it.protein,
+        carbs: it.carbs,
+        fat: it.fat,
+      });
+    }
+
+    for (const [slotKey, mealItems] of Object.entries(grouped)) {
+      if (!mealItems || mealItems.length === 0) continue;
+      const slot = slotKey as MealSlot;
+      const desc = mealItems.map((i) => `${i.name} (${i.amount}${i.unit})`).join(' + ');
+      onAddMealLog({
+        date: selectedDate,
+        slot,
+        description: desc,
+        items: mealItems,
+      });
+    }
   };
 
   const numericInput = (
@@ -617,17 +709,112 @@ export const HealthView: React.FC<HealthViewProps> = ({
             </div>
           </div>
 
-          {/* Macros */}
+          {/* Macros & CTG Macro Ring */}
           <div className="bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs p-4">
-            <h3 className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 mb-3">
-              {lang === 'vi' ? 'Macros (Protein / Carbs / Fat)' : 'Macros (Protein / Carbs / Fat)'}
-            </h3>
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <h3 className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                  {lang === 'vi' ? 'Dinh dưỡng & Tỉ lệ Macros' : 'Nutrition & Macro Ratio'}
+                </h3>
+                <span className="text-xs font-bold text-slate-900 dark:text-slate-100">
+                  {macroTotal > 0 ? `${macroTotal} kcal` : `${effectiveLog.caloriesIn || 0} kcal`}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowMacroPromptModal(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-[11px] font-bold shadow-xs cursor-pointer transition-colors"
+              >
+                <Zap className="w-3.5 h-3.5" />
+                <span>{lang === 'vi' ? '⚡ Nhập Prompt Macro' : '⚡ Prompt Macro'}</span>
+              </button>
+            </div>
+
+            {/* CTG Macro Ring Visualization */}
+            <div className="flex items-center gap-4 py-2 border-y border-slate-100 dark:border-slate-800/80 mb-3">
+              <div className="relative w-20 h-20 shrink-0">
+                <svg className="w-20 h-20 -rotate-90" viewBox="0 0 80 80">
+                  <circle cx="40" cy="40" r="34" stroke="currentColor" strokeWidth="7" fill="none" className="text-slate-100 dark:text-slate-800" />
+                  {/* Protein */}
+                  <circle
+                    cx="40"
+                    cy="40"
+                    r="34"
+                    stroke="#75c6ac"
+                    strokeWidth="7"
+                    fill="none"
+                    strokeDasharray={`${pLen} ${ringCircumference}`}
+                    strokeLinecap="round"
+                    className="transition-all duration-500"
+                  />
+                  {/* Carbs */}
+                  <circle
+                    cx="40"
+                    cy="40"
+                    r="34"
+                    stroke="#97f64f"
+                    strokeWidth="7"
+                    fill="none"
+                    strokeDasharray={`${cLen} ${ringCircumference}`}
+                    strokeDashoffset={-pLen}
+                    strokeLinecap="round"
+                    className="transition-all duration-500"
+                  />
+                  {/* Fat */}
+                  <circle
+                    cx="40"
+                    cy="40"
+                    r="34"
+                    stroke="#ff6025"
+                    strokeWidth="7"
+                    fill="none"
+                    strokeDasharray={`${fLen} ${ringCircumference}`}
+                    strokeDashoffset={-(pLen + cLen)}
+                    strokeLinecap="round"
+                    className="transition-all duration-500"
+                  />
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+                  <span className="text-xs font-black font-mono leading-none text-slate-900 dark:text-slate-100">
+                    {macroTotal > 0 ? macroTotal : (effectiveLog.caloriesIn || 0)}
+                  </span>
+                  <span className="text-[8px] uppercase font-bold text-slate-400">kcal</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-1.5 flex-1 text-center">
+                <div className="p-1.5 rounded-xl bg-[#75c6ac]/15 border border-[#75c6ac]/30">
+                  <div className="text-[9px] font-bold text-[#1f6b54] dark:text-[#75c6ac] uppercase">Đạm (P)</div>
+                  <div className="text-xs font-black font-mono text-slate-900 dark:text-slate-100">{effectiveLog.protein || 0}g</div>
+                  <div className="text-[8px] text-slate-400 font-mono">/{targetProteinG}g</div>
+                </div>
+
+                <div className="p-1.5 rounded-xl bg-[#97f64f]/15 border border-[#97f64f]/30">
+                  <div className="text-[9px] font-bold text-[#4c8024] dark:text-[#97f64f] uppercase">Carbs (C)</div>
+                  <div className="text-xs font-black font-mono text-slate-900 dark:text-slate-100">{effectiveLog.carbs || 0}g</div>
+                  <div className="text-[8px] text-slate-400 font-mono">/{targetCarbsG}g</div>
+                </div>
+
+                <div className="p-1.5 rounded-xl bg-[#ff6025]/15 border border-[#ff6025]/30">
+                  <div className="text-[9px] font-bold text-[#b33900] dark:text-[#ff804d] uppercase">Béo (F)</div>
+                  <div className="text-xs font-black font-mono text-slate-900 dark:text-slate-100">{effectiveLog.fat || 0}g</div>
+                  <div className="text-[8px] text-slate-400 font-mono">/{targetFatG}g</div>
+                </div>
+              </div>
+            </div>
+
+            {dayMealTotals.kcal > 0 && selectedLog.protein === undefined && (
+              <div className="mb-2 text-[10px] text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1">
+                <CheckCircle2 className="w-3 h-3" />
+                <span>{lang === 'vi' ? 'Đã tự động cộng dồn từ các bữa ăn trong ngày' : 'Auto-computed from logged meals'}</span>
+              </div>
+            )}
 
             <div className="grid grid-cols-3 gap-2 mb-3">
               {[
-                { key: 'protein' as const, label: 'Protein', color: '#E11D48' },
-                { key: 'carbs' as const, label: 'Carbs', color: '#F59E0B' },
-                { key: 'fat' as const, label: 'Fat', color: '#8E24AA' },
+                { key: 'protein' as const, label: 'Protein', color: '#75c6ac' },
+                { key: 'carbs' as const, label: 'Carbs', color: '#97f64f' },
+                { key: 'fat' as const, label: 'Fat', color: '#ff6025' },
               ].map((m) => (
                 <label key={m.key} className="block">
                   <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: m.color }}>
@@ -637,12 +824,12 @@ export const HealthView: React.FC<HealthViewProps> = ({
                     type="number"
                     min={0}
                     step={1}
-                    value={selectedLog[m.key] === undefined ? '' : selectedLog[m.key]}
+                    value={effectiveLog[m.key] === undefined ? '' : effectiveLog[m.key]}
                     onChange={(e) => {
                       const v = e.target.value === '' ? undefined : Number(e.target.value);
                       patchLog({ [m.key]: v } as Partial<HealthDayLog>);
                     }}
-                    className="mt-1 w-full text-xs px-2 py-1.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
+                    className="mt-1 w-full text-xs px-2 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100"
                   />
                 </label>
               ))}
@@ -650,21 +837,114 @@ export const HealthView: React.FC<HealthViewProps> = ({
 
             <StackedBar
               segments={[
-                { value: selectedLog.protein || 0, color: '#E11D48', label: 'Protein' },
-                { value: selectedLog.carbs || 0, color: '#F59E0B', label: 'Carbs' },
-                { value: selectedLog.fat || 0, color: '#8E24AA', label: 'Fat' },
+                { value: effectiveLog.protein || 0, color: '#75c6ac', label: 'Protein' },
+                { value: effectiveLog.carbs || 0, color: '#97f64f', label: 'Carbs' },
+                { value: effectiveLog.fat || 0, color: '#ff6025', label: 'Fat' },
               ]}
-              height={10}
+              height={8}
             />
 
-            <div className="flex items-center justify-between mt-2 text-[10px] text-gray-400">
+            <div className="flex items-center justify-between mt-2 text-[10px] text-slate-400">
               <span>
-                {macros.protein}% · {macros.carbs}% · {macros.fat}%
+                {macros.protein}% Đạm · {macros.carbs}% Carbs · {macros.fat}% Béo
               </span>
               <span className="font-mono">
-                {macroTotal > 0 ? `${macroTotal} kcal` : lang === 'vi' ? 'Chưa nhập' : 'No data'}
+                {macroTotal > 0 ? `${macroTotal} kcal` : lang === 'vi' ? 'Chưa có dữ liệu' : 'No data'}
               </span>
             </div>
+          </div>
+
+          {/* CTG Energy Balance (Cân bằng năng lượng & Thâm hụt calo) */}
+          <div className="bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-orange-500/10 text-orange-500 flex items-center justify-center">
+                  <Flame className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-xs font-bold text-slate-900 dark:text-slate-100 uppercase tracking-wider">
+                    {lang === 'vi' ? 'Cân Bằng Năng Lượng' : 'Energy Balance'}
+                  </h3>
+                  <p className="text-[10px] text-slate-400">
+                    {lang === 'vi' ? 'Nạp vào vs Tiêu thụ (TDEE + Tập)' : 'Intake vs Total Burn (TDEE + Exercise)'}
+                  </p>
+                </div>
+              </div>
+              {netEnergy !== null && (
+                <span
+                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${
+                    netEnergy < -100
+                      ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-300'
+                      : netEnergy > 100
+                        ? 'bg-amber-50 text-amber-600 dark:bg-amber-950/40 dark:text-amber-300'
+                        : 'bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-300'
+                  }`}
+                >
+                  {netEnergy < -100
+                    ? lang === 'vi'
+                      ? 'Thâm hụt calo'
+                      : 'Caloric Deficit'
+                    : netEnergy > 100
+                      ? lang === 'vi'
+                        ? 'Thặng dư calo'
+                        : 'Caloric Surplus'
+                      : lang === 'vi'
+                        ? 'Cân bằng duy trì'
+                        : 'Maintenance'}
+                </span>
+              )}
+            </div>
+
+            <div className="grid grid-cols-3 gap-2 p-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-center mb-3">
+              <div>
+                <div className="text-[10px] font-semibold text-slate-400 uppercase">Nạp vào</div>
+                <div className="text-base font-extrabold text-slate-900 dark:text-slate-100 font-mono">
+                  {currentIn} <span className="text-[10px] font-normal text-slate-400">kcal</span>
+                </div>
+              </div>
+              <div>
+                <div className="text-[10px] font-semibold text-slate-400 uppercase">Tiêu thụ</div>
+                <div className="text-base font-extrabold text-slate-900 dark:text-slate-100 font-mono">
+                  {totalBurned} <span className="text-[10px] font-normal text-slate-400">kcal</span>
+                </div>
+                <div className="text-[9px] text-slate-400 font-mono">TDEE {estimatedTdee} + Tập {effectiveLog.caloriesBurned || 0}</div>
+              </div>
+              <div>
+                <div className="text-[10px] font-semibold text-slate-400 uppercase">Chênh lệch (Net)</div>
+                <div
+                  className={`text-base font-extrabold font-mono ${
+                    netEnergy === null
+                      ? 'text-slate-400'
+                      : netEnergy < 0
+                        ? 'text-emerald-600 dark:text-emerald-400'
+                        : 'text-amber-600 dark:text-amber-400'
+                  }`}
+                >
+                  {netEnergy === null ? '—' : `${netEnergy > 0 ? '+' : ''}${netEnergy}`}
+                  <span className="text-[10px] font-normal text-slate-400 ml-0.5">kcal</span>
+                </div>
+              </div>
+            </div>
+
+            {netEnergy !== null && currentIn > 0 && (
+              <div className="p-2.5 rounded-xl border border-dashed border-slate-200 dark:border-slate-800 text-xs">
+                <div className="flex items-center justify-between text-[11px] mb-1">
+                  <span className="text-slate-500 dark:text-slate-400 font-medium">
+                    {netEnergy < 0 ? '🔥 Tốc độ giảm mỡ ước tính:' : '⚡ Tốc độ tăng cân/cơ ước tính:'}
+                  </span>
+                  <span className="font-bold font-mono text-slate-900 dark:text-slate-100">
+                    ~{((Math.abs(netEnergy) * 7) / 7700).toFixed(2)} kg / tuần
+                  </span>
+                </div>
+                <p className="text-[10px] text-slate-400">
+                  {netEnergy < -100
+                    ? 'Thâm hụt năng lượng lành mạnh giúp kích hoạt đốt mỡ thừa mà vẫn bảo toàn khối cơ nạc.'
+                    : netEnergy > 100
+                      ? 'Thặng dư năng lượng tích cực hỗ trợ tối ưu việc tổng hợp protein và phát triển cơ bắp.'
+                      : 'Năng lượng cân bằng giúp duy trì thể trọng và thúc đẩy quá trình tái cấu trúc cơ thể.'}
+                </p>
+              </div>
+            )}
           </div>
 
           {/* BMI / profile */}
@@ -882,6 +1162,13 @@ export const HealthView: React.FC<HealthViewProps> = ({
       </div>
       </>
       )}
+      {/* Gemini Macro Modal */}
+      <GeminiMacroModal
+        isOpen={showMacroPromptModal}
+        onClose={() => setShowMacroPromptModal(false)}
+        onApplyGeminiMacros={handleApplyMacroPrompt}
+        selectedDate={selectedDate}
+      />
     </div>
   );
 };
