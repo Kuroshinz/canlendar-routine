@@ -390,6 +390,40 @@ export interface Exercise {
 
 export type RoutineSplitTemplate = 'ppl' | 'upper_lower' | 'arnold' | 'fullbody' | 'glute_lower' | 'custom';
 
+export type CtgPhaseType = 'cut' | 'bulk' | 'minicut' | 'maintain' | 'final_cut';
+
+export interface CtgRoadmapPhase {
+  id: string;
+  name: string; // 'Giảm mỡ', 'Tăng cơ', 'Mini-cut', 'Giảm mỡ hoàn thiện'
+  phaseType: CtgPhaseType;
+  startDate: string; // '12/09/2026'
+  endDate: string; // '24/10/2026'
+  startWeightKg: number;
+  targetWeightKg: number;
+  startBodyFatPct: number;
+  targetBodyFatPct: number;
+  startLbmKg: number;
+  targetLbmKg: number;
+  startFfmi: number;
+  targetFfmi: number;
+  targetKcal: number;
+  macros: {
+    protein: number;
+    carbs: number;
+    fat: number;
+  };
+  note?: string;
+  isCurrent?: boolean;
+}
+
+export interface CtgPeriodizedRoadmap {
+  id: string;
+  title: string;
+  createdAt: number;
+  phases: CtgRoadmapPhase[];
+  activePhaseId?: string;
+}
+
 export interface SavedRoadmap {
   id: string;
   title: string;

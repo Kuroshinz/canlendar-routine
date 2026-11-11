@@ -154,5 +154,33 @@ const healthScore = calculateDailyHealthScore(testDayLog, 8000, 2500, 2000, 140)
 assert(healthScore.score >= 90, `Expected score >= 90, got ${healthScore.score}`);
 assert(healthScore.status === 'excellent', `Expected excellent status, got ${healthScore.status}`);
 
+// 11. CTG 17-Phase Master Periodized Roadmap
+import { SEED_CTG_PERIODIZED_ROADMAP } from '../data/productivitySeed';
+import { parseVnDate, getPhaseStatus } from '../components/productivity/fitness/RoadmapTab';
+
+assert(SEED_CTG_PERIODIZED_ROADMAP.phases.length === 17, 'Should have exactly 17 CTG phases');
+const p1 = SEED_CTG_PERIODIZED_ROADMAP.phases[0];
+assert(p1.name === 'Giảm mỡ' && p1.startWeightKg === 63.55 && p1.targetWeightKg === 61.35, 'Phase 1 checks');
+assert(p1.macros.protein === 141 && p1.targetKcal === 1606, 'Phase 1 nutrition checks');
+
+const p2 = SEED_CTG_PERIODIZED_ROADMAP.phases[1];
+assert(p2.name === 'Tăng cơ' && p2.isCurrent === true, 'Phase 2 should be active/current');
+assert(p2.startWeightKg === 61.35 && p2.targetWeightKg === 65.81, 'Phase 2 weight checks');
+assert(p2.macros.protein === 110 && p2.macros.carbs === 310 && p2.macros.fat === 69 && p2.targetKcal === 2302, 'Phase 2 macro checks');
+
+const pFinal = SEED_CTG_PERIODIZED_ROADMAP.phases[16];
+assert(pFinal.name === 'Giảm mỡ hoàn thiện' && pFinal.targetWeightKg === 81.23 && pFinal.targetFfmi === 22.0, 'Final phase checks');
+
+// Net LBM growth check: 68.2kg LBM - 52.4kg LBM = 15.8kg pure muscle gain!
+const netLbmGrowth = Math.round((pFinal.targetLbmKg - p1.startLbmKg) * 10) / 10;
+assert(netLbmGrowth === 15.8, `Expected +15.8kg LBM growth, got ${netLbmGrowth}`);
+
+// Date parse helper check
+const parsedD = parseVnDate('24/10/2026');
+assert(parsedD.getDate() === 24 && parsedD.getMonth() === 9 && parsedD.getFullYear() === 2026, 'parseVnDate should parse DD/MM/YYYY');
+
+const phaseStatus = getPhaseStatus(p2, 'ctg-p2');
+assert(phaseStatus === 'current', 'Phase 2 should report current status');
+
 console.log('All fitness metrics tests passed successfully!');
 

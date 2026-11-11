@@ -3,7 +3,9 @@ import {
   BodyCheckPhoto,
   BodyPoint,
   BudgetSettings,
+  CtgPeriodizedRoadmap,
   CtgProfile,
+  CtgRoadmapPhase,
   DEFAULT_BUDGET,
   DEFAULT_HEALTH_PROFILE,
   Exercise,
@@ -32,6 +34,7 @@ import {
 import {
   DEFAULT_NUTRITION_SETTINGS,
   SEED_BODY_POINTS,
+  SEED_CTG_PERIODIZED_ROADMAP,
   SEED_CTG_PROFILE,
   SEED_FOCUS_SESSIONS,
   SEED_GOALS,
@@ -76,6 +79,7 @@ const KEYS = {
   nutritionSettings: 'gcal_ctg_nutrition_settings',
   bodyPhotos: 'gcal_prod_body_photos',
   savedRoadmaps: 'gcal_prod_saved_roadmaps',
+  ctgPeriodizedRoadmap: 'gcal_ctg_periodized_roadmap',
   customExercises: 'gcal_prod_custom_exercises',
 } as const;
 
@@ -145,6 +149,9 @@ export interface ProductivityStore {
   savedRoadmaps: SavedRoadmap[];
   addSavedRoadmap: (roadmap: Omit<SavedRoadmap, 'id' | 'createdAt'>) => SavedRoadmap;
   deleteSavedRoadmap: (id: string) => void;
+  ctgPeriodizedRoadmap: CtgPeriodizedRoadmap;
+  updateCtgPeriodizedRoadmap: (roadmap: CtgPeriodizedRoadmap) => void;
+  setActiveRoadmapPhase: (phaseId: string) => void;
   customExercises: Exercise[];
   addCustomExercise: (exercise: Omit<Exercise, 'id'>) => Exercise;
   deleteCustomExercise: (id: string) => void;
@@ -224,6 +231,10 @@ export function useProductivityStore(): ProductivityStore {
   );
   const [bodyPhotos, setBodyPhotos] = usePersistentState<BodyCheckPhoto[]>(KEYS.bodyPhotos, []);
   const [savedRoadmaps, setSavedRoadmaps] = usePersistentState<SavedRoadmap[]>(KEYS.savedRoadmaps, []);
+  const [ctgPeriodizedRoadmap, setCtgPeriodizedRoadmap] = usePersistentState<CtgPeriodizedRoadmap>(
+    KEYS.ctgPeriodizedRoadmap,
+    SEED_CTG_PERIODIZED_ROADMAP
+  );
   const [customExercises, setCustomExercises] = usePersistentState<Exercise[]>(KEYS.customExercises, []);
 
   // --- Tasks ---------------------------------------------------------------
@@ -669,6 +680,27 @@ export function useProductivityStore(): ProductivityStore {
     [setSavedRoadmaps]
   );
 
+  const updateCtgPeriodizedRoadmap = useCallback(
+    (roadmap: CtgPeriodizedRoadmap) => {
+      setCtgPeriodizedRoadmap(roadmap);
+    },
+    [setCtgPeriodizedRoadmap]
+  );
+
+  const setActiveRoadmapPhase = useCallback(
+    (phaseId: string) => {
+      setCtgPeriodizedRoadmap((prev) => ({
+        ...prev,
+        activePhaseId: phaseId,
+        phases: prev.phases.map((p) => ({
+          ...p,
+          isCurrent: p.id === phaseId,
+        })),
+      }));
+    },
+    [setCtgPeriodizedRoadmap]
+  );
+
   const addCustomExercise = useCallback(
     (input: Omit<Exercise, 'id'>) => {
       const ex: Exercise = {
@@ -900,6 +932,7 @@ export function useProductivityStore(): ProductivityStore {
     setNutritionSettings(DEFAULT_NUTRITION_SETTINGS);
     setBodyPhotos([]);
     setSavedRoadmaps([]);
+    setCtgPeriodizedRoadmap(SEED_CTG_PERIODIZED_ROADMAP);
     setCustomExercises([]);
   }, [
     setTasks,
@@ -921,6 +954,7 @@ export function useProductivityStore(): ProductivityStore {
     setNutritionSettings,
     setBodyPhotos,
     setSavedRoadmaps,
+    setCtgPeriodizedRoadmap,
     setCustomExercises,
   ]);
 
@@ -949,6 +983,7 @@ export function useProductivityStore(): ProductivityStore {
       setNutritionSettings(DEFAULT_NUTRITION_SETTINGS);
       setBodyPhotos([]);
       setSavedRoadmaps([]);
+      setCtgPeriodizedRoadmap(SEED_CTG_PERIODIZED_ROADMAP);
       setCustomExercises([]);
     },
     [
@@ -971,6 +1006,7 @@ export function useProductivityStore(): ProductivityStore {
       setNutritionSettings,
       setBodyPhotos,
       setSavedRoadmaps,
+      setCtgPeriodizedRoadmap,
       setCustomExercises,
     ]
   );
@@ -1029,6 +1065,9 @@ export function useProductivityStore(): ProductivityStore {
     savedRoadmaps,
     addSavedRoadmap,
     deleteSavedRoadmap,
+    ctgPeriodizedRoadmap,
+    updateCtgPeriodizedRoadmap,
+    setActiveRoadmapPhase,
     customExercises,
     addCustomExercise,
     deleteCustomExercise,

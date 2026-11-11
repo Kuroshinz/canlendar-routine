@@ -24,7 +24,9 @@ import {
 import {
   BodyCheckPhoto,
   BodyPoint,
+  CtgPeriodizedRoadmap,
   CtgProfile,
+  CtgRoadmapPhase,
   Exercise,
   HealthDayLog,
   HealthProfile,
@@ -94,6 +96,9 @@ export interface HealthViewProps {
   savedRoadmaps?: SavedRoadmap[];
   onAddSavedRoadmap?: (roadmap: Omit<SavedRoadmap, 'id' | 'createdAt'>) => SavedRoadmap;
   onDeleteSavedRoadmap?: (id: string) => void;
+  ctgPeriodizedRoadmap?: CtgPeriodizedRoadmap;
+  onUpdateCtgPeriodizedRoadmap?: (roadmap: CtgPeriodizedRoadmap) => void;
+  onSetActiveRoadmapPhase?: (phaseId: string) => void;
   customExercises?: Exercise[];
   onAddCustomExercise?: (exercise: Omit<Exercise, 'id'>) => Exercise;
   onDeleteCustomExercise?: (id: string) => void;
@@ -152,6 +157,9 @@ export const HealthView: React.FC<HealthViewProps> = ({
   savedRoadmaps = [],
   onAddSavedRoadmap = (r) => ({ ...r, id: 'tmp', createdAt: Date.now() }),
   onDeleteSavedRoadmap = () => {},
+  ctgPeriodizedRoadmap,
+  onUpdateCtgPeriodizedRoadmap,
+  onSetActiveRoadmapPhase,
   customExercises = [],
   onAddCustomExercise = (e) => ({ ...e, id: 'tmp', isCustom: true }),
   onDeleteCustomExercise = () => {},
@@ -480,6 +488,10 @@ export const HealthView: React.FC<HealthViewProps> = ({
         <RoadmapTab
           profile={ctgProfile}
           lang={lang}
+          bodyPoints={bodyPoints}
+          ctgPeriodizedRoadmap={ctgPeriodizedRoadmap}
+          onUpdateCtgPeriodizedRoadmap={onUpdateCtgPeriodizedRoadmap}
+          onSetActiveRoadmapPhase={onSetActiveRoadmapPhase}
           savedRoadmaps={savedRoadmaps}
           onAddSavedRoadmap={onAddSavedRoadmap}
           onDeleteSavedRoadmap={onDeleteSavedRoadmap}
