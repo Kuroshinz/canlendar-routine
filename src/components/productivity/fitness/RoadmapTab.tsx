@@ -103,7 +103,6 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
   const [heightCm, setHeightCm] = useState(String(profile.heightCm || 172));
   const [weightKg, setWeightKg] = useState(String(profile.targetWeightKg || 68));
   const [bodyfatPct, setBodyfatPct] = useState(String(profile.targetBodyFatPct || 18));
-  const [waistCm, setWaistCm] = useState('80');
   const [userGoal, setUserGoal] = useState<'auto' | Goal>('auto');
   const [appliedBanner, setAppliedBanner] = useState<string | null>(null);
 
@@ -124,7 +123,6 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
   const hNum = Number(heightCm) || 172;
   const wNum = Number(weightKg) || 68;
   const bfNum = Number(bodyfatPct) || 18;
-  const waistNum = Number(waistCm) || 0;
 
   // Analysis result using VortexCal algorithm
   const analysis = useMemo(() => {
@@ -141,9 +139,6 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
     // Determine Body Fat band
     const bfBandItem =
       BODYFAT_BANDS[sexKey].find((b) => bfNum < b.max) || BODYFAT_BANDS[sexKey][BODYFAT_BANDS[sexKey].length - 1];
-
-    // Waist-to-height ratio
-    const whtr = waistNum > 0 && hNum > 0 ? Math.round((waistNum / hNum) * 100) / 100 : 0;
 
     // Decision Logic
     let recommendedPlan: Goal = 'cut';
@@ -193,7 +188,6 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
       ffmi: Math.round(computedFfmi * 10) / 10,
       ffmiBand: ffmiBandItem,
       bfBand: bfBandItem,
-      whtr,
       recommendedPlan,
       effectiveGoal,
       planLabelVi,
@@ -203,7 +197,7 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
       targetKcal,
       macros,
     };
-  }, [sexKey, hNum, wNum, bfNum, waistNum, userGoal, profile]);
+  }, [sexKey, hNum, wNum, bfNum, userGoal, profile]);
 
   const handleApplyRoadmap = () => {
     onUpdateProfile({
@@ -537,39 +531,23 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
                 </div>
               </div>
 
-              {/* Bodyfat % & Waist */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <div className="flex items-center justify-between">
-                    <label className="text-[10px] font-semibold uppercase text-white/50 block">
-                      Bodyfat (%)
-                    </label>
-                    <span className="text-[9px] text-[#2563EB] font-bold">InBody</span>
-                  </div>
-                  <input
-                    type="number"
-                    min="3"
-                    max="70"
-                    step="0.1"
-                    value={bodyfatPct}
-                    onChange={(e) => setBodyfatPct(e.target.value)}
-                    className="mt-1 w-full text-xs font-bold px-3 py-2 rounded-xl border border-white/10 bg-[#0e0f11] text-white focus:border-[#2563EB] focus:outline-none"
-                  />
-                </div>
-                <div>
+              {/* Bodyfat % */}
+              <div>
+                <div className="flex items-center justify-between">
                   <label className="text-[10px] font-semibold uppercase text-white/50 block">
-                    Vòng eo (cm) <span className="text-white/30 lowercase">(tùy chọn)</span>
+                    Tỷ lệ mỡ Bodyfat (%)
                   </label>
-                  <input
-                    type="number"
-                    min="40"
-                    max="180"
-                    step="0.5"
-                    value={waistCm}
-                    onChange={(e) => setWaistCm(e.target.value)}
-                    className="mt-1 w-full text-xs font-bold px-3 py-2 rounded-xl border border-white/10 bg-[#0e0f11] text-white focus:border-[#2563EB] focus:outline-none"
-                  />
+                  <span className="text-[9px] text-[#2563EB] font-bold">Ước tính / InBody</span>
                 </div>
+                <input
+                  type="number"
+                  min="3"
+                  max="70"
+                  step="0.1"
+                  value={bodyfatPct}
+                  onChange={(e) => setBodyfatPct(e.target.value)}
+                  className="mt-1 w-full text-xs font-bold px-3 py-2 rounded-xl border border-white/10 bg-[#0e0f11] text-white focus:border-[#2563EB] focus:outline-none"
+                />
               </div>
 
               {/* Goal Choice */}
@@ -714,23 +692,15 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
               </div>
             </div>
 
-            {/* Extra Row: Fat Mass & Waist ratio */}
+            {/* Extra Row: Fat Mass & Lean Mass */}
             <div className="grid grid-cols-2 gap-3 text-xs pt-1">
               <div className="p-2.5 rounded-xl bg-white/5 border border-white/5 flex items-center justify-between">
                 <span className="text-white/60 text-[11px]">Tổng lượng mỡ (BFM):</span>
                 <span className="font-mono font-bold text-orange-400">{analysis.bfmKg} kg</span>
               </div>
               <div className="p-2.5 rounded-xl bg-white/5 border border-white/5 flex items-center justify-between">
-                <span className="text-white/60 text-[11px]">Tỷ lệ Eo/Chiều cao:</span>
-                <span className="font-mono font-bold text-white">
-                  {analysis.whtr > 0 ? (
-                    <span className={analysis.whtr > 0.5 ? 'text-rose-400' : 'text-emerald-400'}>
-                      {analysis.whtr} ({analysis.whtr > 0.5 ? 'Mỡ bụng cao' : 'Chuẩn khỏe'})
-                    </span>
-                  ) : (
-                    '—'
-                  )}
-                </span>
+                <span className="text-white/60 text-[11px]">Khối lượng cơ nạc (LBM):</span>
+                <span className="font-mono font-bold text-emerald-400">{analysis.lbmKg} kg</span>
               </div>
             </div>
           </div>

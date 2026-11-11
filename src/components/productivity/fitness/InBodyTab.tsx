@@ -38,7 +38,6 @@ import {
   sortPoints,
   tdee,
   withUnit,
-  calculateNavyBodyFat,
 } from '../../../utils/fitnessMetrics';
 import { ChartSeries, MultiSeriesLineChart } from '../../charts/SimpleCharts';
 
@@ -266,7 +265,6 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [weightKg, setWeightKg] = useState('68');
   const [bodyFatPct, setBodyFatPct] = useState('17');
-  const [waistCm, setWaistCm] = useState('83');
   const [chestCm, setChestCm] = useState('99');
   const [armCm, setArmCm] = useState('34');
   const [thighCm, setThighCm] = useState('56');
@@ -277,7 +275,6 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
     if (todayPoint) {
       setWeightKg(String(todayPoint.weightKg));
       setBodyFatPct(String(todayPoint.bodyFatPct));
-      setWaistCm(todayPoint.waistCm ? String(todayPoint.waistCm) : '');
       setChestCm(todayPoint.chestCm ? String(todayPoint.chestCm) : '');
       setArmCm(todayPoint.armCm ? String(todayPoint.armCm) : '');
       setThighCm(todayPoint.thighCm ? String(todayPoint.thighCm) : '');
@@ -285,7 +282,6 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
     } else if (latest) {
       setWeightKg(String(latest.weightKg));
       setBodyFatPct(String(latest.bodyFatPct));
-      setWaistCm(latest.waistCm ? String(latest.waistCm) : '');
       setChestCm(latest.chestCm ? String(latest.chestCm) : '');
       setArmCm(latest.armCm ? String(latest.armCm) : '');
       setThighCm(latest.thighCm ? String(latest.thighCm) : '');
@@ -293,29 +289,8 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
     setShowForm(true);
   };
 
-  // US Navy Calculator & Body Fat Guide states
-  const [showNavyModal, setShowNavyModal] = useState(false);
+  // Body Fat Visual Guide state
   const [showBfGuide, setShowBfGuide] = useState(false);
-  const [navyNeck, setNavyNeck] = useState(profile.sex === 'male' ? '38' : '33');
-  const [navyWaist, setNavyWaist] = useState(profile.sex === 'male' ? '82' : '70');
-  const [navyHip, setNavyHip] = useState(profile.sex === 'male' ? '96' : '95');
-
-  const calculatedNavyBf = useMemo(() => {
-    return calculateNavyBodyFat(
-      profile.sex,
-      profile.heightCm,
-      Number(navyWaist) || 0,
-      Number(navyNeck) || 0,
-      profile.sex === 'female' ? Number(navyHip) || 0 : undefined
-    );
-  }, [profile.sex, profile.heightCm, navyWaist, navyNeck, navyHip]);
-
-  const handleApplyNavyBf = () => {
-    setBodyFatPct(String(calculatedNavyBf));
-    if (navyWaist) setWaistCm(navyWaist);
-    setShowForm(true);
-    setShowNavyModal(false);
-  };
 
   const handleAdd = (e: React.FormEvent) => {
     e.preventDefault();
@@ -324,7 +299,6 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
       date,
       weightKg: Number(weightKg),
       bodyFatPct: Number(bodyFatPct),
-      waistCm: waistCm ? Number(waistCm) : undefined,
       chestCm: chestCm ? Number(chestCm) : undefined,
       armCm: armCm ? Number(armCm) : undefined,
       thighCm: thighCm ? Number(thighCm) : undefined,
@@ -435,16 +409,6 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
-            onClick={() => setShowNavyModal(true)}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/80 dark:bg-gray-800/80 hover:bg-white dark:hover:bg-gray-800 border border-orange-300 dark:border-orange-800/60 text-orange-700 dark:text-orange-300 text-xs font-semibold cursor-pointer shadow-2xs transition-all"
-            title="Tính % mỡ chính xác tại nhà bằng thước dây theo chuẩn Hải Quân Hoa Kỳ (US Navy)"
-          >
-            <Ruler className="w-4 h-4 text-orange-500" />
-            <span>Đo % Mỡ Thước Dây</span>
-          </button>
-
-          <button
-            type="button"
             onClick={() => setShowBfGuide((v) => !v)}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/80 dark:bg-gray-800/80 hover:bg-white dark:hover:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 text-xs font-semibold cursor-pointer shadow-2xs transition-all"
             title="Xem hình ảnh đối chiếu và các phân khúc % mỡ"
@@ -541,7 +505,7 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
             </button>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
             <div>
               <label className="text-[10px] font-semibold text-gray-400 uppercase">Ngày</label>
               <input
@@ -571,16 +535,6 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
                 required
                 value={bodyFatPct}
                 onChange={(e) => setBodyFatPct(e.target.value)}
-                className="mt-1 w-full text-xs px-2.5 py-1.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
-              />
-            </div>
-            <div>
-              <label className="text-[10px] font-semibold text-gray-400 uppercase">Vòng eo (cm)</label>
-              <input
-                type="number"
-                step="0.5"
-                value={waistCm}
-                onChange={(e) => setWaistCm(e.target.value)}
                 className="mt-1 w-full text-xs px-2.5 py-1.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
               />
             </div>
@@ -828,12 +782,20 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             {[
-              { label: 'Vòng eo', val: latest?.waistCm, init: first?.waistCm, unit: 'cm', color: 'text-rose-600' },
+              {
+                label: 'Cơ nạc LBM',
+                val: latest ? leanMassKg(latest.weightKg, latest.bodyFatPct) : undefined,
+                init: first ? leanMassKg(first.weightKg, first.bodyFatPct) : undefined,
+                unit: 'kg',
+                color: 'text-indigo-600 dark:text-indigo-400',
+                isLbm: true,
+              },
               { label: 'Vòng ngực', val: latest?.chestCm, init: first?.chestCm, unit: 'cm', color: 'text-blue-600' },
               { label: 'Bắp tay', val: latest?.armCm, init: first?.armCm, unit: 'cm', color: 'text-amber-600' },
               { label: 'Vòng đùi', val: latest?.thighCm, init: first?.thighCm, unit: 'cm', color: 'text-emerald-600' },
             ].map((t) => {
               const diff = t.val !== undefined && t.init !== undefined ? Math.round((t.val - t.init) * 10) / 10 : null;
+              const isGood = t.isLbm ? (diff !== null && diff > 0) : (diff !== null && diff < 0);
               return (
                 <div key={t.label} className="p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 text-center border border-gray-100 dark:border-slate-800">
                   <div className="text-[10px] text-gray-400 uppercase font-semibold">{t.label}</div>
@@ -841,7 +803,7 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
                     {t.val ? `${t.val} ${t.unit}` : '—'}
                   </div>
                   {diff !== null && Math.abs(diff) >= 0.1 ? (
-                    <div className={`text-[10px] font-semibold mt-0.5 ${diff < 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-orange-600 dark:text-orange-400'}`}>
+                    <div className={`text-[10px] font-semibold mt-0.5 ${isGood ? 'text-emerald-600 dark:text-emerald-400' : 'text-orange-600 dark:text-orange-400'}`}>
                       {diff > 0 ? `+${diff}` : diff} {t.unit}
                     </div>
                   ) : (
@@ -1252,7 +1214,7 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
                 <th className="py-2.5 px-3">% Mỡ</th>
                 <th className="py-2.5 px-3">Khối nạc</th>
                 <th className="py-2.5 px-3">FFMI</th>
-                <th className="py-2.5 px-3">Thước dây (Eo / Ngực / Tay / Đùi)</th>
+                <th className="py-2.5 px-3">Số đo (Ngực / Tay / Đùi)</th>
                 <th className="py-2.5 px-3">Ghi chú</th>
                 <th className="py-2.5 px-3 text-right">Thao tác</th>
               </tr>
@@ -1279,7 +1241,7 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
                       {fmt1(userFf)}
                     </td>
                     <td className="py-2 px-3 text-gray-500 dark:text-gray-400">
-                      {p.waistCm || '—'} / {p.chestCm || '—'} / {p.armCm || '—'} / {p.thighCm || '—'} cm
+                      {p.chestCm || '—'} / {p.armCm || '—'} / {p.thighCm || '—'} cm
                     </td>
                     <td className="py-2 px-3 text-gray-400 italic truncate max-w-xs">
                       {p.note || '—'}
@@ -1609,7 +1571,6 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
                   date: editingPoint.date,
                   weightKg: Number(editingPoint.weightKg),
                   bodyFatPct: Number(editingPoint.bodyFatPct),
-                  waistCm: editingPoint.waistCm ? Number(editingPoint.waistCm) : undefined,
                   chestCm: editingPoint.chestCm ? Number(editingPoint.chestCm) : undefined,
                   armCm: editingPoint.armCm ? Number(editingPoint.armCm) : undefined,
                   thighCm: editingPoint.thighCm ? Number(editingPoint.thighCm) : undefined,
@@ -1654,19 +1615,6 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
                     }
                     className="mt-1 w-full text-xs px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 font-bold"
                     required
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] font-semibold uppercase text-gray-400">Vòng eo (cm)</label>
-                  <input
-                    type="number"
-                    step="0.5"
-                    value={editingPoint.waistCm || ''}
-                    onChange={(e) =>
-                      setEditingPoint({ ...editingPoint, waistCm: Number(e.target.value) || undefined })
-                    }
-                    placeholder="Tùy chọn"
-                    className="mt-1 w-full text-xs px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
                   />
                 </div>
                 <div>
@@ -1723,158 +1671,6 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
-
-      {/* US Navy Body Fat Calculator Modal */}
-      {showNavyModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
-          <div className="bg-white dark:bg-[#131b2e] w-full max-w-md rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-slate-800 bg-linear-to-r from-orange-500/10 to-transparent">
-              <div className="flex items-center gap-2">
-                <div className="p-2 rounded-xl bg-orange-500/10 text-orange-600 dark:text-orange-400">
-                  <Ruler className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100">
-                    Đo % Mỡ Thước Dây (US Navy)
-                  </h3>
-                  <p className="text-[11px] text-gray-500 dark:text-gray-400">
-                    Chuẩn Hải Quân Hoa Kỳ · Đo tại nhà không cần máy InBody
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowNavyModal(false)}
-                className="p-1 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="p-5 space-y-4">
-              <div className="bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-900/50 rounded-xl p-3 text-xs text-orange-800 dark:text-orange-200 space-y-1">
-                <p className="font-semibold flex items-center gap-1.5">
-                  <Sparkles className="w-4 h-4 text-orange-500 shrink-0" />
-                  Hướng dẫn đo thước dây:
-                </p>
-                <ul className="list-disc list-inside space-y-0.5 text-[11px] opacity-90 pl-1">
-                  <li><strong>Vòng cổ:</strong> Đo sát ngay dưới thanh quản (trái táo cổ).</li>
-                  <li><strong>Vòng eo (bụng):</strong> Đo ngang rốn lúc thở ra tự nhiên, không hóp bụng.</li>
-                  {profile.sex === 'female' && (
-                    <li><strong>Vòng hông:</strong> Đo tại điểm nở rộng nhất của mông.</li>
-                  )}
-                </ul>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-[10px] font-semibold uppercase text-gray-400">Chiều cao</label>
-                  <div className="mt-1 flex items-center gap-1">
-                    <input
-                      type="number"
-                      disabled
-                      value={profile.heightCm}
-                      className="w-full text-xs px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-gray-50 dark:bg-gray-900/50 text-gray-500 font-mono font-bold"
-                    />
-                    <span className="text-xs text-gray-400 shrink-0">cm</span>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-[10px] font-semibold uppercase text-gray-400">Giới tính</label>
-                  <input
-                    type="text"
-                    disabled
-                    value={profile.sex === 'male' ? 'Nam' : 'Nữ'}
-                    className="mt-1 w-full text-xs px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-gray-50 dark:bg-gray-900/50 text-gray-500 font-bold"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-[10px] font-semibold uppercase text-gray-400">Vòng cổ (Neck)</label>
-                  <div className="mt-1 flex items-center gap-1">
-                    <input
-                      type="number"
-                      step="0.5"
-                      required
-                      value={navyNeck}
-                      onChange={(e) => setNavyNeck(e.target.value)}
-                      placeholder="vd: 38"
-                      className="w-full text-xs px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 font-bold"
-                    />
-                    <span className="text-xs text-gray-400 shrink-0">cm</span>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-[10px] font-semibold uppercase text-gray-400">Vòng bụng (Waist)</label>
-                  <div className="mt-1 flex items-center gap-1">
-                    <input
-                      type="number"
-                      step="0.5"
-                      required
-                      value={navyWaist}
-                      onChange={(e) => setNavyWaist(e.target.value)}
-                      placeholder="vd: 82"
-                      className="w-full text-xs px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 font-bold"
-                    />
-                    <span className="text-xs text-gray-400 shrink-0">cm</span>
-                  </div>
-                </div>
-
-                {profile.sex === 'female' && (
-                  <div className="col-span-2">
-                    <label className="text-[10px] font-semibold uppercase text-gray-400">Vòng hông (Hip)</label>
-                    <div className="mt-1 flex items-center gap-1">
-                      <input
-                        type="number"
-                        step="0.5"
-                        required
-                        value={navyHip}
-                        onChange={(e) => setNavyHip(e.target.value)}
-                        placeholder="vd: 95"
-                        className="w-full text-xs px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 font-bold"
-                      />
-                      <span className="text-xs text-gray-400 shrink-0">cm</span>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Calculated Result Badge */}
-              <div className="bg-linear-to-br from-orange-500 to-amber-600 rounded-2xl p-4 text-white text-center shadow-md">
-                <span className="text-[11px] font-semibold uppercase tracking-wider opacity-90">
-                  % Mỡ Cơ Thể Ước Tính
-                </span>
-                <div className="text-4xl font-extrabold font-mono mt-0.5 tracking-tight">
-                  {calculatedNavyBf} <span className="text-xl">%</span>
-                </div>
-                <p className="text-xs opacity-90 mt-1">
-                  Độ chênh lệch trung bình với DEXA Scan chỉ khoảng ±1.5% đến 2.5%
-                </p>
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowNavyModal(false)}
-                  className="px-3.5 py-2 rounded-xl border border-gray-300 dark:border-gray-700 text-xs font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-50 cursor-pointer"
-                >
-                  Đóng
-                </button>
-                <button
-                  type="button"
-                  onClick={handleApplyNavyBf}
-                  className="px-4 py-2 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold shadow-xs cursor-pointer flex items-center gap-1.5"
-                >
-                  <Sparkles className="w-4 h-4" />
-                  <span>Áp Dụng Vào Form InBody</span>
-                </button>
-              </div>
-            </div>
           </div>
         </div>
       )}
