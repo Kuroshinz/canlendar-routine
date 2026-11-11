@@ -79,8 +79,51 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
 }) => {
   const [selectedDate, setSelectedDate] = useState(() => todayString());
   const [selectedSlot, setSelectedSlot] = useState<MealSlot>('lunch');
-  const [inputMode, setInputMode] = useState<'quick' | 'manual'>('quick');
+  const [inputMode, setInputMode] = useState<'quick' | 'direct_macro' | 'manual'>('quick');
   const [inputText, setInputText] = useState('');
+
+  // Direct Macro Input State
+  const [macroTitle, setMacroTitle] = useState('');
+  const [macroProtein, setMacroProtein] = useState('30');
+  const [macroCarbs, setMacroCarbs] = useState('45');
+  const [macroFat, setMacroFat] = useState('10');
+
+  const directKcal = useMemo(() => {
+    const p = Number(macroProtein) || 0;
+    const c = Number(macroCarbs) || 0;
+    const f = Number(macroFat) || 0;
+    return Math.round(p * 4 + c * 4 + f * 9);
+  }, [macroProtein, macroCarbs, macroFat]);
+
+  const handleAddDirectMacro = (e: React.FormEvent) => {
+    e.preventDefault();
+    const p = Number(macroProtein) || 0;
+    const c = Number(macroCarbs) || 0;
+    const f = Number(macroFat) || 0;
+    if (p <= 0 && c <= 0 && f <= 0) return;
+
+    const title = macroTitle.trim() || `Bữa ${MEAL_LABEL[selectedSlot]}`;
+    const newItem: FoodItem = {
+      name: title,
+      amount: 100,
+      unit: 'g',
+      kcal: directKcal,
+      protein: p,
+      carbs: c,
+      fat: f,
+    };
+
+    onAddMealLog({
+      date: selectedDate,
+      slot: selectedSlot,
+      description: `${title} (P:${p}g, C:${c}g, F:${f}g - ${directKcal} kcal)`,
+      items: [newItem],
+    });
+
+    setMacroTitle('');
+    setComboToast(`Đã ghi nhận ${title} (${directKcal} kcal · ${p}g P, ${c}g C, ${f}g F)!`);
+    setTimeout(() => setComboToast(null), 3000);
+  };
 
   // Manual food form state
   const [manualName, setManualName] = useState('');
@@ -642,7 +685,7 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
               <span>Prompt Macro AI</span>
             </button>
 
-            {/* Toggle between NLP and Manual mode */}
+            {/* Toggle between NLP, Direct Macro and Manual mode */}
             <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 p-0.5 rounded-xl">
               <button
                 type="button"
@@ -654,6 +697,17 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
                 }`}
               >
                 Nhập nhanh
+              </button>
+              <button
+                type="button"
+                onClick={() => setInputMode('direct_macro')}
+                className={`px-2.5 py-1 text-[11px] font-semibold rounded-lg transition-colors cursor-pointer ${
+                  inputMode === 'direct_macro'
+                    ? 'bg-white dark:bg-gray-700 text-emerald-600 dark:text-emerald-400 shadow-2xs font-bold'
+                    : 'text-gray-500 hover:text-gray-900 dark:hover:text-gray-200'
+                }`}
+              >
+                Nhập Macro (P-C-F)
               </button>
               <button
                 type="button"
@@ -688,8 +742,86 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
           ))}
         </div>
 
-        {/* Mode 1: Quick NLP Input */}
-        {inputMode === 'quick' ? (
+        {/* Mode Selector Display */}
+        {inputMode === 'direct_macro' ? (
+          <form onSubmit={handleAddDirectMacro} className="space-y-3 pt-1">
+            <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
+              <div className="sm:col-span-4">
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">
+                  Mô tả bữa ăn (không bắt buộc)
+                </label>
+                <input
+                  type="text"
+                  placeholder={`Ví dụ: Bữa ${MEAL_LABEL[selectedSlot]} ngoài quán, Whey...`}
+                  value={macroTitle}
+                  onChange={(e) => setMacroTitle(e.target.value)}
+                  className="w-full text-xs px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
+                />
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="text-[10px] font-bold text-rose-500 uppercase tracking-wider block mb-1">
+                  Đạm / Protein (g)
+                </label>
+                <input
+                  type="number"
+                  step="0.5"
+                  min="0"
+                  value={macroProtein}
+                  onChange={(e) => setMacroProtein(e.target.value)}
+                  className="w-full text-xs px-3 py-2 rounded-xl border border-rose-300 dark:border-rose-900 bg-rose-50/30 dark:bg-rose-950/20 text-gray-800 dark:text-gray-100 font-bold font-mono"
+                  required
+                />
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="text-[10px] font-bold text-amber-500 uppercase tracking-wider block mb-1">
+                  Carbs (g)
+                </label>
+                <input
+                  type="number"
+                  step="0.5"
+                  min="0"
+                  value={macroCarbs}
+                  onChange={(e) => setMacroCarbs(e.target.value)}
+                  className="w-full text-xs px-3 py-2 rounded-xl border border-amber-300 dark:border-amber-900 bg-amber-50/30 dark:bg-amber-950/20 text-gray-800 dark:text-gray-100 font-bold font-mono"
+                  required
+                />
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="text-[10px] font-bold text-purple-500 uppercase tracking-wider block mb-1">
+                  Béo / Fat (g)
+                </label>
+                <input
+                  type="number"
+                  step="0.5"
+                  min="0"
+                  value={macroFat}
+                  onChange={(e) => setMacroFat(e.target.value)}
+                  className="w-full text-xs px-3 py-2 rounded-xl border border-purple-300 dark:border-purple-900 bg-purple-50/30 dark:bg-purple-950/20 text-gray-800 dark:text-gray-100 font-bold font-mono"
+                  required
+                />
+              </div>
+
+              <div className="sm:col-span-2 flex items-center gap-2">
+                <div className="text-center flex-1">
+                  <span className="text-[10px] font-bold uppercase text-gray-400 block">Tự tính:</span>
+                  <span className="text-sm font-black font-mono text-emerald-600 dark:text-emerald-400">
+                    {directKcal} <span className="text-[10px]">kcal</span>
+                  </span>
+                </div>
+                <button
+                  type="submit"
+                  className="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold cursor-pointer transition-colors shadow-xs flex items-center gap-1"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Lưu</span>
+                </button>
+              </div>
+            </div>
+          </form>
+        ) : inputMode === 'quick' ? (
           <form onSubmit={handleAddMeal} className="space-y-3">
             <div className="flex items-center gap-2">
               <input

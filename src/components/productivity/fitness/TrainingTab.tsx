@@ -6,6 +6,7 @@ import {
   CheckCircle2,
   Clock,
   ChevronRight,
+  ChevronLeft,
   ChevronDown,
   ChevronUp,
   BookOpen,
@@ -135,6 +136,16 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
   const [sportDuration, setSportDuration] = useState('30');
   const [sportDate, setSportDate] = useState(() => todayString());
   const [sportNote, setSportNote] = useState('');
+
+  // Workout Days Calendar & Manual Logger State
+  const [calendarMonth, setCalendarMonth] = useState(() => todayString().slice(0, 7)); // YYYY-MM
+  const [selectedDayFilter, setSelectedDayFilter] = useState<string | null>(null);
+  const [showLogPastWorkoutModal, setShowLogPastWorkoutModal] = useState(false);
+  const [pastDate, setPastDate] = useState(() => todayString());
+  const [pastTitle, setPastTitle] = useState('Buổi tập thể hình');
+  const [pastDuration, setPastDuration] = useState('50');
+  const [pastBurnedKcal, setPastBurnedKcal] = useState('260');
+  const [pastNotes, setPastNotes] = useState('');
 
   // Active workout session tracker
   interface ActiveSessionState {
@@ -466,6 +477,124 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
   const muscleSets = useMemo(() => {
     return setsByMuscle(workoutSessions, allExercises);
   }, [workoutSessions, allExercises]);
+
+  const monthCalendarData = useMemo(() => {
+    const [yStr, mStr] = calendarMonth.split('-');
+    const year = Number(yStr);
+    const month = Number(mStr);
+    const firstDayOfWeek = new Date(year, month - 1, 1).getDay(); // 0 is Sunday
+    const daysInMonth = new Date(year, month, 0).getDate();
+
+    const workoutByDate = new Map<string, WorkoutSession[]>();
+    workoutSessions.forEach((w) => {
+      const arr = workoutByDate.get(w.date) || [];
+      arr.push(w);
+      workoutByDate.set(w.date, arr);
+    });
+
+    const sportByDate = new Map<string, SportSession[]>();
+    sportSessions.forEach((s) => {
+      const arr = sportByDate.get(s.date) || [];
+      arr.push(s);
+      sportByDate.set(s.date, arr);
+    });
+
+    const days = [];
+    const startOffset = (firstDayOfWeek + 6) % 7; // Monday as 0
+    for (let i = 0; i < startOffset; i++) {
+      days.push(null);
+    }
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dStr = `${calendarMonth}-${String(d).padStart(2, '0')}`;
+      const ws = workoutByDate.get(dStr) || [];
+      const ss = sportByDate.get(dStr) || [];
+      days.push({
+        dayNumber: d,
+        dateStr: dStr,
+        hasWorkout: ws.length > 0,
+        hasSport: ss.length > 0,
+        workouts: ws,
+        sports: ss,
+        isToday: dStr === todayString(),
+      });
+    }
+
+    const totalTrainedDaysInMonth = days.filter((d) => d && (d.hasWorkout || d.hasSport)).length;
+
+    return {
+      year,
+      month,
+      days,
+      daysInMonth,
+      totalTrainedDaysInMonth,
+      monthLabel: `Tháng ${month}/${year}`,
+    };
+  }, [calendarMonth, workoutSessions, sportSessions]);
+
+  const workoutStreak = useMemo(() => {
+    const dateSet = new Set([
+      ...workoutSessions.map((w) => w.date),
+      ...sportSessions.map((s) => s.date),
+    ]);
+    let streak = 0;
+    const d = new Date();
+    const today = todayString();
+    if (!dateSet.has(today)) {
+      d.setDate(d.getDate() - 1);
+    }
+    while (dateSet.has(d.toISOString().slice(0, 10))) {
+      streak++;
+      d.setDate(d.getDate() - 1);
+    }
+    return streak;
+  }, [workoutSessions, sportSessions]);
+
+  const handleShiftCalendarMonth = (delta: number) => {
+    const [yStr, mStr] = calendarMonth.split('-');
+    const d = new Date(Number(yStr), Number(mStr) - 1 + delta, 1);
+    const newMonth = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    setCalendarMonth(newMonth);
+  };
+
+  const handleSavePastWorkout = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!pastTitle.trim() || !pastDate) return;
+
+    const burnedKcal = Number(pastBurnedKcal) || 220;
+    const sets = [
+      {
+        id: `s-${Date.now()}-1`,
+        exerciseId: 'bench-press',
+        setIndex: 0,
+        weightKg: 50,
+        reps: 10,
+      },
+    ];
+
+    onLogWorkoutSession({
+      date: pastDate,
+      title: pastTitle.trim(),
+      startedAt: Date.now() - (Number(pastDuration) || 50) * 60_000,
+      finishedAt: Date.now(),
+      sets,
+      note: pastNotes.trim() || `Tập ${pastDuration} phút, đốt ~${burnedKcal} kcal.`,
+    });
+
+    if (onUpsertHealthLog) {
+      const existing = (healthLogs || []).find((l) => l.date === pastDate);
+      const prevBurn = existing?.caloriesBurned || 0;
+      onUpsertHealthLog({
+        ...(existing || { date: pastDate, source: 'manual' }),
+        caloriesBurned: prevBurn + burnedKcal,
+        date: pastDate,
+        source: 'manual',
+      });
+    }
+
+    setShowLogPastWorkoutModal(false);
+    setScheduledBanner(`Đã ghi nhận buổi tập "${pastTitle.trim()}" cho ngày ${pastDate} (+${burnedKcal} kcal)!`);
+    setTimeout(() => setScheduledBanner(null), 4000);
+  };
 
   const handleSchedule = (session: PlannedSession) => {
     const today = todayString();
@@ -930,31 +1059,167 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
         </div>
       </div>
 
+      {/* Monthly Workout Calendar Tracker */}
+      <div className="bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200 dark:border-slate-800 p-4 shadow-xs space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-100 dark:border-slate-800 pb-3">
+          <div className="flex items-center gap-2">
+            <Calendar className="w-4 h-4 text-blue-500" />
+            <div>
+              <h3 className="text-xs font-bold text-gray-900 dark:text-gray-100 uppercase tracking-wider flex items-center gap-2">
+                <span>Nhật Ký Ngày Tập &amp; Chuỗi Tập Luyện</span>
+                {workoutStreak > 0 && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-orange-500 text-white shadow-2xs">
+                    🔥 Streak {workoutStreak} ngày
+                  </span>
+                )}
+              </h3>
+              <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
+                Đã tập <strong>{monthCalendarData.totalTrainedDaysInMonth} ngày</strong> trong {monthCalendarData.monthLabel}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <div className="flex items-center border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden bg-gray-50 dark:bg-gray-800">
+              <button
+                type="button"
+                onClick={() => handleShiftCalendarMonth(-1)}
+                className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 cursor-pointer"
+                title="Tháng trước"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <span className="px-3 text-xs font-bold text-gray-800 dark:text-gray-200 min-w-24 text-center">
+                {monthCalendarData.monthLabel}
+              </span>
+              <button
+                type="button"
+                onClick={() => handleShiftCalendarMonth(1)}
+                className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 cursor-pointer"
+                title="Tháng sau"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                setPastDate(todayString());
+                setShowLogPastWorkoutModal(true);
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-semibold shadow-xs cursor-pointer transition-colors"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Ghi ngày tập</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Days of week header */}
+        <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+          <span>T2</span>
+          <span>T3</span>
+          <span>T4</span>
+          <span>T5</span>
+          <span>T6</span>
+          <span>T7</span>
+          <span className="text-orange-500">CN</span>
+        </div>
+
+        {/* Calendar Grid */}
+        <div className="grid grid-cols-7 gap-1.5">
+          {monthCalendarData.days.map((day, idx) => {
+            if (!day) {
+              return <div key={`empty-${idx}`} className="h-14 rounded-xl bg-slate-50/40 dark:bg-slate-900/30" />;
+            }
+            const isSelected = selectedDayFilter === day.dateStr;
+            const hasActivity = day.hasWorkout || day.hasSport;
+            return (
+              <div
+                key={day.dateStr}
+                onClick={() => setSelectedDayFilter(isSelected ? null : day.dateStr)}
+                className={`h-14 p-1 rounded-xl border flex flex-col justify-between transition-all cursor-pointer ${
+                  isSelected
+                    ? 'border-blue-500 ring-2 ring-blue-500/30 bg-blue-50/50 dark:bg-blue-950/40'
+                    : day.isToday
+                    ? 'border-orange-400 bg-orange-50/30 dark:bg-orange-950/20'
+                    : hasActivity
+                    ? 'border-emerald-300 dark:border-emerald-800 bg-emerald-50/40 dark:bg-emerald-950/20'
+                    : 'border-slate-200/70 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-900/40 hover:border-slate-300'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className={`text-[11px] font-bold ${
+                    day.isToday ? 'text-orange-600 dark:text-orange-400' : 'text-gray-700 dark:text-gray-300'
+                  }`}>
+                    {day.dayNumber}
+                  </span>
+                  {day.isToday && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
+                  )}
+                </div>
+
+                <div className="flex items-center gap-1">
+                  {day.hasWorkout && (
+                    <span className="px-1 py-0.2 rounded text-[8px] font-bold bg-blue-600 text-white flex items-center gap-0.5 truncate" title={`Gym: ${day.workouts.map(w => w.title).join(', ')}`}>
+                      <Dumbbell className="w-2.5 h-2.5 shrink-0" />
+                      <span className="truncate">{day.workouts[0]?.title || 'Gym'}</span>
+                    </span>
+                  )}
+                  {day.hasSport && (
+                    <span className="px-1 py-0.2 rounded text-[8px] font-bold bg-indigo-600 text-white flex items-center gap-0.5" title={`Thể thao: ${day.sports.map(s => SPORT_LABEL[s.type]).join(', ')}`}>
+                      <Flame className="w-2.5 h-2.5 shrink-0" />
+                      <span>{day.sports[0]?.durationMin}p</span>
+                    </span>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {selectedDayFilter && (
+          <div className="flex items-center justify-between p-2 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 text-xs">
+            <span className="font-semibold text-blue-800 dark:text-blue-200">
+              Đang lọc theo ngày: <strong>{selectedDayFilter}</strong>
+            </span>
+            <button
+              type="button"
+              onClick={() => setSelectedDayFilter(null)}
+              className="text-[11px] text-blue-600 dark:text-blue-400 font-bold hover:underline cursor-pointer"
+            >
+              Xem tất cả
+            </button>
+          </div>
+        )}
+      </div>
+
       {/* Workout Sessions History Card */}
       <div className="bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200 dark:border-slate-800 p-4 shadow-xs">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <History className="w-4 h-4 text-orange-500" />
             <h3 className="text-xs font-bold text-gray-900 dark:text-gray-100 uppercase tracking-wider">
-              Lịch Sử Buổi Tập Kháng Lực ({workoutSessions.length})
+              Lịch Sử Buổi Tập Kháng Lực ({selectedDayFilter ? workoutSessions.filter(s => s.date === selectedDayFilter).length : workoutSessions.length})
             </h3>
           </div>
           <span className="text-[10px] text-gray-400">
-            Chi tiết tải trọng & từng hiệp đã hoàn thành
+            Chi tiết tải trọng &amp; từng hiệp đã hoàn thành
           </span>
         </div>
 
-        {workoutSessions.length === 0 ? (
+        {(selectedDayFilter ? workoutSessions.filter(s => s.date === selectedDayFilter) : workoutSessions).length === 0 ? (
           <div className="text-center py-6 text-gray-400 border border-dashed border-slate-200 dark:border-slate-800 rounded-xl">
             <Dumbbell className="w-8 h-8 mx-auto mb-2 opacity-30 text-orange-500" />
-            <p className="text-xs">Chưa có buổi tập kháng lực nào được ghi nhận.</p>
+            <p className="text-xs">Chưa có buổi tập kháng lực nào{selectedDayFilter ? ` vào ngày ${selectedDayFilter}` : ''}.</p>
             <p className="text-[11px] text-gray-400 mt-1">
-              Hãy nhấn "Bắt Đầu Tập Ngay" ở một giáo án bên trên để trải nghiệm tracking trực tiếp!
+              Hãy nhấn "Ghi ngày tập" hoặc "Bắt Đầu Tập Ngay" ở một giáo án bên trên để trải nghiệm tracking!
             </p>
           </div>
         ) : (
           <div className="space-y-3">
-            {workoutSessions.map((session) => {
+            {(selectedDayFilter ? workoutSessions.filter(s => s.date === selectedDayFilter) : workoutSessions).map((session) => {
               const isExpanded = expandedWorkoutId === session.id;
               const totalSetsCount = session.sets.length;
               const sessionVolume = session.sets.reduce((sum, s) => sum + s.weightKg * s.reps, 0);
@@ -2321,6 +2586,132 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
                 Đóng
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Log Past / Custom Workout Modal */}
+      {showLogPastWorkoutModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+          <div className="bg-white dark:bg-[#131b2e] w-full max-w-md rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-5 animate-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between mb-3 border-b border-gray-100 dark:border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <Dumbbell className="w-5 h-5 text-orange-500" />
+                <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                  Ghi Nhận Buổi Tập Cho Ngày
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowLogPastWorkoutModal(false)}
+                className="p-1 text-gray-400 hover:text-gray-600 rounded-lg cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSavePastWorkout} className="space-y-3">
+              <div>
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">
+                  Ngày tập
+                </label>
+                <input
+                  type="date"
+                  value={pastDate}
+                  onChange={(e) => setPastDate(e.target.value)}
+                  className="w-full text-xs px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 font-bold"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">
+                  Tên buổi tập / Giáo án
+                </label>
+                <input
+                  type="text"
+                  value={pastTitle}
+                  onChange={(e) => setPastTitle(e.target.value)}
+                  placeholder="VD: Đẩy Ngực &amp; Tay Sau, Chân Mông..."
+                  className="w-full text-xs px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
+                  required
+                />
+                {/* Quick suggestions */}
+                <div className="flex flex-wrap gap-1 mt-1.5">
+                  {['Đẩy Ngực & Tay Sau', 'Kéo Lưng & Tay Trước', 'Chân & Bụng', 'Vai & Bắp Tay', 'Full Body Toàn Thân'].map((sug) => (
+                    <button
+                      key={sug}
+                      type="button"
+                      onClick={() => setPastTitle(sug)}
+                      className="px-2 py-0.5 text-[10px] rounded-md bg-slate-100 dark:bg-slate-800 hover:bg-orange-50 hover:text-orange-600 text-gray-600 dark:text-gray-300 cursor-pointer"
+                    >
+                      {sug}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">
+                    Thời lượng (phút)
+                  </label>
+                  <input
+                    type="number"
+                    min={10}
+                    max={240}
+                    value={pastDuration}
+                    onChange={(e) => setPastDuration(e.target.value)}
+                    className="w-full text-xs px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 font-mono font-bold"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">
+                    Calo tiêu hao ước tính (kcal)
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    step={10}
+                    value={pastBurnedKcal}
+                    onChange={(e) => setPastBurnedKcal(e.target.value)}
+                    className="w-full text-xs px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 font-mono font-bold text-orange-600"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">
+                  Ghi chú buổi tập (RPE, cảm nhận, tạ chính)
+                </label>
+                <textarea
+                  rows={2}
+                  value={pastNotes}
+                  onChange={(e) => setPastNotes(e.target.value)}
+                  placeholder="VD: Bench Press 70kg x 8 reps, Squat 90kg, cơ bắp căng tốt..."
+                  className="w-full text-xs px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-gray-100 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setShowLogPastWorkoutModal(false)}
+                  className="px-3.5 py-2 text-xs font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-xl cursor-pointer"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 text-xs font-semibold bg-orange-600 hover:bg-orange-700 text-white rounded-xl shadow-xs cursor-pointer flex items-center gap-1.5"
+                >
+                  <Check className="w-4 h-4" />
+                  <span>Lưu Buổi Tập</span>
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

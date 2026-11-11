@@ -237,6 +237,30 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
     return etaWeeks(latest.weightKg, profile.targetWeightKg, delta.weightRate);
   }, [delta, latest, profile.targetWeightKg]);
 
+  const todayStr = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const todayPoint = useMemo(() => sorted.find((p) => p.date === todayStr), [sorted, todayStr]);
+  const yesterdayStr = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
+    return d.toISOString().slice(0, 10);
+  }, []);
+  const yesterdayPoint = useMemo(() => sorted.find((p) => p.date === yesterdayStr), [sorted, yesterdayStr]);
+
+  const checkinStreak = useMemo(() => {
+    let streak = 0;
+    const dateSet = new Set(points.map((p) => p.date));
+    const d = new Date();
+    const hasToday = dateSet.has(d.toISOString().slice(0, 10));
+    if (!hasToday) {
+      d.setDate(d.getDate() - 1);
+    }
+    while (dateSet.has(d.toISOString().slice(0, 10))) {
+      streak++;
+      d.setDate(d.getDate() - 1);
+    }
+    return streak;
+  }, [points]);
+
   // Form state
   const [showForm, setShowForm] = useState(false);
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
@@ -247,6 +271,27 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
   const [armCm, setArmCm] = useState('34');
   const [thighCm, setThighCm] = useState('56');
   const [note, setNote] = useState('');
+
+  const handleQuickCheckinToday = () => {
+    setDate(todayStr);
+    if (todayPoint) {
+      setWeightKg(String(todayPoint.weightKg));
+      setBodyFatPct(String(todayPoint.bodyFatPct));
+      setWaistCm(todayPoint.waistCm ? String(todayPoint.waistCm) : '');
+      setChestCm(todayPoint.chestCm ? String(todayPoint.chestCm) : '');
+      setArmCm(todayPoint.armCm ? String(todayPoint.armCm) : '');
+      setThighCm(todayPoint.thighCm ? String(todayPoint.thighCm) : '');
+      setNote(todayPoint.note || '');
+    } else if (latest) {
+      setWeightKg(String(latest.weightKg));
+      setBodyFatPct(String(latest.bodyFatPct));
+      setWaistCm(latest.waistCm ? String(latest.waistCm) : '');
+      setChestCm(latest.chestCm ? String(latest.chestCm) : '');
+      setArmCm(latest.armCm ? String(latest.armCm) : '');
+      setThighCm(latest.thighCm ? String(latest.thighCm) : '');
+    }
+    setShowForm(true);
+  };
 
   // US Navy Calculator & Body Fat Guide states
   const [showNavyModal, setShowNavyModal] = useState(false);
@@ -291,6 +336,83 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
 
   return (
     <div className="space-y-6">
+      {/* Daily Body Check-in Hero Widget */}
+      <div className={`p-4 md:p-5 rounded-2xl border transition-all ${
+        todayPoint
+          ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-950 dark:text-emerald-100'
+          : 'bg-amber-500/10 border-amber-500/30 text-amber-950 dark:text-amber-100'
+      }`}>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-start gap-3">
+            <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${
+              todayPoint ? 'bg-emerald-500 text-white' : 'bg-amber-500 text-white animate-pulse'
+            }`}>
+              <Scale className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold uppercase tracking-wider">
+                  {todayPoint ? 'Đã Check Body Hôm Nay' : 'Chưa Check Body Hôm Nay'}
+                </span>
+                {checkinStreak > 0 && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-orange-500 text-white shadow-2xs">
+                    🔥 Chuỗi {checkinStreak} ngày
+                  </span>
+                )}
+              </div>
+              <div className="text-sm font-semibold mt-0.5">
+                {todayPoint ? (
+                  <span>
+                    Hôm nay: <strong className="font-mono text-base">{todayPoint.weightKg} kg</strong> · <strong className="font-mono">{todayPoint.bodyFatPct}%</strong> mỡ
+                    {yesterdayPoint && (
+                      <span className="text-xs ml-2 opacity-80 font-mono">
+                        ({todayPoint.weightKg - yesterdayPoint.weightKg > 0 ? '+' : ''}{(todayPoint.weightKg - yesterdayPoint.weightKg).toFixed(1)} kg so với hôm qua)
+                      </span>
+                    )}
+                  </span>
+                ) : (
+                  <span>
+                    Chưa ghi nhận thể trạng ngày hôm nay ({new Date().toLocaleDateString('vi-VN', { weekday: 'long', day: '2-digit', month: '2-digit' })}).
+                  </span>
+                )}
+              </div>
+              <p className="text-xs opacity-75 mt-0.5">
+                {todayPoint
+                  ? 'Tuyệt vời! Hãy tiếp tục duy trì ghi nhận cân nặng và số đo mỗi sáng sau khi thức dậy.'
+                  : 'Cân nặng lúc đói vào sáng sớm là chỉ số chân thực nhất để theo dõi tiến trình giảm mỡ hoặc tăng cơ.'}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={handleQuickCheckinToday}
+              className={`px-4 py-2.5 rounded-xl text-xs font-bold cursor-pointer shadow-xs transition-colors flex items-center gap-1.5 ${
+                todayPoint
+                  ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                  : 'bg-amber-600 hover:bg-amber-700 text-white'
+              }`}
+            >
+              {todayPoint ? <Check className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+              <span>{todayPoint ? 'Cập nhật số đo hôm nay' : 'Check body hôm nay ngay'}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setPhotoDate(todayStr);
+                setShowPhotoModal(true);
+              }}
+              className="px-3 py-2.5 rounded-xl bg-white/80 dark:bg-gray-800/80 hover:bg-white dark:hover:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 text-xs font-semibold cursor-pointer shadow-2xs transition-colors flex items-center gap-1.5"
+              title="Chụp hoặc tải ảnh check body hôm nay"
+            >
+              <Camera className="w-4 h-4 text-blue-500" />
+              <span>Chụp ảnh body</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* Top Banner & Quick Target */}
       <div className="bg-gradient-to-r from-orange-500/10 via-amber-500/10 to-transparent dark:from-orange-950/30 dark:via-amber-950/20 rounded-2xl border border-orange-200 dark:border-orange-900/50 p-4 md:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
