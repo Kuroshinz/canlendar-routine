@@ -52,7 +52,9 @@ interface FinanceViewProps {
   onDeleteTransaction: (id: string) => void;
   onUpdateBudget: (patch: Partial<BudgetSettings>) => void;
   onClearAllTransactions?: () => void;
-  onSetRealStartingBalance?: (realBalance: number) => void;
+  onSetRealStartingBalance?: (realBalance: number, clearOldTransactions?: boolean) => void;
+  onAdjustBalanceWithTransaction?: (targetBalance: number, note?: string) => void;
+  onResetFinance?: (startingBalance?: number) => void;
 }
 
 const categoryMeta = (id: FinanceCategoryId) =>
@@ -75,6 +77,8 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
   onUpdateBudget,
   onClearAllTransactions,
   onSetRealStartingBalance,
+  onAdjustBalanceWithTransaction,
+  onResetFinance,
 }) => {
   const today = formatDateString(new Date());
 
@@ -88,8 +92,14 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
   // Real Balance & Edit State
   const [showBalanceModal, setShowBalanceModal] = useState(false);
   const [realBalanceDraft, setRealBalanceDraft] = useState('');
+  const [balanceMode, setBalanceMode] = useState<'wipe_clean' | 'calibrate_base' | 'adjust_tx'>('wipe_clean');
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [clearDemoConfirm, setClearDemoConfirm] = useState(false);
+
+  const hasGhostSeedTx = useMemo(
+    () => transactions.some((t) => /^tx-([1-9]|10)$/.test(t.id)),
+    [transactions]
+  );
 
   const QUICK_EXPENSE_PRESETS = [
     { label: '☕ Cà phê (35k)', amount: 35000, category: 'food' as FinanceCategoryId, title: 'Cà phê sáng' },
@@ -138,16 +148,67 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
     setShowBalanceModal(true);
   };
 
+  const handleResetToZero = () => {
+    if (onResetFinance) {
+      onResetFinance(0);
+    } else if (onSetRealStartingBalance) {
+      onSetRealStartingBalance(0, true);
+    } else {
+      if (onClearAllTransactions) onClearAllTransactions();
+      onUpdateBudget({ initialBalance: 0 });
+    }
+    setClearDemoConfirm(false);
+    setShowBalanceModal(false);
+    setQuickBanner(
+      lang === 'vi'
+        ? 'Đã đặt lại số dư về 0 ₫ và dọn sạch dữ liệu ảo! Sổ sách đã sạch để bạn nhập dữ liệu thật.'
+        : 'Balance reset to 0 and phantom data cleared! Ledger is now clean for your real data.'
+    );
+    setTimeout(() => setQuickBanner(null), 4000);
+  };
+
   const handleSaveRealBalance = (e: React.FormEvent) => {
     e.preventDefault();
     const target = Number(realBalanceDraft.replace(/[^\d.-]/g, ''));
     if (!Number.isFinite(target)) return;
 
-    if (onSetRealStartingBalance) {
-      onSetRealStartingBalance(target);
+    if (balanceMode === 'wipe_clean') {
+      if (onResetFinance) {
+        onResetFinance(target);
+      } else if (onSetRealStartingBalance) {
+        onSetRealStartingBalance(target, true);
+      } else {
+        if (onClearAllTransactions) onClearAllTransactions();
+        onUpdateBudget({ initialBalance: target });
+      }
+    } else if (balanceMode === 'adjust_tx') {
+      if (onAdjustBalanceWithTransaction) {
+        onAdjustBalanceWithTransaction(
+          target,
+          lang === 'vi' ? 'Điều chỉnh số dư thực tế' : 'Wallet balance adjustment'
+        );
+      } else {
+        const diff = target - realTotalBalance;
+        if (diff !== 0) {
+          onAddTransaction({
+            title: lang === 'vi' ? 'Điều chỉnh số dư thực tế' : 'Balance adjustment',
+            amount: Math.abs(diff),
+            type: diff > 0 ? 'income' : 'expense',
+            category: 'other',
+            date: today,
+            note: 'Cân đối số dư tài khoản',
+          });
+        }
+      }
     } else {
-      onUpdateBudget({ initialBalance: target - allTime.balance });
+      // calibrate_base
+      if (onSetRealStartingBalance) {
+        onSetRealStartingBalance(target, false);
+      } else {
+        onUpdateBudget({ initialBalance: target - allTime.balance });
+      }
     }
+
     setShowBalanceModal(false);
     setQuickBanner(
       lang === 'vi'
@@ -390,14 +451,27 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
             <span>{lang === 'vi' ? 'Đặt số dư ví' : 'Set balance'}</span>
           </button>
 
+          <button
+            onClick={() => {
+              if (window.confirm(lang === 'vi' ? 'Đặt lại toàn bộ số dư và sổ sách về 0 ₫ để bắt đầu dữ liệu thật của bạn?' : 'Reset balance and transactions to 0 to start clean?')) {
+                handleResetToZero();
+              }
+            }}
+            className="flex items-center gap-1.5 px-2.5 py-2 bg-slate-100 hover:bg-rose-50 hover:text-rose-600 dark:bg-slate-800 dark:hover:bg-rose-950/40 text-gray-600 dark:text-gray-300 border border-slate-200/80 dark:border-slate-700/80 rounded-xl text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+            title={lang === 'vi' ? 'Đặt lại số dư về 0 ₫ và dọn sạch giao dịch ảo' : 'Reset to 0'}
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            <span>{lang === 'vi' ? 'Đặt lại 0 ₫' : 'Reset 0 ₫'}</span>
+          </button>
+
           {transactions.length > 0 && onClearAllTransactions && (
             <button
               onClick={() => setClearDemoConfirm(true)}
               className="flex items-center gap-1.5 px-2.5 py-2 bg-slate-100 hover:bg-rose-50 hover:text-rose-600 dark:bg-slate-800 dark:hover:bg-rose-950/40 text-gray-500 dark:text-gray-400 rounded-xl text-xs font-medium transition-colors cursor-pointer"
               title={lang === 'vi' ? 'Xóa toàn bộ dữ liệu mẫu ban đầu để bắt đầu sổ sách thực tế của bạn' : 'Clear demo data'}
             >
-              <RefreshCw className="w-3.5 h-3.5" />
-              <span>{lang === 'vi' ? 'Xóa dữ liệu mẫu' : 'Clear demo'}</span>
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>{lang === 'vi' ? 'Xóa tất cả' : 'Clear all'}</span>
             </button>
           )}
 
@@ -418,6 +492,37 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Ghost Seed Transactions Warning Banner */}
+      {hasGhostSeedTx && (
+        <div className="mb-4 p-3.5 rounded-2xl border border-amber-300 dark:border-amber-800 bg-amber-50/90 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs animate-in fade-in duration-200">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl bg-amber-200/60 dark:bg-amber-800/50 flex items-center justify-center shrink-0 text-amber-700 dark:text-amber-300">
+              <AlertTriangle className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="text-xs font-bold">
+                {lang === 'vi' ? 'Phát hiện dữ liệu mẫu ban đầu (+10.855.000 ₫)' : 'Sample demo transactions detected'}
+              </div>
+              <div className="text-[11px] text-amber-700/90 dark:text-amber-300/80">
+                {lang === 'vi'
+                  ? 'Sổ sách đang chứa các giao dịch mẫu ban đầu gây số dư ảo. Bấm để xóa sạch và đưa số dư về 0 ₫ để bắt đầu dùng số thật.'
+                  : 'Ledger contains initial sample transactions distorting real balance. Clear them to use real data.'}
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={handleResetToZero}
+              className="px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold shadow-xs cursor-pointer flex items-center gap-1.5 transition-colors"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>{lang === 'vi' ? 'Xóa dữ liệu mẫu & Về 0 ₫' : 'Clear demo & Reset to 0'}</span>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Summary strip */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
@@ -1013,37 +1118,141 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
               {/* Quick Preset Buttons */}
               <div className="mb-4">
                 <span className="text-[10px] text-gray-400 block mb-1">
-                  {lang === 'vi' ? 'Chọn nhanh:' : 'Quick presets:'}
+                  {lang === 'vi' ? 'Chọn nhanh mức số dư:' : 'Quick presets:'}
                 </span>
                 <div className="flex flex-wrap gap-1.5">
-                  {[0, 1000000, 5000000, 10000000, 20000000, 50000000].map((val) => (
+                  {[0, 1000000, 2000000, 5000000, 10000000, 20000000, 50000000, 100000000].map((val) => (
                     <button
                       key={val}
                       type="button"
                       onClick={() => setRealBalanceDraft(String(val))}
-                      className="px-2.5 py-1 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-blue-950/40 cursor-pointer"
+                      className={`px-2.5 py-1 text-xs rounded-lg border cursor-pointer font-medium transition-colors ${
+                        val === 0
+                          ? 'border-rose-200 dark:border-rose-900 bg-rose-50/70 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 hover:bg-rose-100'
+                          : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-blue-950/40'
+                      }`}
                     >
-                      {formatMoneyCompact(val, budget.currency)}
+                      {val === 0 ? (lang === 'vi' ? '0 ₫ (Reset)' : '0 ₫ (Reset)') : formatMoneyCompact(val, budget.currency)}
                     </button>
                   ))}
                 </div>
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+              {/* Calibration Mode Selector */}
+              <div className="mb-4 space-y-2">
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
+                  {lang === 'vi' ? 'Cách thức đồng bộ số dư:' : 'Sync method:'}
+                </span>
+
+                <label
+                  onClick={() => setBalanceMode('wipe_clean')}
+                  className={`flex items-start gap-2.5 p-2.5 rounded-xl border cursor-pointer transition-colors ${
+                    balanceMode === 'wipe_clean'
+                      ? 'border-blue-500 bg-blue-50/50 dark:bg-blue-950/30'
+                      : 'border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="balanceMode"
+                    checked={balanceMode === 'wipe_clean'}
+                    onChange={() => setBalanceMode('wipe_clean')}
+                    className="mt-0.5 text-blue-600"
+                  />
+                  <div className="text-xs">
+                    <div className="font-semibold text-gray-900 dark:text-gray-100">
+                      {lang === 'vi' ? 'Xóa giao dịch cũ & Khởi đầu mới (Khuyên dùng)' : 'Wipe old data & Fresh start (Recommended)'}
+                    </div>
+                    <div className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
+                      {lang === 'vi'
+                        ? 'Xóa toàn bộ giao dịch mẫu/ảo, đặt số dư ví đúng bằng số tiền này để bắt đầu ghi nhận dữ liệu thật từ đầu.'
+                        : 'Purge all sample/old transactions and set real balance = this exact amount.'}
+                    </div>
+                  </div>
+                </label>
+
+                <label
+                  onClick={() => setBalanceMode('calibrate_base')}
+                  className={`flex items-start gap-2.5 p-2.5 rounded-xl border cursor-pointer transition-colors ${
+                    balanceMode === 'calibrate_base'
+                      ? 'border-blue-500 bg-blue-50/50 dark:bg-blue-950/30'
+                      : 'border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="balanceMode"
+                    checked={balanceMode === 'calibrate_base'}
+                    onChange={() => setBalanceMode('calibrate_base')}
+                    className="mt-0.5 text-blue-600"
+                  />
+                  <div className="text-xs">
+                    <div className="font-semibold text-gray-900 dark:text-gray-100">
+                      {lang === 'vi' ? 'Cân đối số dư ban đầu (Giữ lịch sử giao dịch)' : 'Calibrate initial balance (Keep history)'}
+                    </div>
+                    <div className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
+                      {lang === 'vi'
+                        ? 'Giữ nguyên các giao dịch bạn đã ghi, hệ thống tự động suy ra số dư ban đầu để tổng bằng số này.'
+                        : 'Keep logged transactions and adjust starting capital so net equals this target.'}
+                    </div>
+                  </div>
+                </label>
+
+                <label
+                  onClick={() => setBalanceMode('adjust_tx')}
+                  className={`flex items-start gap-2.5 p-2.5 rounded-xl border cursor-pointer transition-colors ${
+                    balanceMode === 'adjust_tx'
+                      ? 'border-blue-500 bg-blue-50/50 dark:bg-blue-950/30'
+                      : 'border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="balanceMode"
+                    checked={balanceMode === 'adjust_tx'}
+                    onChange={() => setBalanceMode('adjust_tx')}
+                    className="mt-0.5 text-blue-600"
+                  />
+                  <div className="text-xs">
+                    <div className="font-semibold text-gray-900 dark:text-gray-100">
+                      {lang === 'vi' ? 'Tạo giao dịch "Điều chỉnh số dư" hôm nay' : 'Log an adjustment transaction today'}
+                    </div>
+                    <div className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
+                      {lang === 'vi'
+                        ? 'Tự động tạo 1 giao dịch chênh lệch để số dư khớp với thực tế mà không làm mất lịch sử.'
+                        : 'Auto-add a balancing transaction for the difference.'}
+                    </div>
+                  </div>
+                </label>
+              </div>
+
+              <div className="flex items-center justify-between gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
                 <button
                   type="button"
-                  onClick={() => setShowBalanceModal(false)}
-                  className="px-3.5 py-2 text-xs font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-xl cursor-pointer"
+                  onClick={handleResetToZero}
+                  className="px-2.5 py-1.5 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl cursor-pointer flex items-center gap-1 transition-colors"
+                  title={lang === 'vi' ? 'Đặt lại toàn bộ về 0 ₫' : 'Reset to 0'}
                 >
-                  {lang === 'vi' ? 'Hủy' : 'Cancel'}
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  <span>{lang === 'vi' ? 'Reset về 0 ₫' : 'Reset to 0'}</span>
                 </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-xs cursor-pointer flex items-center gap-1.5"
-                >
-                  <Check className="w-4 h-4" />
-                  <span>{lang === 'vi' ? 'Cập Nhật Số Dư' : 'Update Balance'}</span>
-                </button>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowBalanceModal(false)}
+                    className="px-3.5 py-2 text-xs font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-xl cursor-pointer"
+                  >
+                    {lang === 'vi' ? 'Hủy' : 'Cancel'}
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-xs cursor-pointer flex items-center gap-1.5"
+                  >
+                    <Check className="w-4 h-4" />
+                    <span>{lang === 'vi' ? 'Áp Dụng' : 'Apply'}</span>
+                  </button>
+                </div>
               </div>
             </form>
           </div>

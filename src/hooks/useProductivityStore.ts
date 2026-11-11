@@ -24,6 +24,7 @@ import {
   TaskItem,
   TaskStatus,
   Transaction,
+  TransactionType,
   WellnessCheck,
   WorkoutLog,
   WorkoutSession,
@@ -113,7 +114,9 @@ export interface ProductivityStore {
   updateTransaction: (id: string, patch: Partial<Transaction>) => void;
   deleteTransaction: (id: string) => void;
   clearAllTransactions: () => void;
-  setRealStartingBalance: (realBalance: number) => void;
+  setRealStartingBalance: (realBalance: number, clearOldTransactions?: boolean) => void;
+  adjustBalanceWithTransaction: (targetBalance: number, note?: string) => void;
+  resetFinance: (startingBalance?: number) => void;
   budget: BudgetSettings;
   updateBudget: (patch: Partial<BudgetSettings>) => void;
   monthSummary: (monthPrefix?: string) => FinanceSummary;
@@ -459,17 +462,67 @@ export function useProductivityStore(): ProductivityStore {
   );
 
   const setRealStartingBalance = useCallback(
-    (realBalance: number) => {
-      const netTx = transactions.reduce(
+    (realBalance: number, clearOldTransactions: boolean = false) => {
+      if (clearOldTransactions) {
+        setTransactions([]);
+        setBudget((prev) => ({
+          ...prev,
+          initialBalance: realBalance,
+        }));
+      } else {
+        const netTx = transactions.reduce(
+          (acc, t) => acc + (t.type === 'income' ? t.amount : -t.amount),
+          0
+        );
+        setBudget((prev) => ({
+          ...prev,
+          initialBalance: realBalance - netTx,
+        }));
+      }
+    },
+    [transactions, setBudget, setTransactions]
+  );
+
+  const adjustBalanceWithTransaction = useCallback(
+    (targetBalance: number, note: string = 'Điều chỉnh số dư thực tế') => {
+      const currentNet = transactions.reduce(
         (acc, t) => acc + (t.type === 'income' ? t.amount : -t.amount),
         0
       );
+      const currentTotal = (budget.initialBalance || 0) + currentNet;
+      const diff = targetBalance - currentTotal;
+      if (diff === 0) return;
+
+      const type: TransactionType = diff > 0 ? 'income' : 'expense';
+      const amount = Math.abs(diff);
+      const today = formatDateString(new Date());
+
+      setTransactions((prev) => [
+        {
+          id: uid('tx'),
+          title: note,
+          amount,
+          type,
+          category: 'other',
+          date: today,
+          note: `Cân đối số dư lúc ${new Date().toLocaleTimeString('vi-VN')}`,
+          createdAt: Date.now(),
+        },
+        ...prev,
+      ]);
+    },
+    [budget.initialBalance, transactions, setTransactions]
+  );
+
+  const resetFinance = useCallback(
+    (startingBalance: number = 0) => {
+      setTransactions([]);
       setBudget((prev) => ({
         ...prev,
-        initialBalance: realBalance - netTx,
+        initialBalance: startingBalance,
       }));
     },
-    [transactions, setBudget]
+    [setTransactions, setBudget]
   );
 
   const monthSummary = useCallback(
@@ -949,6 +1002,8 @@ export function useProductivityStore(): ProductivityStore {
     deleteTransaction,
     clearAllTransactions,
     setRealStartingBalance,
+    adjustBalanceWithTransaction,
+    resetFinance,
     budget,
     updateBudget,
     monthSummary,

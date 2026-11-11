@@ -633,7 +633,7 @@ export const ProductivityDashboard: React.FC<ProductivityDashboardProps> = ({
           </div>
         </div>
 
-        {/* Card 4: Finance & Cashflow */}
+        {/* Card 4: Finance & Real Balance */}
         <div
           onClick={() => onNavigate('finance')}
           className="bg-white dark:bg-[#131b2e] p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800/80 shadow-xs hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between"
@@ -641,10 +641,14 @@ export const ProductivityDashboard: React.FC<ProductivityDashboardProps> = ({
           <div className="flex items-start justify-between">
             <div>
               <span className="text-xs font-semibold text-slate-400 block mb-1">
-                {lang === 'vi' ? 'Tài chính ròng tháng' : 'Monthly Net Cashflow'}
+                {lang === 'vi' ? 'Số dư thực tế ví / bank' : 'Real Wallet / Bank Balance'}
               </span>
               <div className="text-2xl font-black text-slate-900 dark:text-white font-mono tracking-tight">
-                {formatMoneyCompact(finance.balance, budget.currency || 'VND')}
+                {formatMoneyCompact(
+                  (budget.initialBalance || 0) +
+                    transactions.reduce((acc, t) => acc + (t.type === 'income' ? t.amount : -t.amount), 0),
+                  budget.currency || 'VND'
+                )}
               </div>
             </div>
             <div className="w-10 h-10 rounded-2xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -653,7 +657,7 @@ export const ProductivityDashboard: React.FC<ProductivityDashboardProps> = ({
           </div>
           <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800/60 flex items-center justify-between text-xs font-medium">
             <span className="text-slate-500">
-              Chi {formatMoneyCompact(finance.expense, budget.currency || 'VND')}
+              {lang === 'vi' ? 'Dòng tiền tháng' : 'Net'}: {formatMoneyCompact(finance.balance, budget.currency || 'VND')}
             </span>
             <span className={`inline-flex items-center font-bold px-2 py-0.5 rounded-lg ${
               budgetStatus.level === 'over'

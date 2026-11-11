@@ -1066,6 +1066,8 @@ export default function App() {
                   onUpdateBudget={productivity.updateBudget}
                   onClearAllTransactions={productivity.clearAllTransactions}
                   onSetRealStartingBalance={productivity.setRealStartingBalance}
+                  onAdjustBalanceWithTransaction={productivity.adjustBalanceWithTransaction}
+                  onResetFinance={productivity.resetFinance}
                 />
               )}
 
