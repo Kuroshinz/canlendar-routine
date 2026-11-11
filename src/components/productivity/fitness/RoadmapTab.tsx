@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Compass,
   CheckCircle2,
@@ -205,8 +205,7 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
 
   const activePhase = useMemo(() => {
     if (!activeRoadmap || phases.length === 0) return null;
-    if (activeRoadmap.activePhaseId) {
-      if (activeRoadmap.activePhaseId === 'none') return null;
+    if (activeRoadmap.activePhaseId && activeRoadmap.activePhaseId !== 'none') {
       const found = phases.find((p) => p.id === activeRoadmap.activePhaseId);
       if (found) return found;
     }
@@ -218,8 +217,15 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
       const e = parseVnDate(p.endDate);
       return today >= s && today <= e;
     });
-    return byDate || phases[1] || phases[0];
+    return byDate || phases[0] || null;
   }, [activeRoadmap, phases]);
+
+  // Tự động khôi phục phase hợp lệ nếu activePhaseId đang là 'none' hoặc bị trống
+  useEffect(() => {
+    if (activeRoadmap && activeRoadmap.activePhaseId === 'none' && phases.length > 0) {
+      onSetActiveRoadmapPhase?.(phases[0].id);
+    }
+  }, [activeRoadmap, phases, onSetActiveRoadmapPhase]);
 
   // CTG Periodized Generator & Custom Phase Modals
   const [showGeneratorModal, setShowGeneratorModal] = useState(false);
@@ -1069,7 +1075,7 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
       )}
 
       {/* VIEW 1: ACTIVE CTG MASTER PERIODIZED ROADMAP (KHI CÓ GIAI ĐOẠN) */}
-      {activeViewMode === 'ctg_periodized' && activeRoadmap && phases.length > 0 && activePhase && (
+      {activeViewMode === 'ctg_periodized' && activeRoadmap && phases.length > 0 && (
         <div className="space-y-5 animate-fadeIn">
           {/* 1. TỔNG QUAN HÀNH TRÌNH CHUYỂN HÓA & CÔNG CỤ */}
           <div className="bg-[#0b101b] rounded-3xl border border-white/10 p-5 shadow-xl relative overflow-hidden">
@@ -1207,19 +1213,6 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
                     title={isLiveTrackingCollapsed ? "Mở rộng thẻ này" : "Thu gọn thẻ này"}
                   >
                     {isLiveTrackingCollapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onSetActiveRoadmapPhase?.('none');
-                      setAppliedBanner('Đã dừng theo dõi mốc giai đoạn này.');
-                      setTimeout(() => setAppliedBanner(null), 4000);
-                    }}
-                    className="p-2 rounded-xl border border-white/10 hover:bg-rose-500/20 text-white/40 hover:text-rose-300 transition-colors cursor-pointer"
-                    title="Dừng theo dõi giai đoạn này (Ẩn bảng)"
-                  >
-                    <X className="w-4 h-4" />
                   </button>
                 </div>
               </div>
