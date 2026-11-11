@@ -20,6 +20,8 @@ import {
   calculateDailyHealthScore,
   VIETNAMESE_FOOD_CATALOG,
   BALANCED_MEAL_COMBOS,
+  generateCtgPeriodizedRoadmap,
+  calculatePhaseNutrition,
 } from './fitnessMetrics';
 import { BodyPoint, CtgProfile, HealthDayLog, NutritionSettings, SetLog, SportSession } from '../types/productivity';
 
@@ -181,6 +183,45 @@ assert(parsedD.getDate() === 24 && parsedD.getMonth() === 9 && parsedD.getFullYe
 
 const phaseStatus = getPhaseStatus(p2, 'ctg-p2');
 assert(phaseStatus === 'current', 'Phase 2 should report current status');
+
+// 12. Dynamic CTG Roadmap Generation for Any Height, Weight, Body Fat & Sex
+const customRoadmapMale = generateCtgPeriodizedRoadmap({
+  sex: 'male',
+  heightCm: 180,
+  currentWeightKg: 78,
+  currentBodyFatPct: 20,
+  targetFfmi: 22.0,
+});
+assert(customRoadmapMale.phases.length > 5, 'Should generate multiple waves for 180cm/78kg male');
+assert(customRoadmapMale.heightCm === 180, 'Height should be stored');
+assert(customRoadmapMale.phases[0].phaseType === 'cut', 'Initial phase should be cut since 20% > 16%');
+assert(
+  customRoadmapMale.phases[customRoadmapMale.phases.length - 1].phaseType === 'final_cut',
+  'Last phase should be final_cut'
+);
+const lastPhaseMale = customRoadmapMale.phases[customRoadmapMale.phases.length - 1];
+assert(lastPhaseMale.targetLbmKg > customRoadmapMale.phases[0].startLbmKg, 'Net LBM should increase significantly');
+
+// Test female generation
+const customRoadmapFemale = generateCtgPeriodizedRoadmap({
+  sex: 'female',
+  heightCm: 160,
+  currentWeightKg: 54,
+  currentBodyFatPct: 24,
+  targetFfmi: 19.5,
+});
+assert(customRoadmapFemale.phases.length > 3, 'Should generate roadmap for female 160cm');
+assert(customRoadmapFemale.phases[0].phaseType === 'cut', 'Initial cut for female at 24%');
+
+// Test phase nutrition calculator
+const bulkNut = calculatePhaseNutrition('male', 175, 70, 'bulk');
+assert(bulkNut.targetKcal > 2000, 'Bulk kcal should be surplus');
+assert(bulkNut.protein >= 120, 'Bulk protein should be high');
+assert(bulkNut.fat > 50 && bulkNut.carbs > 150, 'Macros should be balanced');
+
+const minicutNut = calculatePhaseNutrition('male', 175, 70, 'minicut');
+assert(minicutNut.targetKcal < bulkNut.targetKcal, 'Minicut kcal should be significantly lower than bulk');
+assert(minicutNut.protein > bulkNut.protein, 'Minicut protein should be higher to spare muscle');
 
 console.log('All fitness metrics tests passed successfully!');
 

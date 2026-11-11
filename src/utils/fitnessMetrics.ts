@@ -1,7 +1,9 @@
 import {
   ACTIVITY_FACTOR,
   BodyPoint,
+  CtgPeriodizedRoadmap,
   CtgProfile,
+  CtgRoadmapPhase,
   Exercise,
   FoodItem,
   Goal,
@@ -1056,6 +1058,306 @@ export function calculateProgressiveOverload(
       type: 'reps',
     };
   }
+}
+
+// ---------------------------------------------------------------------------
+// 6.5. CTG Periodized Roadmap Generator (Đại Lộ Trình Phân Kỳ Chu Kỳ Dài Hạn)
+// ---------------------------------------------------------------------------
+
+export interface GenerateCtgRoadmapParams {
+  sex: Sex;
+  heightCm: number;
+  currentWeightKg: number;
+  currentBodyFatPct: number;
+  targetFfmi?: number;
+  targetWeightKg?: number;
+  startDate?: string;
+}
+
+function formatVnDateStr(d: Date): string {
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = d.getFullYear();
+  return `${day}/${month}/${year}`;
+}
+
+export function parseAnyDateStr(dStr?: string): Date {
+  if (!dStr) return new Date();
+  if (dStr.includes('/')) {
+    const parts = dStr.trim().split('/');
+    if (parts.length === 3) {
+      return new Date(parseInt(parts[2], 10), parseInt(parts[1], 10) - 1, parseInt(parts[0], 10));
+    }
+  }
+  if (dStr.includes('-')) {
+    const parts = dStr.trim().split('-');
+    if (parts.length === 3) {
+      return new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+    }
+  }
+  return new Date();
+}
+
+function addWeeksToDate(date: Date, weeks: number): Date {
+  const d = new Date(date.getTime());
+  d.setDate(d.getDate() + weeks * 7);
+  return d;
+}
+
+export function calculatePhaseNutrition(
+  sex: Sex,
+  heightCm: number,
+  avgWeightKg: number,
+  phaseType: 'cut' | 'bulk' | 'minicut' | 'maintain' | 'final_cut'
+): { targetKcal: number; protein: number; carbs: number; fat: number } {
+  const bmrEst =
+    sex === 'female'
+      ? 10 * avgWeightKg + 6.25 * heightCm - 5 * 25 - 161
+      : 10 * avgWeightKg + 6.25 * heightCm - 5 * 25 + 5;
+  const tdeeEst = bmrEst * 1.45; // moderate training activity
+
+  let targetKcal: number;
+  let pPerKg: number;
+  let fPerKg: number;
+
+  if (phaseType === 'bulk') {
+    targetKcal = Math.round(tdeeEst + 280);
+    pPerKg = 1.8;
+    fPerKg = 1.05;
+  } else if (phaseType === 'minicut') {
+    targetKcal = Math.round(tdeeEst * 0.72);
+    pPerKg = 2.5;
+    fPerKg = 0.5;
+  } else if (phaseType === 'cut') {
+    targetKcal = Math.round(tdeeEst * 0.78);
+    pPerKg = 2.3;
+    fPerKg = 0.55;
+  } else if (phaseType === 'final_cut') {
+    targetKcal = Math.round(tdeeEst * 0.82);
+    pPerKg = 2.3;
+    fPerKg = 0.55;
+  } else {
+    targetKcal = Math.round(tdeeEst);
+    pPerKg = 2.0;
+    fPerKg = 0.8;
+  }
+
+  const protein = Math.round(avgWeightKg * pPerKg);
+  const fat = Math.round(avgWeightKg * fPerKg);
+  const remKcal = Math.max(120, targetKcal - protein * 4 - fat * 9);
+  const carbs = Math.round(remKcal / 4);
+
+  return { targetKcal, protein, carbs, fat };
+}
+
+/**
+ * Generates an end-to-end science-backed CTG periodized roadmap with alternating
+ * Hypertrophy Bulk & Mini-cut waves for any height, weight, bodyfat, and sex.
+ */
+export function generateCtgPeriodizedRoadmap(
+  params: GenerateCtgRoadmapParams
+): CtgPeriodizedRoadmap {
+  const { sex, heightCm, currentWeightKg, currentBodyFatPct } = params;
+  const hMeter = heightCm / 100;
+  const hSq = hMeter * hMeter;
+  const isFemale = sex === 'female';
+
+  const defaultMaxFfmi = isFemale ? 19.5 : 22.0;
+  const targetFfmi = params.targetFfmi ? Math.min(24.5, Math.max(16, params.targetFfmi)) : defaultMaxFfmi;
+
+  const leanBaseBf = isFemale ? 21.0 : 14.8;
+
+  let curW = Math.round(currentWeightKg * 100) / 100;
+  let curBf = Math.round(currentBodyFatPct * 10) / 10;
+  let curLbm = Math.round(curW * (1 - curBf / 100) * 10) / 10;
+  let curFfmi = Math.round((curLbm / hSq) * 10) / 10;
+
+  let curDate = parseAnyDateStr(params.startDate);
+  const today = new Date();
+  const phases: CtgRoadmapPhase[] = [];
+  let phaseIdx = 1;
+
+  // Step 1: Initial Cut if starting fat is above base + 1.2%
+  if (curBf > leanBaseBf + 1.2) {
+    const targetBf = leanBaseBf;
+    const targetLbm = Math.round(curLbm * 0.995 * 10) / 10;
+    const targetW = Math.round((targetLbm / (1 - targetBf / 100)) * 100) / 100;
+    const kgToLose = Math.max(0.8, curW - targetW);
+    const durationWeeks = Math.max(3, Math.min(16, Math.round(kgToLose / 0.45)));
+    const endDate = addWeeksToDate(curDate, durationWeeks);
+
+    const nut = calculatePhaseNutrition(sex, heightCm, (curW + targetW) / 2, 'cut');
+    const targetFfmiStep = Math.round((targetLbm / hSq) * 10) / 10;
+
+    phases.push({
+      id: `ctg-p${phaseIdx++}`,
+      name: 'Giảm mỡ',
+      phaseType: 'cut',
+      startDate: formatVnDateStr(curDate),
+      endDate: formatVnDateStr(endDate),
+      startWeightKg: curW,
+      targetWeightKg: targetW,
+      startBodyFatPct: curBf,
+      targetBodyFatPct: targetBf,
+      startLbmKg: curLbm,
+      targetLbmKg: targetLbm,
+      startFfmi: curFfmi,
+      targetFfmi: targetFfmiStep,
+      targetKcal: nut.targetKcal,
+      macros: { protein: nut.protein, carbs: nut.carbs, fat: nut.fat },
+      note: 'Hạ mỡ về ngưỡng nhạy insulin tối ưu trước khi bước vào chu kỳ tăng cơ dài hạn.',
+    });
+
+    curW = targetW;
+    curBf = targetBf;
+    curLbm = targetLbm;
+    curFfmi = targetFfmiStep;
+    curDate = endDate;
+  }
+
+  // Step 2: Alternating Waves of Bulk & Mini-cut
+  const targetTotalLbm = Math.round(targetFfmi * hSq * 10) / 10;
+  let wave = 1;
+
+  while (curLbm < targetTotalLbm - 0.5 && phaseIdx <= 22) {
+    // 2A: Wave Bulk
+    const lbmToGainThisWave = Math.min(
+      isFemale ? 1.8 : 2.9,
+      Math.max(1.2, targetTotalLbm - curLbm)
+    );
+    const totalWeightGain = Math.round((lbmToGainThisWave / 0.65) * 100) / 100;
+    const targetBulkWeight = Math.round((curW + totalWeightGain) * 100) / 100;
+    const targetBulkLbm = Math.round((curLbm + lbmToGainThisWave) * 10) / 10;
+    const targetBulkBf = Math.round(((targetBulkWeight - targetBulkLbm) / targetBulkWeight) * 1000) / 10;
+    const targetBulkFfmi = Math.round((targetBulkLbm / hSq) * 10) / 10;
+
+    const bulkDurationWeeks = Math.max(8, Math.min(16, Math.round(totalWeightGain / 0.38)));
+    const bulkEndDate = addWeeksToDate(curDate, bulkDurationWeeks);
+    const bulkNut = calculatePhaseNutrition(sex, heightCm, (curW + targetBulkWeight) / 2, 'bulk');
+
+    phases.push({
+      id: `ctg-p${phaseIdx++}`,
+      name: 'Tăng cơ',
+      phaseType: 'bulk',
+      startDate: formatVnDateStr(curDate),
+      endDate: formatVnDateStr(bulkEndDate),
+      startWeightKg: curW,
+      targetWeightKg: targetBulkWeight,
+      startBodyFatPct: curBf,
+      targetBodyFatPct: targetBulkBf,
+      startLbmKg: curLbm,
+      targetLbmKg: targetBulkLbm,
+      startFfmi: curFfmi,
+      targetFfmi: targetBulkFfmi,
+      targetKcal: bulkNut.targetKcal,
+      macros: { protein: bulkNut.protein, carbs: bulkNut.carbs, fat: bulkNut.fat },
+      note: `Giai đoạn tăng cơ đợt ${wave}: thặng dư calo nhẹ và tăng tải liên tục để kích hoạt phì đại cơ bắp.`,
+    });
+
+    curW = targetBulkWeight;
+    curBf = targetBulkBf;
+    curLbm = targetBulkLbm;
+    curFfmi = targetBulkFfmi;
+    curDate = bulkEndDate;
+
+    if (curLbm >= targetTotalLbm - 0.3) {
+      break;
+    }
+
+    // 2B: Wave Mini-cut
+    const targetMinicutBf = leanBaseBf;
+    const targetMinicutLbm = Math.round(curLbm * 0.996 * 10) / 10;
+    const targetMinicutWeight = Math.round((targetMinicutLbm / (1 - targetMinicutBf / 100)) * 100) / 100;
+    const targetMinicutFfmi = Math.round((targetMinicutLbm / hSq) * 10) / 10;
+
+    const minicutKgToLose = Math.max(0.6, curW - targetMinicutWeight);
+    const minicutDurationWeeks = Math.max(2, Math.min(4, Math.round(minicutKgToLose / 0.65)));
+    const minicutEndDate = addWeeksToDate(curDate, minicutDurationWeeks);
+    const minicutNut = calculatePhaseNutrition(sex, heightCm, (curW + targetMinicutWeight) / 2, 'minicut');
+
+    phases.push({
+      id: `ctg-p${phaseIdx++}`,
+      name: 'Mini-cut',
+      phaseType: 'minicut',
+      startDate: formatVnDateStr(curDate),
+      endDate: formatVnDateStr(minicutEndDate),
+      startWeightKg: curW,
+      targetWeightKg: targetMinicutWeight,
+      startBodyFatPct: curBf,
+      targetBodyFatPct: targetMinicutBf,
+      startLbmKg: curLbm,
+      targetLbmKg: targetMinicutLbm,
+      startFfmi: curFfmi,
+      targetFfmi: targetMinicutFfmi,
+      targetKcal: minicutNut.targetKcal,
+      macros: { protein: minicutNut.protein, carbs: minicutNut.carbs, fat: minicutNut.fat },
+      note: `Mini-cut đợt ${wave}: thâm hụt calo sâu trong ${minicutDurationWeeks} tuần để đốt sạch mỡ thừa tích tụ, đưa độ nhạy insulin về mức đỉnh.`,
+    });
+
+    curW = targetMinicutWeight;
+    curBf = targetMinicutBf;
+    curLbm = targetMinicutLbm;
+    curFfmi = targetMinicutFfmi;
+    curDate = minicutEndDate;
+    wave++;
+  }
+
+  // Step 3: Final Polish Cut
+  const finalTargetBf = Math.min(curBf, isFemale ? 20.0 : 16.0);
+  const finalLbm = Math.round(curLbm * 0.997 * 10) / 10;
+  const finalWeight = Math.round((finalLbm / (1 - finalTargetBf / 100)) * 100) / 100;
+  const finalFfmi = Math.round((finalLbm / hSq) * 10) / 10;
+  const finalWeeks = 4;
+  const finalEndDate = addWeeksToDate(curDate, finalWeeks);
+  const finalNut = calculatePhaseNutrition(sex, heightCm, (curW + finalWeight) / 2, 'final_cut');
+
+  phases.push({
+    id: `ctg-p${phaseIdx}`,
+    name: 'Giảm mỡ hoàn thiện',
+    phaseType: 'final_cut',
+    startDate: formatVnDateStr(curDate),
+    endDate: formatVnDateStr(finalEndDate),
+    startWeightKg: curW,
+    targetWeightKg: finalWeight,
+    startBodyFatPct: curBf,
+    targetBodyFatPct: finalTargetBf,
+    startLbmKg: curLbm,
+    targetLbmKg: finalLbm,
+    startFfmi: curFfmi,
+    targetFfmi: finalFfmi,
+    targetKcal: finalNut.targetKcal,
+    macros: { protein: finalNut.protein, carbs: finalNut.carbs, fat: finalNut.fat },
+    note: 'Giai đoạn về đích: siết nét toàn diện để lộ rõ từng khối cơ bắp, đạt đỉnh cao phong độ hình thể.',
+  });
+
+  // Find active phase based on current date
+  let activePhaseId = phases[0]?.id;
+  for (const p of phases) {
+    const s = parseAnyDateStr(p.startDate);
+    const e = parseAnyDateStr(p.endDate);
+    if (today >= s && today <= e) {
+      activePhaseId = p.id;
+      p.isCurrent = true;
+      break;
+    }
+  }
+  if (!phases.some((p) => p.isCurrent) && phases.length > 1) {
+    phases[1].isCurrent = true;
+    activePhaseId = phases[1].id;
+  }
+
+  return {
+    id: `ctg-custom-${Date.now()}`,
+    title: `Lộ Trình Chu Kỳ CTG (${heightCm}cm · ${currentWeightKg}kg → ${finalWeight}kg · ${phases.length} Giai Đoạn)`,
+    createdAt: Date.now(),
+    activePhaseId,
+    heightCm,
+    initialWeightKg: currentWeightKg,
+    initialBodyFatPct: currentBodyFatPct,
+    targetFfmi,
+    sex,
+    phases,
+  };
 }
 
 // ---------------------------------------------------------------------------

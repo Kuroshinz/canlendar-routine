@@ -30,12 +30,17 @@ import {
   ChevronRight,
   Filter,
   Eye,
+  Edit3,
+  PlusCircle,
+  RefreshCw,
+  Wand2,
 } from 'lucide-react';
 import {
   BodyPoint,
   CtgPeriodizedRoadmap,
   CtgProfile,
   CtgRoadmapPhase,
+  CtgPhaseType,
   Goal,
   NutritionSettings,
   RoutineSplitTemplate,
@@ -43,7 +48,17 @@ import {
   Sex,
 } from '../../../types/productivity';
 import { SEED_CTG_PERIODIZED_ROADMAP } from '../../../data/productivitySeed';
-import { ffmi, leanMassKg, fatMassKg, tdee, calorieTarget, macroTargets, MESOCYCLE_PHASES } from '../../../utils/fitnessMetrics';
+import {
+  ffmi,
+  leanMassKg,
+  fatMassKg,
+  tdee,
+  calorieTarget,
+  macroTargets,
+  MESOCYCLE_PHASES,
+  generateCtgPeriodizedRoadmap,
+  calculatePhaseNutrition,
+} from '../../../utils/fitnessMetrics';
 
 interface RoadmapTabProps {
   profile: CtgProfile;
@@ -188,6 +203,38 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
     });
     return byDate || phases[1] || phases[0];
   }, [activeRoadmap, phases]);
+
+  // CTG Periodized Generator & Custom Phase Modals
+  const [showGeneratorModal, setShowGeneratorModal] = useState(false);
+  const [genSex, setGenSex] = useState<Sex>(profile.sex || 'male');
+  const [genHeight, setGenHeight] = useState(String(profile.heightCm || 172));
+  const [genWeight, setGenWeight] = useState(String(currentWeight || 68));
+  const [genBodyFat, setGenBodyFat] = useState(String(currentBf || 18));
+  const [genTargetFfmi, setGenTargetFfmi] = useState(profile.sex === 'female' ? '19.5' : '22.0');
+  const [genStartDate, setGenStartDate] = useState(() => {
+    const d = new Date();
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    return `${day}/${month}/${year}`;
+  });
+
+  const [showAddPhaseModal, setShowAddPhaseModal] = useState(false);
+  const [newPhaseName, setNewPhaseName] = useState('Tăng cơ');
+  const [newPhaseType, setNewPhaseType] = useState<CtgPhaseType>('bulk');
+  const [newStartDate, setNewStartDate] = useState('');
+  const [newEndDate, setNewEndDate] = useState('');
+  const [newStartWeight, setNewStartWeight] = useState(String(currentWeight));
+  const [newTargetWeight, setNewTargetWeight] = useState(String(Math.round((currentWeight + 4) * 10) / 10));
+  const [newStartBf, setNewStartBf] = useState(String(currentBf));
+  const [newTargetBf, setNewTargetBf] = useState(String(Math.round((currentBf + 1.5) * 10) / 10));
+  const [newKcal, setNewKcal] = useState('2300');
+  const [newProtein, setNewProtein] = useState('130');
+  const [newCarbs, setNewCarbs] = useState('300');
+  const [newFat, setNewFat] = useState('65');
+  const [newNote, setNewNote] = useState('');
+
+  const [editingPhase, setEditingPhase] = useState<CtgRoadmapPhase | null>(null);
 
   // Saved Roadmaps Modal & State
   const [showSaveModal, setShowSaveModal] = useState(false);
@@ -517,6 +564,141 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
     }
   };
 
+  const handleGenerateNewRoadmap = () => {
+    const h = Number(genHeight) || 172;
+    const w = Number(genWeight) || 68;
+    const bf = Number(genBodyFat) || 18;
+    const targetFfmiVal = Number(genTargetFfmi) || (genSex === 'female' ? 19.5 : 22.0);
+
+    const generated = generateCtgPeriodizedRoadmap({
+      sex: genSex,
+      heightCm: h,
+      currentWeightKg: w,
+      currentBodyFatPct: bf,
+      targetFfmi: targetFfmiVal,
+      startDate: genStartDate || undefined,
+    });
+
+    onUpdateCtgPeriodizedRoadmap?.(generated);
+    setShowGeneratorModal(false);
+    setAppliedBanner(
+      `Đã tạo đại lộ trình chu kỳ mới với ${generated.phases.length} giai đoạn tối ưu hóa riêng cho chiều cao ${h}cm, cân nặng ${w}kg, % mỡ ${bf}%!`
+    );
+    setTimeout(() => setAppliedBanner(null), 8000);
+  };
+
+  const handleAddCustomPhaseSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const hMeter = (Number(profile.heightCm) || 172) / 100;
+    const hSq = hMeter * hMeter;
+    const sW = Number(newStartWeight) || currentWeight;
+    const tW = Number(newTargetWeight) || currentWeight;
+    const sBf = Number(newStartBf) || currentBf;
+    const tBf = Number(newTargetBf) || currentBf;
+    const sLbm = Math.round(sW * (1 - sBf / 100) * 10) / 10;
+    const tLbm = Math.round(tW * (1 - tBf / 100) * 10) / 10;
+    const sFfmi = Math.round((sLbm / hSq) * 10) / 10;
+    const tFfmi = Math.round((tLbm / hSq) * 10) / 10;
+
+    const createdPhase: CtgRoadmapPhase = {
+      id: `ctg-custom-${Date.now()}`,
+      name: newPhaseName.trim() || 'Giai đoạn tùy chỉnh',
+      phaseType: newPhaseType,
+      startDate: newStartDate.trim() || 'Hôm nay',
+      endDate: newEndDate.trim() || 'Tương lai',
+      startWeightKg: sW,
+      targetWeightKg: tW,
+      startBodyFatPct: sBf,
+      targetBodyFatPct: tBf,
+      startLbmKg: sLbm,
+      targetLbmKg: tLbm,
+      startFfmi: sFfmi,
+      targetFfmi: tFfmi,
+      targetKcal: Number(newKcal) || 2000,
+      macros: {
+        protein: Number(newProtein) || 130,
+        carbs: Number(newCarbs) || 220,
+        fat: Number(newFat) || 50,
+      },
+      note: newNote.trim() || '',
+    };
+
+    const updatedPhases = [...activeRoadmap.phases, createdPhase];
+    onUpdateCtgPeriodizedRoadmap?.({
+      ...activeRoadmap,
+      phases: updatedPhases,
+    });
+    setShowAddPhaseModal(false);
+    setAppliedBanner(`Đã thêm giai đoạn "${createdPhase.name}" vào lộ trình!`);
+    setTimeout(() => setAppliedBanner(null), 6000);
+  };
+
+  const handleUpdatePhaseSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingPhase) return;
+    const hMeter = (Number(profile.heightCm) || 172) / 100;
+    const hSq = hMeter * hMeter;
+    const sW = Number(editingPhase.startWeightKg) || currentWeight;
+    const tW = Number(editingPhase.targetWeightKg) || currentWeight;
+    const sBf = Number(editingPhase.startBodyFatPct) || currentBf;
+    const tBf = Number(editingPhase.targetBodyFatPct) || currentBf;
+    const sLbm = Math.round(sW * (1 - sBf / 100) * 10) / 10;
+    const tLbm = Math.round(tW * (1 - tBf / 100) * 10) / 10;
+    const sFfmi = Math.round((sLbm / hSq) * 10) / 10;
+    const tFfmi = Math.round((tLbm / hSq) * 10) / 10;
+
+    const updated: CtgRoadmapPhase = {
+      ...editingPhase,
+      startLbmKg: sLbm,
+      targetLbmKg: tLbm,
+      startFfmi: sFfmi,
+      targetFfmi: tFfmi,
+    };
+
+    const updatedPhases = activeRoadmap.phases.map((p) => (p.id === updated.id ? updated : p));
+    onUpdateCtgPeriodizedRoadmap?.({
+      ...activeRoadmap,
+      phases: updatedPhases,
+    });
+    setEditingPhase(null);
+    setAppliedBanner(`Đã cập nhật thông tin giai đoạn "${updated.name}"!`);
+    setTimeout(() => setAppliedBanner(null), 6000);
+  };
+
+  const handleDeletePhase = (phaseId: string) => {
+    if (phases.length <= 1) {
+      alert('Lộ trình cần có ít nhất 1 giai đoạn.');
+      return;
+    }
+    const remaining = phases.filter((p) => p.id !== phaseId);
+    let nextActiveId = activeRoadmap.activePhaseId;
+    if (nextActiveId === phaseId) {
+      nextActiveId = remaining[0]?.id;
+    }
+    onUpdateCtgPeriodizedRoadmap?.({
+      ...activeRoadmap,
+      activePhaseId: nextActiveId,
+      phases: remaining,
+    });
+    setAppliedBanner('Đã xóa giai đoạn khỏi lộ trình.');
+    setTimeout(() => setAppliedBanner(null), 4000);
+  };
+
+  const handleResetToSeedRoadmap = () => {
+    if (window.confirm('Khôi phục lại Đại Lộ Trình Chu Kỳ 17 Giai Đoạn chuẩn (2026 – 2029)?')) {
+      onUpdateCtgPeriodizedRoadmap?.(SEED_CTG_PERIODIZED_ROADMAP);
+      setAppliedBanner('Đã khôi phục lại đại lộ trình chu kỳ 17 giai đoạn chuẩn!');
+      setTimeout(() => setAppliedBanner(null), 5000);
+    }
+  };
+
+  const firstPhase = phases[0];
+  const lastPhase = phases[phases.length - 1];
+  const totalLbmGain =
+    firstPhase && lastPhase ? Math.round((lastPhase.targetLbmKg - firstPhase.startLbmKg) * 10) / 10 : 0;
+  const totalFfmiGain =
+    firstPhase && lastPhase ? Math.round((lastPhase.targetFfmi - firstPhase.startFfmi) * 10) / 10 : 0;
+
   const isBulkPhase = activePhase.phaseType === 'bulk';
   const startW = activePhase.startWeightKg;
   const targetW = activePhase.targetWeightKg;
@@ -599,9 +781,9 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
           }`}
         >
           <Layers className="w-4 h-4" />
-          <span>Lộ Trình Chu Kỳ CTG (17 Giai Đoạn)</span>
+          <span>Lộ Trình Chu Kỳ CTG</span>
           <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-white/20 text-white font-mono">
-            {phases.length}
+            {phases.length} Giai Đoạn
           </span>
         </button>
 
@@ -632,7 +814,7 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
         </button>
       </div>
 
-      {/* VIEW 1: CTG MASTER PERIODIZED ROADMAP (17 GIAI ĐOẠN) */}
+      {/* VIEW 1: CTG MASTER PERIODIZED ROADMAP */}
       {activeViewMode === 'ctg_periodized' && (
         <div className="space-y-6 animate-fadeIn">
           {/* Hero Banner for CTG Master Periodization */}
@@ -640,27 +822,75 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
             <div className="absolute top-0 right-0 w-80 h-80 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
             <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <span className="font-display font-extrabold text-2xl tracking-tight text-white">
                     CTG<span className="text-[#2563EB]">.</span>Periodization
                   </span>
                   <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-orange-500/20 text-orange-400 border border-orange-500/30">
-                    Chiến Lược Dài Hạn 2026 – 2029
+                    {firstPhase?.startDate} – {lastPhase?.endDate}
                   </span>
+                  {activeRoadmap.heightCm && (
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                      {activeRoadmap.heightCm} cm · {activeRoadmap.initialWeightKg} kg
+                    </span>
+                  )}
                 </div>
                 <h2 className="text-lg sm:text-xl font-bold text-white mt-1">
-                  Đại Lộ Trình Phân Kỳ Chu Kỳ 17 Giai Đoạn
+                  {activeRoadmap.title || `Đại Lộ Trình Phân Kỳ Chu Kỳ (${phases.length} Giai Đoạn)`}
                 </h2>
                 <p className="text-xs text-white/60 mt-1 max-w-2xl leading-relaxed">
-                  Hệ thống phân kỳ sóng xen kẽ giữa Tăng cơ (Hypertrophy Surplus) và Mini-cut siết mỡ sâu (Fast Deficit). Giúp phát triển tối đa cơ nạc LBM từ thể trạng ban đầu lên chuẩn vận động viên thể hình tự nhiên mà không bị tích mỡ dư thừa.
+                  Chiến lược phân kỳ chu kỳ dài hạn kết hợp các đợt Tăng Cơ (Hypertrophy Surplus) và Mini-cut siết mỡ sâu (Fast Deficit). Giúp tối đa hóa lượng cơ nạc LBM mà không làm tích mỡ dư thừa theo đúng thể trạng riêng của bạn.
                 </p>
+
+                {/* Creator and Modifier Action Bar */}
+                <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-white/10">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setGenHeight(String(profile.heightCm || 172));
+                      setGenWeight(String(currentWeight || 68));
+                      setGenBodyFat(String(currentBf || 18));
+                      setGenSex(profile.sex || 'male');
+                      setShowGeneratorModal(true);
+                    }}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-linear-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold transition-all cursor-pointer shadow-md shadow-blue-500/20"
+                  >
+                    <Wand2 className="w-3.5 h-3.5" />
+                    <span>⚡ Tạo Lộ Trình Mới Theo Thể Trạng</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNewStartWeight(String(currentWeight));
+                      setNewTargetWeight(String(Math.round((currentWeight + (isBulkPhase ? 4 : -3)) * 10) / 10));
+                      setNewStartBf(String(currentBf));
+                      setNewTargetBf(String(Math.round((currentBf + (isBulkPhase ? 1.5 : -2)) * 10) / 10));
+                      setShowAddPhaseModal(true);
+                    }}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-white/15 bg-white/5 hover:bg-white/10 text-white text-xs font-semibold transition-colors cursor-pointer"
+                  >
+                    <PlusCircle className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>+ Thêm 1 Giai Đoạn</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleResetToSeedRoadmap}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-white/10 hover:bg-white/5 text-white/50 hover:text-white text-xs transition-colors cursor-pointer"
+                    title="Khôi phục lại lộ trình 17 giai đoạn chuẩn mẫu"
+                  >
+                    <RefreshCw className="w-3 h-3" />
+                    <span>Khôi phục mẫu chuẩn</span>
+                  </button>
+                </div>
               </div>
 
-              <div className="flex flex-wrap items-center gap-2 shrink-0">
+              <div className="flex flex-col sm:flex-row md:flex-col gap-2 shrink-0 self-start md:self-center">
                 <button
                   type="button"
                   onClick={() => handleApplySinglePhase(activePhase)}
-                  className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-blue-500/40 bg-blue-500/15 hover:bg-blue-500/25 text-blue-300 text-xs font-bold transition-all cursor-pointer shadow-xs"
+                  className="flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl border border-blue-500/40 bg-blue-500/15 hover:bg-blue-500/25 text-blue-300 text-xs font-bold transition-all cursor-pointer shadow-xs"
                 >
                   <Target className="w-4 h-4 text-blue-400" />
                   <span>🎯 Áp Dụng 1 Giai Đoạn Này ({activePhase.name})</span>
@@ -668,10 +898,10 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
                 <button
                   type="button"
                   onClick={handleApplyFullRoadmap}
-                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-orange-600 hover:bg-orange-500 text-white text-xs font-bold transition-all shadow-md cursor-pointer hover:shadow-orange-500/30"
+                  className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-orange-600 hover:bg-orange-500 text-white text-xs font-bold transition-all shadow-md cursor-pointer hover:shadow-orange-500/30"
                 >
                   <Zap className="w-4 h-4" />
-                  <span>⚡ Kích Hoạt Cả Lộ Trình (17 Giai Đoạn)</span>
+                  <span>⚡ Kích Hoạt Cả Lộ Trình ({phases.length} Giai Đoạn)</span>
                 </button>
               </div>
             </div>
@@ -868,20 +1098,20 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
             </div>
           </div>
 
-          {/* TRANSFORMATION MASTER SUMMARY (2026 – 2029) */}
+          {/* TRANSFORMATION MASTER SUMMARY */}
           <div className="bg-[#0b101b] rounded-3xl border border-white/10 p-5 sm:p-6 shadow-xl space-y-4">
             <div className="flex items-center justify-between border-b border-white/10 pb-3">
               <div className="flex items-center gap-2.5">
                 <Award className="w-5 h-5 text-amber-400" />
                 <div>
                   <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                    Tổng Quan Chuyển Hóa Cơ Thể 2026 – 2029
+                    Tổng Quan Chuyển Hóa Cơ Thể {firstPhase?.startDate ? `(${firstPhase.startDate} – ${lastPhase?.endDate || ''})` : ''}
                     <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30">
-                      17 Chu Kỳ Sóng
+                      {phases.length} Chu Kỳ Sóng
                     </span>
                   </h3>
                   <p className="text-xs text-white/50 mt-0.5">
-                    Chiến lược tăng cơ bắp liên tục kết hợp xả mỡ ngắt quãng (Mini-cut) kéo dài gần 3 năm
+                    Chiến lược phân kỳ chu kỳ dài hạn tối ưu hóa theo thể trạng cá nhân
                   </p>
                 </div>
               </div>
@@ -889,41 +1119,57 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
               <div className="p-3.5 rounded-2xl bg-[#131b2e] border border-white/5">
-                <span className="text-[10px] text-white/40 uppercase font-semibold block">Xuất Phát (12/09/2026)</span>
-                <div className="text-base font-extrabold text-white font-mono mt-1">63.55 kg</div>
-                <div className="text-[10px] text-white/50 mt-0.5">17.5% mỡ · 52.4kg LBM · FFMI 16.9</div>
+                <span className="text-[10px] text-white/40 uppercase font-semibold block">
+                  Xuất Phát ({firstPhase?.startDate || 'Ban đầu'})
+                </span>
+                <div className="text-base font-extrabold text-white font-mono mt-1">
+                  {firstPhase?.startWeightKg ?? 63.55} kg
+                </div>
+                <div className="text-[10px] text-white/50 mt-0.5">
+                  {firstPhase?.startBodyFatPct ?? 17.5}% mỡ · {firstPhase?.startLbmKg ?? 52.4}kg LBM · FFMI {firstPhase?.startFfmi ?? 16.9}
+                </div>
               </div>
 
               <div className="p-3.5 rounded-2xl bg-[#131b2e] border border-white/5">
-                <span className="text-[10px] text-white/40 uppercase font-semibold block">Đích Đến (02/06/2029)</span>
-                <div className="text-base font-extrabold text-blue-400 font-mono mt-1">81.23 kg</div>
-                <div className="text-[10px] text-white/50 mt-0.5">16.0% mỡ · 68.2kg LBM · FFMI 22.0</div>
+                <span className="text-[10px] text-white/40 uppercase font-semibold block">
+                  Đích Đến ({lastPhase?.endDate || 'Kết thúc'})
+                </span>
+                <div className="text-base font-extrabold text-blue-400 font-mono mt-1">
+                  {lastPhase?.targetWeightKg ?? 81.23} kg
+                </div>
+                <div className="text-[10px] text-white/50 mt-0.5">
+                  {lastPhase?.targetBodyFatPct ?? 16.0}% mỡ · {lastPhase?.targetLbmKg ?? 68.2}kg LBM · FFMI {lastPhase?.targetFfmi ?? 22.0}
+                </div>
               </div>
 
               <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20">
                 <span className="text-[10px] text-emerald-400 uppercase font-semibold block">Cơ Nạc Tăng Trưởng</span>
-                <div className="text-base font-extrabold text-emerald-300 font-mono mt-1">+15.8 kg LBM</div>
-                <div className="text-[10px] text-emerald-400/70 mt-0.5">Khối cơ thuần tự nhiên cực lớn</div>
+                <div className="text-base font-extrabold text-emerald-300 font-mono mt-1">
+                  {totalLbmGain >= 0 ? `+${totalLbmGain}` : totalLbmGain} kg LBM
+                </div>
+                <div className="text-[10px] text-emerald-400/70 mt-0.5">Khối cơ thuần tự nhiên</div>
               </div>
 
               <div className="p-3.5 rounded-2xl bg-indigo-500/10 border border-indigo-500/20">
                 <span className="text-[10px] text-indigo-400 uppercase font-semibold block">Chỉ Số FFMI Đạt Được</span>
-                <div className="text-base font-extrabold text-indigo-300 font-mono mt-1">22.0 (+5.1)</div>
-                <div className="text-[10px] text-indigo-400/70 mt-0.5">Sát chuẩn vận động viên thể hình</div>
+                <div className="text-base font-extrabold text-indigo-300 font-mono mt-1">
+                  {lastPhase?.targetFfmi ?? 22.0} ({totalFfmiGain >= 0 ? `+${totalFfmiGain}` : totalFfmiGain})
+                </div>
+                <div className="text-[10px] text-indigo-400/70 mt-0.5">Mức độ phát triển cơ bắp</div>
               </div>
             </div>
           </div>
 
-          {/* 17 PHASES TIMELINE & LIST */}
+          {/* TIMELINE & LIST */}
           <div className="bg-[#0b101b] rounded-3xl border border-white/10 p-5 sm:p-6 shadow-xl space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-3">
               <div>
                 <h3 className="text-sm font-bold text-white flex items-center gap-2">
                   <Calendar className="w-4 h-4 text-blue-400" />
-                  Danh Sách 17 Giai Đoạn Chi Tiết
+                  Danh Sách {phases.length} Giai Đoạn Chi Tiết
                 </h3>
                 <p className="text-xs text-white/50 mt-0.5">
-                  Bấm vào từng giai đoạn để chọn áp dụng dinh dưỡng hoặc đổi giai đoạn đang thực hiện
+                  Bấm vào từng giai đoạn để xem chi tiết, chỉnh sửa số đo, áp dụng dinh dưỡng hoặc đổi mốc đang thực hiện
                 </p>
               </div>
 
@@ -1082,7 +1328,27 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
                     </div>
 
                     {/* Action buttons */}
-                    <div className="flex items-center justify-end gap-2 pt-1 relative z-10">
+                    <div className="flex flex-wrap items-center justify-end gap-1.5 pt-1 relative z-10">
+                      <button
+                        type="button"
+                        onClick={() => setEditingPhase({ ...phase })}
+                        className="px-2.5 py-1.5 rounded-lg border border-white/10 hover:bg-white/10 text-white/70 hover:text-white text-[11px] font-semibold transition-colors cursor-pointer flex items-center gap-1"
+                        title="Chỉnh sửa giai đoạn"
+                      >
+                        <Edit3 className="w-3.5 h-3.5 text-amber-400" />
+                        <span>Sửa</span>
+                      </button>
+                      {phases.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => handleDeletePhase(phase.id)}
+                          className="px-2.5 py-1.5 rounded-lg border border-rose-500/20 hover:bg-rose-500/20 text-rose-400 text-[11px] font-semibold transition-colors cursor-pointer flex items-center gap-1"
+                          title="Xóa giai đoạn"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Xóa</span>
+                        </button>
+                      )}
                       {!isCurrent && (
                         <button
                           type="button"
@@ -1098,7 +1364,7 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
                         className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-bold transition-colors cursor-pointer flex items-center gap-1 shadow-xs"
                       >
                         <Sparkles className="w-3.5 h-3.5" />
-                        <span>Áp dụng giai đoạn này</span>
+                        <span>Áp dụng</span>
                       </button>
                     </div>
                   </div>
@@ -1188,7 +1454,18 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
                 </div>
 
                 {/* Actions */}
-                <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-white/10">
+                <div className="flex flex-wrap items-center justify-end gap-2.5 pt-2 border-t border-white/10">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingPhase({ ...selectedPhase });
+                      setSelectedPhase(null);
+                    }}
+                    className="px-3.5 py-2.5 rounded-xl border border-amber-500/30 hover:bg-amber-500/10 text-amber-300 text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5"
+                  >
+                    <Edit3 className="w-3.5 h-3.5" />
+                    <span>Sửa giai đoạn</span>
+                  </button>
                   <button
                     type="button"
                     onClick={() => {
@@ -1197,7 +1474,7 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
                     }}
                     className="px-4 py-2.5 rounded-xl border border-white/20 hover:bg-white/10 text-white text-xs font-bold transition-colors cursor-pointer"
                   >
-                    Đặt làm giai đoạn hiện tại
+                    Đặt làm hiện tại
                   </button>
                   <button
                     type="button"
@@ -2047,6 +2324,685 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
                 >
                   <Save className="w-3.5 h-3.5" />
                   <span>Lưu Định Hướng</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* GENERATOR MODAL: TẠO ĐẠI LỘ TRÌNH CHU KỲ MỚI THEO SỐ ĐO CỦA TỪNG NGƯỜI */}
+      {showGeneratorModal && (
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn overflow-y-auto">
+          <div className="bg-[#101726] border border-white/20 rounded-3xl max-w-lg w-full p-5 sm:p-6 space-y-4 shadow-2xl text-white my-8">
+            <div className="flex items-center justify-between border-b border-white/10 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center">
+                  <Wand2 className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold">Tạo Đại Lộ Trình Chu Kỳ CTG Tự Động</h3>
+                  <p className="text-[11px] text-white/50">Tối ưu hóa các đợt Tăng Cơ &amp; Mini-cut theo thể trạng riêng</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowGeneratorModal(false)}
+                className="text-white/40 hover:text-white cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleGenerateNewRoadmap();
+              }}
+              className="space-y-4 text-xs"
+            >
+              {/* Giới tính */}
+              <div>
+                <label className="block text-[11px] font-semibold uppercase text-white/50 mb-1.5">Giới tính</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setGenSex('male');
+                      setGenTargetFfmi('22.0');
+                    }}
+                    className={`py-2 rounded-xl font-bold border transition-colors cursor-pointer text-center ${
+                      genSex === 'male'
+                        ? 'bg-blue-600 border-blue-500 text-white'
+                        : 'bg-white/5 border-white/10 text-white/60 hover:text-white'
+                    }`}
+                  >
+                    Nam (Male)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setGenSex('female');
+                      setGenTargetFfmi('19.5');
+                    }}
+                    className={`py-2 rounded-xl font-bold border transition-colors cursor-pointer text-center ${
+                      genSex === 'female'
+                        ? 'bg-rose-600 border-rose-500 text-white'
+                        : 'bg-white/5 border-white/10 text-white/60 hover:text-white'
+                    }`}
+                  >
+                    Nữ (Female)
+                  </button>
+                </div>
+              </div>
+
+              {/* Chiều cao, cân nặng, % mỡ */}
+              <div className="grid grid-cols-3 gap-2.5">
+                <div>
+                  <label className="block text-[10px] font-semibold uppercase text-white/50 mb-1">Chiều cao (cm)</label>
+                  <input
+                    type="number"
+                    required
+                    min={120}
+                    max={230}
+                    value={genHeight}
+                    onChange={(e) => setGenHeight(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/15 text-white font-mono focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-semibold uppercase text-white/50 mb-1">Cân nặng (kg)</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    required
+                    min={30}
+                    max={200}
+                    value={genWeight}
+                    onChange={(e) => setGenWeight(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/15 text-white font-mono focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-semibold uppercase text-white/50 mb-1">% Mỡ cơ thể</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    required
+                    min={5}
+                    max={50}
+                    value={genBodyFat}
+                    onChange={(e) => setGenBodyFat(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/15 text-white font-mono focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+              </div>
+
+              {/* Mục tiêu FFMI & Ngày bắt đầu */}
+              <div className="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label className="block text-[10px] font-semibold uppercase text-white/50 mb-1">Mục tiêu FFMI</label>
+                  <select
+                    value={genTargetFfmi}
+                    onChange={(e) => setGenTargetFfmi(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-[#1a233a] border border-white/15 text-white font-mono focus:outline-none focus:border-blue-500 cursor-pointer"
+                  >
+                    {genSex === 'male' ? (
+                      <>
+                        <option value="20.0">20.0 - Săn chắc Thể thao</option>
+                        <option value="21.0">21.0 - Cơ bắp Lực lưỡng</option>
+                        <option value="22.0">22.0 - Đỉnh cao Tự nhiên (Khuyên dùng)</option>
+                        <option value="23.0">23.0 - Đỉnh cao Vận động viên</option>
+                      </>
+                    ) : (
+                      <>
+                        <option value="17.5">17.5 - Thon gọn Săn chắc</option>
+                        <option value="18.5">18.5 - Thể thao Athletic</option>
+                        <option value="19.5">19.5 - Fitness Đỉnh cao (Khuyên dùng)</option>
+                        <option value="20.5">20.5 - Vận động viên Nữ</option>
+                      </>
+                    )}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-semibold uppercase text-white/50 mb-1">Ngày bắt đầu</label>
+                  <input
+                    type="text"
+                    value={genStartDate}
+                    onChange={(e) => setGenStartDate(e.target.value)}
+                    placeholder="DD/MM/YYYY"
+                    className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/15 text-white font-mono focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+              </div>
+
+              {/* Dự phóng nhanh */}
+              {(() => {
+                const hM = (Number(genHeight) || 172) / 100;
+                const hSq = hM * hM;
+                const w = Number(genWeight) || 68;
+                const bf = Number(genBodyFat) || 18;
+                const curLbm = Math.round(w * (1 - bf / 100) * 10) / 10;
+                const curFfmi = Math.round((curLbm / hSq) * 10) / 10;
+                const targetF = Number(genTargetFfmi) || 22.0;
+                const targetL = Math.round(targetF * hSq * 10) / 10;
+                const netLbm = Math.round((targetL - curLbm) * 10) / 10;
+                const finalBf = genSex === 'female' ? 20 : 16;
+                const finalW = Math.round((targetL / (1 - finalBf / 100)) * 10) / 10;
+
+                return (
+                  <div className="p-3.5 rounded-2xl bg-blue-500/10 border border-blue-500/20 space-y-1.5">
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-blue-300">
+                      Dự Phóng Phân Kỳ Chu Kỳ Khoa Học
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-white/80 pt-1">
+                      <div>
+                        Hiện tại: <span className="font-mono text-white font-bold">{curLbm}kg LBM</span> (FFMI {curFfmi})
+                      </div>
+                      <div>
+                        Đích đến: <span className="font-mono text-emerald-400 font-bold">{finalW}kg</span> ({finalBf}% mỡ)
+                      </div>
+                      <div>
+                        Cơ nạc tích lũy: <span className="font-mono text-indigo-300 font-bold">+{netLbm > 0 ? netLbm : 0}kg LBM</span>
+                      </div>
+                      <div>
+                        FFMI cực đại: <span className="font-mono text-amber-300 font-bold">{targetF}</span>
+                      </div>
+                    </div>
+                    <p className="text-[10px] text-white/50 pt-1 leading-relaxed border-t border-white/5 mt-1">
+                      Thuật toán sẽ tự động phân giải thành chuỗi chu kỳ sóng Tăng Cơ (~12 tuần) xen kẽ các đợt Mini-cut (2–4 tuần) siết mỡ sâu để bảo toàn độ nhạy insulin và phát triển tối đa cơ nạc.
+                    </p>
+                  </div>
+                );
+              })()}
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-white/10">
+                <button
+                  type="button"
+                  onClick={() => setShowGeneratorModal(false)}
+                  className="px-4 py-2 rounded-xl border border-white/20 text-white/70 hover:bg-white/5 cursor-pointer font-semibold"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-xl bg-linear-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold cursor-pointer transition-all shadow-md flex items-center gap-1.5"
+                >
+                  <Wand2 className="w-4 h-4" />
+                  <span>⚡ Tạo Đại Lộ Trình Ngay</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ADD CUSTOM PHASE MODAL: THÊM 1 GIAI ĐOẠN ĐƠN LẺ VÀO LỘ TRÌNH */}
+      {showAddPhaseModal && (
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn overflow-y-auto">
+          <div className="bg-[#101726] border border-white/20 rounded-3xl max-w-lg w-full p-5 sm:p-6 space-y-4 shadow-2xl text-white my-8">
+            <div className="flex items-center justify-between border-b border-white/10 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
+                  <PlusCircle className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold">Thêm Giai Đoạn Đơn Lẻ Vào Lộ Trình</h3>
+                  <p className="text-[11px] text-white/50">Tùy biến mục tiêu cân nặng, % mỡ và dinh dưỡng cho giai đoạn này</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAddPhaseModal(false)}
+                className="text-white/40 hover:text-white cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleAddCustomPhaseSubmit} className="space-y-3.5 text-xs">
+              <div className="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label className="block text-[10px] font-semibold uppercase text-white/50 mb-1">Tên giai đoạn</label>
+                  <input
+                    type="text"
+                    required
+                    value={newPhaseName}
+                    onChange={(e) => setNewPhaseName(e.target.value)}
+                    placeholder="Ví dụ: Tăng cơ đợt 3, Mini-cut Tết..."
+                    className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/15 text-white focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-semibold uppercase text-white/50 mb-1">Loại giai đoạn</label>
+                  <select
+                    value={newPhaseType}
+                    onChange={(e) => setNewPhaseType(e.target.value as CtgPhaseType)}
+                    className="w-full px-3 py-2 rounded-xl bg-[#1a233a] border border-white/15 text-white focus:outline-none focus:border-blue-500 cursor-pointer"
+                  >
+                    <option value="bulk">Tăng cơ (Hypertrophy Surplus)</option>
+                    <option value="minicut">Mini-cut (Siết mỡ ngắt quãng)</option>
+                    <option value="cut">Giảm mỡ / Cắt nét (Cut)</option>
+                    <option value="final_cut">Giảm mỡ hoàn thiện</option>
+                    <option value="maintain">Duy trì (Maintenance)</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Ngày bắt đầu & Ngày kết thúc */}
+              <div className="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label className="block text-[10px] font-semibold uppercase text-white/50 mb-1">Ngày bắt đầu</label>
+                  <input
+                    type="text"
+                    required
+                    value={newStartDate}
+                    onChange={(e) => setNewStartDate(e.target.value)}
+                    placeholder="DD/MM/YYYY"
+                    className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/15 text-white font-mono focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-semibold uppercase text-white/50 mb-1">Ngày kết thúc</label>
+                  <input
+                    type="text"
+                    required
+                    value={newEndDate}
+                    onChange={(e) => setNewEndDate(e.target.value)}
+                    placeholder="DD/MM/YYYY"
+                    className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/15 text-white font-mono focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+              </div>
+
+              {/* Số đo bắt đầu & mục tiêu */}
+              <div className="grid grid-cols-4 gap-2">
+                <div>
+                  <label className="block text-[9px] font-semibold uppercase text-white/50 mb-1">Cân bắt đầu (kg)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    required
+                    value={newStartWeight}
+                    onChange={(e) => setNewStartWeight(e.target.value)}
+                    className="w-full px-2.5 py-1.5 rounded-xl bg-white/5 border border-white/15 text-white font-mono focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[9px] font-semibold uppercase text-white/50 mb-1">Cân mục tiêu (kg)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    required
+                    value={newTargetWeight}
+                    onChange={(e) => setNewTargetWeight(e.target.value)}
+                    className="w-full px-2.5 py-1.5 rounded-xl bg-white/5 border border-white/15 text-white font-mono focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[9px] font-semibold uppercase text-white/50 mb-1">% Mỡ bắt đầu</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    required
+                    value={newStartBf}
+                    onChange={(e) => setNewStartBf(e.target.value)}
+                    className="w-full px-2.5 py-1.5 rounded-xl bg-white/5 border border-white/15 text-white font-mono focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[9px] font-semibold uppercase text-white/50 mb-1">% Mỡ mục tiêu</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    required
+                    value={newTargetBf}
+                    onChange={(e) => setNewTargetBf(e.target.value)}
+                    className="w-full px-2.5 py-1.5 rounded-xl bg-white/5 border border-white/15 text-white font-mono focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+              </div>
+
+              {/* Dinh dưỡng & Nút tính tự động */}
+              <div className="p-3 rounded-2xl bg-white/5 border border-white/10 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-white/60">Dinh Dưỡng Mục Tiêu</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const avgW = ((Number(newStartWeight) || currentWeight) + (Number(newTargetWeight) || currentWeight)) / 2;
+                      const nut = calculatePhaseNutrition(
+                        profile.sex || 'male',
+                        Number(profile.heightCm) || 172,
+                        avgW,
+                        newPhaseType
+                      );
+                      setNewKcal(String(nut.targetKcal));
+                      setNewProtein(String(nut.protein));
+                      setNewCarbs(String(nut.carbs));
+                      setNewFat(String(nut.fat));
+                    }}
+                    className="text-[10px] text-blue-400 hover:text-blue-300 font-bold cursor-pointer underline flex items-center gap-1"
+                  >
+                    <Sparkles className="w-3 h-3" />
+                    <span>⚡ Tự tính theo số đo</span>
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-4 gap-2">
+                  <div>
+                    <label className="block text-[9px] text-white/40 uppercase mb-0.5">Calo (kcal)</label>
+                    <input
+                      type="number"
+                      required
+                      value={newKcal}
+                      onChange={(e) => setNewKcal(e.target.value)}
+                      className="w-full px-2 py-1.5 rounded-lg bg-black/30 border border-white/10 text-white font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[9px] text-rose-300 uppercase mb-0.5">Đạm (g)</label>
+                    <input
+                      type="number"
+                      required
+                      value={newProtein}
+                      onChange={(e) => setNewProtein(e.target.value)}
+                      className="w-full px-2 py-1.5 rounded-lg bg-black/30 border border-white/10 text-rose-300 font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[9px] text-amber-300 uppercase mb-0.5">Carb (g)</label>
+                    <input
+                      type="number"
+                      required
+                      value={newCarbs}
+                      onChange={(e) => setNewCarbs(e.target.value)}
+                      className="w-full px-2 py-1.5 rounded-lg bg-black/30 border border-white/10 text-amber-300 font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[9px] text-emerald-300 uppercase mb-0.5">Fat (g)</label>
+                    <input
+                      type="number"
+                      required
+                      value={newFat}
+                      onChange={(e) => setNewFat(e.target.value)}
+                      className="w-full px-2 py-1.5 rounded-lg bg-black/30 border border-white/10 text-emerald-300 font-mono"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-semibold uppercase text-white/50 mb-1">Ghi chú chiến lược</label>
+                <textarea
+                  rows={2}
+                  value={newNote}
+                  onChange={(e) => setNewNote(e.target.value)}
+                  placeholder="Ví dụ: Tăng calo từ gạo lứt, duy trì progressive overload..."
+                  className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/15 text-white focus:outline-none focus:border-blue-500"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-white/10">
+                <button
+                  type="button"
+                  onClick={() => setShowAddPhaseModal(false)}
+                  className="px-4 py-2 rounded-xl border border-white/20 text-white/70 hover:bg-white/5 cursor-pointer font-semibold"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold cursor-pointer transition-colors shadow-sm flex items-center gap-1.5"
+                >
+                  <PlusCircle className="w-4 h-4" />
+                  <span>+ Thêm Giai Đoạn Này</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* EDIT PHASE MODAL: CHỈNH SỬA BẤT KỲ GIAI ĐOẠN NÀO */}
+      {editingPhase && (
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn overflow-y-auto">
+          <div className="bg-[#101726] border border-white/20 rounded-3xl max-w-lg w-full p-5 sm:p-6 space-y-4 shadow-2xl text-white my-8">
+            <div className="flex items-center justify-between border-b border-white/10 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center">
+                  <Edit3 className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold">Chỉnh Sửa Giai Đoạn</h3>
+                  <p className="text-[11px] text-white/50">{editingPhase.name} ({editingPhase.startDate} – {editingPhase.endDate})</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingPhase(null)}
+                className="text-white/40 hover:text-white cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdatePhaseSubmit} className="space-y-3.5 text-xs">
+              <div className="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label className="block text-[10px] font-semibold uppercase text-white/50 mb-1">Tên giai đoạn</label>
+                  <input
+                    type="text"
+                    required
+                    value={editingPhase.name}
+                    onChange={(e) => setEditingPhase({ ...editingPhase, name: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/15 text-white focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-semibold uppercase text-white/50 mb-1">Loại giai đoạn</label>
+                  <select
+                    value={editingPhase.phaseType}
+                    onChange={(e) => setEditingPhase({ ...editingPhase, phaseType: e.target.value as CtgPhaseType })}
+                    className="w-full px-3 py-2 rounded-xl bg-[#1a233a] border border-white/15 text-white focus:outline-none focus:border-blue-500 cursor-pointer"
+                  >
+                    <option value="bulk">Tăng cơ (Hypertrophy Surplus)</option>
+                    <option value="minicut">Mini-cut (Siết mỡ ngắt quãng)</option>
+                    <option value="cut">Giảm mỡ / Cắt nét (Cut)</option>
+                    <option value="final_cut">Giảm mỡ hoàn thiện</option>
+                    <option value="maintain">Duy trì (Maintenance)</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Ngày bắt đầu & Ngày kết thúc */}
+              <div className="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label className="block text-[10px] font-semibold uppercase text-white/50 mb-1">Ngày bắt đầu</label>
+                  <input
+                    type="text"
+                    required
+                    value={editingPhase.startDate}
+                    onChange={(e) => setEditingPhase({ ...editingPhase, startDate: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/15 text-white font-mono focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-semibold uppercase text-white/50 mb-1">Ngày kết thúc</label>
+                  <input
+                    type="text"
+                    required
+                    value={editingPhase.endDate}
+                    onChange={(e) => setEditingPhase({ ...editingPhase, endDate: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/15 text-white font-mono focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+              </div>
+
+              {/* Số đo bắt đầu & mục tiêu */}
+              <div className="grid grid-cols-4 gap-2">
+                <div>
+                  <label className="block text-[9px] font-semibold uppercase text-white/50 mb-1">Cân bắt đầu (kg)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    required
+                    value={editingPhase.startWeightKg}
+                    onChange={(e) => setEditingPhase({ ...editingPhase, startWeightKg: Number(e.target.value) })}
+                    className="w-full px-2.5 py-1.5 rounded-xl bg-white/5 border border-white/15 text-white font-mono focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[9px] font-semibold uppercase text-white/50 mb-1">Cân mục tiêu (kg)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    required
+                    value={editingPhase.targetWeightKg}
+                    onChange={(e) => setEditingPhase({ ...editingPhase, targetWeightKg: Number(e.target.value) })}
+                    className="w-full px-2.5 py-1.5 rounded-xl bg-white/5 border border-white/15 text-white font-mono focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[9px] font-semibold uppercase text-white/50 mb-1">% Mỡ bắt đầu</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    required
+                    value={editingPhase.startBodyFatPct}
+                    onChange={(e) => setEditingPhase({ ...editingPhase, startBodyFatPct: Number(e.target.value) })}
+                    className="w-full px-2.5 py-1.5 rounded-xl bg-white/5 border border-white/15 text-white font-mono focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[9px] font-semibold uppercase text-white/50 mb-1">% Mỡ mục tiêu</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    required
+                    value={editingPhase.targetBodyFatPct}
+                    onChange={(e) => setEditingPhase({ ...editingPhase, targetBodyFatPct: Number(e.target.value) })}
+                    className="w-full px-2.5 py-1.5 rounded-xl bg-white/5 border border-white/15 text-white font-mono focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+              </div>
+
+              {/* Dinh dưỡng & Nút tính tự động */}
+              <div className="p-3 rounded-2xl bg-white/5 border border-white/10 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-white/60">Dinh Dưỡng Thiết Lập</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const avgW = (Number(editingPhase.startWeightKg) + Number(editingPhase.targetWeightKg)) / 2;
+                      const nut = calculatePhaseNutrition(
+                        profile.sex || 'male',
+                        Number(profile.heightCm) || 172,
+                        avgW,
+                        editingPhase.phaseType
+                      );
+                      setEditingPhase({
+                        ...editingPhase,
+                        targetKcal: nut.targetKcal,
+                        macros: {
+                          protein: nut.protein,
+                          carbs: nut.carbs,
+                          fat: nut.fat,
+                        },
+                      });
+                    }}
+                    className="text-[10px] text-amber-400 hover:text-amber-300 font-bold cursor-pointer underline flex items-center gap-1"
+                  >
+                    <Sparkles className="w-3 h-3" />
+                    <span>⚡ Tính lại tự động</span>
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-4 gap-2">
+                  <div>
+                    <label className="block text-[9px] text-white/40 uppercase mb-0.5">Calo (kcal)</label>
+                    <input
+                      type="number"
+                      required
+                      value={editingPhase.targetKcal}
+                      onChange={(e) => setEditingPhase({ ...editingPhase, targetKcal: Number(e.target.value) })}
+                      className="w-full px-2 py-1.5 rounded-lg bg-black/30 border border-white/10 text-white font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[9px] text-rose-300 uppercase mb-0.5">Đạm (g)</label>
+                    <input
+                      type="number"
+                      required
+                      value={editingPhase.macros.protein}
+                      onChange={(e) =>
+                        setEditingPhase({
+                          ...editingPhase,
+                          macros: { ...editingPhase.macros, protein: Number(e.target.value) },
+                        })
+                      }
+                      className="w-full px-2 py-1.5 rounded-lg bg-black/30 border border-white/10 text-rose-300 font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[9px] text-amber-300 uppercase mb-0.5">Carb (g)</label>
+                    <input
+                      type="number"
+                      required
+                      value={editingPhase.macros.carbs}
+                      onChange={(e) =>
+                        setEditingPhase({
+                          ...editingPhase,
+                          macros: { ...editingPhase.macros, carbs: Number(e.target.value) },
+                        })
+                      }
+                      className="w-full px-2 py-1.5 rounded-lg bg-black/30 border border-white/10 text-amber-300 font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[9px] text-emerald-300 uppercase mb-0.5">Fat (g)</label>
+                    <input
+                      type="number"
+                      required
+                      value={editingPhase.macros.fat}
+                      onChange={(e) =>
+                        setEditingPhase({
+                          ...editingPhase,
+                          macros: { ...editingPhase.macros, fat: Number(e.target.value) },
+                        })
+                      }
+                      className="w-full px-2 py-1.5 rounded-lg bg-black/30 border border-white/10 text-emerald-300 font-mono"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-semibold uppercase text-white/50 mb-1">Ghi chú chiến lược</label>
+                <textarea
+                  rows={2}
+                  value={editingPhase.note || ''}
+                  onChange={(e) => setEditingPhase({ ...editingPhase, note: e.target.value })}
+                  placeholder="Ghi chú giai đoạn..."
+                  className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/15 text-white focus:outline-none focus:border-blue-500"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-white/10">
+                <button
+                  type="button"
+                  onClick={() => setEditingPhase(null)}
+                  className="px-4 py-2 rounded-xl border border-white/20 text-white/70 hover:bg-white/5 cursor-pointer font-semibold"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold cursor-pointer transition-colors shadow-sm flex items-center gap-1.5"
+                >
+                  <Save className="w-4 h-4" />
+                  <span>Lưu Thay Đổi</span>
                 </button>
               </div>
             </form>

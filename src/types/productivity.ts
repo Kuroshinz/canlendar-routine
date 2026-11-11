@@ -422,6 +422,11 @@ export interface CtgPeriodizedRoadmap {
   createdAt: number;
   phases: CtgRoadmapPhase[];
   activePhaseId?: string;
+  heightCm?: number;
+  initialWeightKg?: number;
+  initialBodyFatPct?: number;
+  targetFfmi?: number;
+  sex?: Sex;
 }
 
 export interface SavedRoadmap {
