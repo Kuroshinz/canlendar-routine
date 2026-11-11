@@ -1096,8 +1096,13 @@ export default function App() {
                   onAddSavedRoadmap={productivity.addSavedRoadmap}
                   onDeleteSavedRoadmap={productivity.deleteSavedRoadmap}
                   ctgPeriodizedRoadmap={productivity.ctgPeriodizedRoadmap}
+                  savedCtgRoadmaps={productivity.savedCtgRoadmaps}
                   onUpdateCtgPeriodizedRoadmap={productivity.updateCtgPeriodizedRoadmap}
                   onSetActiveRoadmapPhase={productivity.setActiveRoadmapPhase}
+                  onSaveCtgRoadmap={productivity.saveCtgRoadmapToList}
+                  onDeleteCtgRoadmap={productivity.deleteCtgRoadmapFromList}
+                  onSwitchCtgRoadmap={productivity.switchActiveCtgRoadmap}
+                  onDeleteCurrentCtgRoadmap={productivity.deleteCurrentCtgRoadmap}
                   customExercises={productivity.customExercises}
                   onAddCustomExercise={productivity.addCustomExercise}
                   onDeleteCustomExercise={productivity.deleteCustomExercise}

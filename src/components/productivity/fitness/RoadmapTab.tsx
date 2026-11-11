@@ -34,6 +34,8 @@ import {
   PlusCircle,
   RefreshCw,
   Wand2,
+  FolderOpen,
+  ChevronDown,
 } from 'lucide-react';
 import {
   BodyPoint,
@@ -64,8 +66,8 @@ interface RoadmapTabProps {
   profile: CtgProfile;
   lang: 'vi' | 'en';
   bodyPoints?: BodyPoint[];
-  ctgPeriodizedRoadmap?: CtgPeriodizedRoadmap;
-  onUpdateCtgPeriodizedRoadmap?: (roadmap: CtgPeriodizedRoadmap) => void;
+  ctgPeriodizedRoadmap?: CtgPeriodizedRoadmap | null;
+  onUpdateCtgPeriodizedRoadmap?: (roadmap: CtgPeriodizedRoadmap | null) => void;
   onSetActiveRoadmapPhase?: (phaseId: string) => void;
   savedRoadmaps?: SavedRoadmap[];
   onAddSavedRoadmap?: (roadmap: Omit<SavedRoadmap, 'id' | 'createdAt'>) => SavedRoadmap;
@@ -75,6 +77,11 @@ interface RoadmapTabProps {
   onUpdateProfile: (patch: Partial<CtgProfile>) => void;
   onNavigateTab?: (tab: 'inbody' | 'training' | 'nutrition' | 'profile') => void;
   onApplySplitTemplate?: (template: RoutineSplitTemplate) => void;
+  savedCtgRoadmaps?: CtgPeriodizedRoadmap[];
+  onSaveCtgRoadmap?: (roadmap: CtgPeriodizedRoadmap) => void;
+  onDeleteCtgRoadmap?: (roadmapId: string) => void;
+  onSwitchCtgRoadmap?: (roadmapId: string) => void;
+  onDeleteCurrentCtgRoadmap?: () => void;
 }
 
 // VortexCal Standards & Classification criteria from AI analyzer algorithm
@@ -160,14 +167,19 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
   onUpdateProfile,
   onNavigateTab,
   onApplySplitTemplate,
+  savedCtgRoadmaps = [],
+  onSaveCtgRoadmap,
+  onDeleteCtgRoadmap,
+  onSwitchCtgRoadmap,
+  onDeleteCurrentCtgRoadmap,
 }) => {
   // View mode switcher: CTG Master Periodization vs Single Snapshot vs Saved Milestones
   const [activeViewMode, setActiveViewMode] = useState<'ctg_periodized' | 'single_analyzer' | 'saved_milestones'>('ctg_periodized');
   const [phaseFilter, setPhaseFilter] = useState<'all' | 'current' | 'completed' | 'upcoming' | 'bulk' | 'cut'>('all');
   const [selectedPhase, setSelectedPhase] = useState<CtgRoadmapPhase | null>(null);
 
-  const activeRoadmap = ctgPeriodizedRoadmap || SEED_CTG_PERIODIZED_ROADMAP;
-  const phases = activeRoadmap.phases;
+  const activeRoadmap = ctgPeriodizedRoadmap ?? null;
+  const phases = activeRoadmap?.phases || [];
 
   // Sorted BodyPoints and latest point
   const sortedPoints = useMemo(() => {
@@ -189,6 +201,7 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
   const currentFfmi = latestPoint ? ffmi(latestPoint.weightKg, latestPoint.bodyFatPct, Number(heightCm) || 172) : ffmi(currentWeight, currentBf, Number(heightCm) || 172);
 
   const activePhase = useMemo(() => {
+    if (!activeRoadmap || phases.length === 0) return null;
     if (activeRoadmap.activePhaseId) {
       const found = phases.find((p) => p.id === activeRoadmap.activePhaseId);
       if (found) return found;
@@ -206,6 +219,11 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
 
   // CTG Periodized Generator & Custom Phase Modals
   const [showGeneratorModal, setShowGeneratorModal] = useState(false);
+  const [genMode, setGenMode] = useState<'auto' | 'blank'>('auto');
+  const [blankTitle, setBlankTitle] = useState('Lộ Trình Thể Hình Mới');
+  const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
+  const [showRoadmapManagerModal, setShowRoadmapManagerModal] = useState(false);
+
   const [genSex, setGenSex] = useState<Sex>(profile.sex || 'male');
   const [genHeight, setGenHeight] = useState(String(profile.heightCm || 172));
   const [genWeight, setGenWeight] = useState(String(currentWeight || 68));
@@ -547,10 +565,11 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
   };
 
   const handleApplyFullRoadmap = () => {
+    if (!activePhase) return;
     onSetActiveRoadmapPhase?.(activePhase.id);
     handleApplySinglePhase(activePhase);
     setAppliedBanner(
-      `Đã kích hoạt toàn bộ đại lộ trình 17 giai đoạn CTG (2026 – 2029)! Giai đoạn đang chạy: "${activePhase.name}" (${activePhase.startDate} – ${activePhase.endDate}). Mục tiêu Dinh Dưỡng và Giáo Án đã tự động đồng bộ!`
+      `Đã kích hoạt toàn bộ đại lộ trình "${activeRoadmap?.title || 'CTG'}" (${phases.length} giai đoạn)! Giai đoạn đang chạy: "${activePhase.name}" (${activePhase.startDate} – ${activePhase.endDate}). Mục tiêu Dinh Dưỡng và Giáo Án đã tự động đồng bộ!`
     );
     setTimeout(() => setAppliedBanner(null), 8000);
   };
@@ -580,11 +599,44 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
     });
 
     onUpdateCtgPeriodizedRoadmap?.(generated);
+    onSaveCtgRoadmap?.(generated);
     setShowGeneratorModal(false);
     setAppliedBanner(
       `Đã tạo đại lộ trình chu kỳ mới với ${generated.phases.length} giai đoạn tối ưu hóa riêng cho chiều cao ${h}cm, cân nặng ${w}kg, % mỡ ${bf}%!`
     );
     setTimeout(() => setAppliedBanner(null), 8000);
+  };
+
+  const handleCreateBlankRoadmap = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const newRoadmap: CtgPeriodizedRoadmap = {
+      id: `ctg-manual-${Date.now()}`,
+      title: blankTitle.trim() || 'Lộ Trình Thể Hình Mới',
+      createdAt: Date.now(),
+      sex: profile.sex || 'male',
+      heightCm: Number(profile.heightCm) || 172,
+      initialWeightKg: currentWeight,
+      initialBodyFatPct: currentBf,
+      targetFfmi: profile.sex === 'female' ? 19.5 : 22.0,
+      phases: [],
+    };
+    onUpdateCtgPeriodizedRoadmap?.(newRoadmap);
+    onSaveCtgRoadmap?.(newRoadmap);
+    setShowGeneratorModal(false);
+    setShowAddPhaseModal(true);
+    setAppliedBanner(`Đã tạo lộ trình mới "${newRoadmap.title}". Hãy thêm giai đoạn đầu tiên!`);
+    setTimeout(() => setAppliedBanner(null), 6000);
+  };
+
+  const handleConfirmDeleteCurrentRoadmap = () => {
+    if (onDeleteCurrentCtgRoadmap) {
+      onDeleteCurrentCtgRoadmap();
+    } else {
+      onUpdateCtgPeriodizedRoadmap?.(null);
+    }
+    setShowDeleteConfirmModal(false);
+    setAppliedBanner('Đã xóa bỏ hoàn toàn lộ trình hiện tại.');
+    setTimeout(() => setAppliedBanner(null), 4000);
   };
 
   const handleAddCustomPhaseSubmit = (e: React.FormEvent) => {
@@ -623,11 +675,26 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
       note: newNote.trim() || '',
     };
 
-    const updatedPhases = [...activeRoadmap.phases, createdPhase];
-    onUpdateCtgPeriodizedRoadmap?.({
-      ...activeRoadmap,
+    const baseRoadmap: CtgPeriodizedRoadmap = activeRoadmap || {
+      id: `ctg-manual-${Date.now()}`,
+      title: 'Lộ Trình Thể Hình Tùy Chỉnh',
+      createdAt: Date.now(),
+      sex: profile.sex || 'male',
+      heightCm: Number(profile.heightCm) || 172,
+      initialWeightKg: currentWeight,
+      initialBodyFatPct: currentBf,
+      targetFfmi: profile.sex === 'female' ? 19.5 : 22.0,
+      phases: [],
+    };
+
+    const updatedPhases = [...baseRoadmap.phases, createdPhase];
+    const updatedRoadmap: CtgPeriodizedRoadmap = {
+      ...baseRoadmap,
+      activePhaseId: baseRoadmap.activePhaseId || createdPhase.id,
       phases: updatedPhases,
-    });
+    };
+    onUpdateCtgPeriodizedRoadmap?.(updatedRoadmap);
+    onSaveCtgRoadmap?.(updatedRoadmap);
     setShowAddPhaseModal(false);
     setAppliedBanner(`Đã thêm giai đoạn "${createdPhase.name}" vào lộ trình!`);
     setTimeout(() => setAppliedBanner(null), 6000);
@@ -635,7 +702,7 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
 
   const handleUpdatePhaseSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingPhase) return;
+    if (!editingPhase || !activeRoadmap) return;
     const hMeter = (Number(profile.heightCm) || 172) / 100;
     const hSq = hMeter * hMeter;
     const sW = Number(editingPhase.startWeightKg) || currentWeight;
@@ -656,18 +723,23 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
     };
 
     const updatedPhases = activeRoadmap.phases.map((p) => (p.id === updated.id ? updated : p));
-    onUpdateCtgPeriodizedRoadmap?.({
+    const updatedRoadmap = {
       ...activeRoadmap,
       phases: updatedPhases,
-    });
+    };
+    onUpdateCtgPeriodizedRoadmap?.(updatedRoadmap);
+    onSaveCtgRoadmap?.(updatedRoadmap);
     setEditingPhase(null);
     setAppliedBanner(`Đã cập nhật thông tin giai đoạn "${updated.name}"!`);
     setTimeout(() => setAppliedBanner(null), 6000);
   };
 
   const handleDeletePhase = (phaseId: string) => {
+    if (!activeRoadmap) return;
     if (phases.length <= 1) {
-      alert('Lộ trình cần có ít nhất 1 giai đoạn.');
+      if (window.confirm('Đây là giai đoạn duy nhất còn lại. Bạn có muốn xóa toàn bộ lộ trình không?')) {
+        handleConfirmDeleteCurrentRoadmap();
+      }
       return;
     }
     const remaining = phases.filter((p) => p.id !== phaseId);
@@ -675,11 +747,13 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
     if (nextActiveId === phaseId) {
       nextActiveId = remaining[0]?.id;
     }
-    onUpdateCtgPeriodizedRoadmap?.({
+    const updatedRoadmap = {
       ...activeRoadmap,
       activePhaseId: nextActiveId,
       phases: remaining,
-    });
+    };
+    onUpdateCtgPeriodizedRoadmap?.(updatedRoadmap);
+    onSaveCtgRoadmap?.(updatedRoadmap);
     setAppliedBanner('Đã xóa giai đoạn khỏi lộ trình.');
     setTimeout(() => setAppliedBanner(null), 4000);
   };
@@ -687,6 +761,7 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
   const handleResetToSeedRoadmap = () => {
     if (window.confirm('Khôi phục lại Đại Lộ Trình Chu Kỳ 17 Giai Đoạn chuẩn (2026 – 2029)?')) {
       onUpdateCtgPeriodizedRoadmap?.(SEED_CTG_PERIODIZED_ROADMAP);
+      onSaveCtgRoadmap?.(SEED_CTG_PERIODIZED_ROADMAP);
       setAppliedBanner('Đã khôi phục lại đại lộ trình chu kỳ 17 giai đoạn chuẩn!');
       setTimeout(() => setAppliedBanner(null), 5000);
     }
@@ -699,14 +774,15 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
   const totalFfmiGain =
     firstPhase && lastPhase ? Math.round((lastPhase.targetFfmi - firstPhase.startFfmi) * 10) / 10 : 0;
 
-  const isBulkPhase = activePhase.phaseType === 'bulk';
-  const startW = activePhase.startWeightKg;
-  const targetW = activePhase.targetWeightKg;
-  const wDelta = Math.round((currentWeight - targetW) * 10) / 10;
-  const lbmGain = Math.round((currentLbm - activePhase.startLbmKg) * 10) / 10;
-  const targetLbmGain = Math.round((activePhase.targetLbmKg - activePhase.startLbmKg) * 10) / 10;
+  const isBulkPhase = activePhase?.phaseType === 'bulk';
+  const startW = activePhase?.startWeightKg ?? currentWeight;
+  const targetW = activePhase?.targetWeightKg ?? currentWeight;
+  const wDelta = activePhase ? Math.round((currentWeight - targetW) * 10) / 10 : 0;
+  const lbmGain = activePhase ? Math.round((currentLbm - activePhase.startLbmKg) * 10) / 10 : 0;
+  const targetLbmGain = activePhase ? Math.round((activePhase.targetLbmKg - activePhase.startLbmKg) * 10) / 10 : 0;
 
   const weightProgress = useMemo(() => {
+    if (!activePhase) return 0;
     if (isBulkPhase) {
       if (currentWeight >= targetW) return 100;
       if (currentWeight <= startW) return 0;
@@ -716,9 +792,10 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
       if (currentWeight >= startW) return 0;
       return Math.min(100, Math.max(0, Math.round(((startW - currentWeight) / (startW - targetW)) * 100)));
     }
-  }, [isBulkPhase, currentWeight, startW, targetW]);
+  }, [activePhase, isBulkPhase, currentWeight, startW, targetW]);
 
   const timeProgress = useMemo(() => {
+    if (!activePhase) return 0;
     const s = parseVnDate(activePhase.startDate);
     const e = parseVnDate(activePhase.endDate);
     const now = new Date();
@@ -729,6 +806,7 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
   }, [activePhase]);
 
   const daysRemaining = useMemo(() => {
+    if (!activePhase) return 0;
     const e = parseVnDate(activePhase.endDate);
     const now = new Date();
     return Math.max(0, Math.round((e.getTime() - now.getTime()) / 864e5));
@@ -736,7 +814,7 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
 
   const filteredPhases = useMemo(() => {
     return phases.filter((p) => {
-      const status = getPhaseStatus(p, activeRoadmap.activePhaseId);
+      const status = getPhaseStatus(p, activeRoadmap?.activePhaseId);
       if (phaseFilter === 'current') return status === 'current';
       if (phaseFilter === 'completed') return status === 'completed';
       if (phaseFilter === 'upcoming') return status === 'upcoming';
@@ -744,7 +822,7 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
       if (phaseFilter === 'cut') return p.phaseType === 'cut' || p.phaseType === 'minicut' || p.phaseType === 'final_cut';
       return true;
     });
-  }, [phases, phaseFilter, activeRoadmap.activePhaseId]);
+  }, [phases, phaseFilter, activeRoadmap?.activePhaseId]);
 
   return (
     <div className="space-y-6 animate-fadeIn pb-12">
@@ -815,7 +893,116 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
       </div>
 
       {/* VIEW 1: CTG MASTER PERIODIZED ROADMAP */}
-      {activeViewMode === 'ctg_periodized' && (
+      {activeViewMode === 'ctg_periodized' && (!activeRoadmap || phases.length === 0) && (
+        <div className="bg-[#0b101b] rounded-3xl border border-white/10 p-8 sm:p-12 text-center shadow-xl space-y-6 animate-fadeIn">
+          <div className="w-16 h-16 rounded-3xl bg-blue-500/10 border border-blue-500/20 text-blue-400 mx-auto flex items-center justify-center">
+            <Layers className="w-8 h-8" />
+          </div>
+          <div className="max-w-md mx-auto space-y-2">
+            <h3 className="text-xl font-bold text-white">Chưa Có Lộ Trình Nào Đang Kích Hoạt</h3>
+            <p className="text-xs text-white/50 leading-relaxed">
+              Bạn chưa có lộ trình chu kỳ nào hoặc vừa xóa bỏ lộ trình cũ. Hãy chọn một cách dưới đây để thiết lập hành trình chuyển hóa hình thể:
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 max-w-3xl mx-auto pt-2 text-left">
+            {/* Option 1: Tạo tự động theo thể trạng */}
+            <div
+              onClick={() => {
+                setGenMode('auto');
+                setGenHeight(String(profile.heightCm || 172));
+                setGenWeight(String(currentWeight || 68));
+                setGenBodyFat(String(currentBf || 18));
+                setGenSex(profile.sex || 'male');
+                setShowGeneratorModal(true);
+              }}
+              className="p-5 rounded-2xl bg-linear-to-b from-blue-900/30 to-blue-950/20 border border-blue-500/30 hover:border-blue-500/60 transition-all cursor-pointer group flex flex-col justify-between"
+            >
+              <div className="space-y-2">
+                <div className="w-10 h-10 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center">
+                  <Wand2 className="w-5 h-5" />
+                </div>
+                <h4 className="font-bold text-sm text-white group-hover:text-blue-300 transition-colors">
+                  ⚡ Tự Động Theo Thể Trạng (AI)
+                </h4>
+                <p className="text-[11px] text-white/60 leading-relaxed">
+                  Thuật toán tự động tính toán chu kỳ Tăng cơ &amp; Mini-cut khoa học tối ưu riêng theo Chiều cao, Cân nặng và FFMI của bạn.
+                </p>
+              </div>
+              <div className="mt-4 pt-3 border-t border-white/5 flex items-center gap-1.5 text-xs text-blue-400 font-bold">
+                <span>Tạo tự động ngay</span>
+                <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+              </div>
+            </div>
+
+            {/* Option 2: Tạo lộ trình thủ công trống */}
+            <div
+              onClick={() => {
+                setGenMode('blank');
+                setBlankTitle('Lộ Trình Thể Hình Mới');
+                setShowGeneratorModal(true);
+              }}
+              className="p-5 rounded-2xl bg-white/5 border border-white/10 hover:border-white/20 transition-all cursor-pointer group flex flex-col justify-between"
+            >
+              <div className="space-y-2">
+                <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
+                  <PlusCircle className="w-5 h-5" />
+                </div>
+                <h4 className="font-bold text-sm text-white group-hover:text-emerald-300 transition-colors">
+                  📝 Tạo Thủ Công (Trống)
+                </h4>
+                <p className="text-[11px] text-white/60 leading-relaxed">
+                  Tạo lộ trình trắng từ con số 0 và tự do thêm từng giai đoạn theo kế hoạch riêng của bạn hoặc huấn luyện viên.
+                </p>
+              </div>
+              <div className="mt-4 pt-3 border-t border-white/5 flex items-center gap-1.5 text-xs text-emerald-400 font-bold">
+                <span>Tạo lộ trình trống</span>
+                <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+              </div>
+            </div>
+
+            {/* Option 3: Khôi phục mẫu 17 giai đoạn chuẩn */}
+            <div
+              onClick={handleResetToSeedRoadmap}
+              className="p-5 rounded-2xl bg-white/5 border border-white/10 hover:border-white/20 transition-all cursor-pointer group flex flex-col justify-between"
+            >
+              <div className="space-y-2">
+                <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center">
+                  <RefreshCw className="w-5 h-5" />
+                </div>
+                <h4 className="font-bold text-sm text-white group-hover:text-amber-300 transition-colors">
+                  ↺ Nạp Mẫu Chuẩn (17 Giai Đoạn)
+                </h4>
+                <p className="text-[11px] text-white/60 leading-relaxed">
+                  Lộ trình mẫu chuẩn CTG 17 giai đoạn (2026 – 2029) từ 63.55kg lên 81.23kg cực đại cơ bắp tự nhiên.
+                </p>
+              </div>
+              <div className="mt-4 pt-3 border-t border-white/5 flex items-center gap-1.5 text-xs text-amber-400 font-bold">
+                <span>Nạp mẫu chuẩn</span>
+                <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+              </div>
+            </div>
+          </div>
+
+          {/* Nếu có lộ trình đã lưu trong danh sách */}
+          {savedCtgRoadmaps.length > 0 && (
+            <div className="pt-4 border-t border-white/10 max-w-md mx-auto">
+              <button
+                type="button"
+                onClick={() => setShowRoadmapManagerModal(true)}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-bold transition-all cursor-pointer"
+              >
+                <FolderOpen className="w-4 h-4 text-blue-400" />
+                <span>Xem danh sách các lộ trình đã lưu ({savedCtgRoadmaps.length})</span>
+                <ChevronRight className="w-3.5 h-3.5 text-white/40" />
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* VIEW 1: ACTIVE CTG MASTER PERIODIZED ROADMAP (KHI CÓ GIAI ĐOẠN) */}
+      {activeViewMode === 'ctg_periodized' && activeRoadmap && phases.length > 0 && activePhase && (
         <div className="space-y-5 animate-fadeIn">
           {/* 1. TỔNG QUAN HÀNH TRÌNH CHUYỂN HÓA & CÔNG CỤ */}
           <div className="bg-[#0b101b] rounded-3xl border border-white/10 p-5 shadow-xl relative overflow-hidden">
@@ -823,7 +1010,7 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
               <div className="space-y-2.5">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="font-display font-extrabold text-xl tracking-tight text-white">
-                    Lộ Trình Chu Kỳ CTG
+                    {activeRoadmap.title || 'Lộ Trình Chu Kỳ CTG'}
                   </span>
                   <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-blue-500/20 text-blue-400 border border-blue-500/30">
                     {phases.length} Giai Đoạn · {firstPhase?.startDate} – {lastPhase?.endDate}
@@ -857,9 +1044,22 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
 
               {/* Thanh công cụ thao tác */}
               <div className="flex flex-wrap items-center gap-2">
+                {/* Switcher Dropdown Button */}
+                <button
+                  type="button"
+                  onClick={() => setShowRoadmapManagerModal(true)}
+                  className="px-3 py-2 rounded-xl border border-white/15 bg-white/5 hover:bg-white/10 text-white text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1.5"
+                  title="Danh sách các lộ trình đã lưu"
+                >
+                  <FolderOpen className="w-3.5 h-3.5 text-blue-400" />
+                  <span>📑 Lộ Trình ({savedCtgRoadmaps.length || 1})</span>
+                  <ChevronDown className="w-3 h-3 text-white/40" />
+                </button>
+
                 <button
                   type="button"
                   onClick={() => {
+                    setGenMode('auto');
                     setGenHeight(String(profile.heightCm || 172));
                     setGenWeight(String(currentWeight || 68));
                     setGenBodyFat(String(currentBf || 18));
@@ -869,7 +1069,7 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
                   className="px-3.5 py-2 rounded-xl bg-linear-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold transition-all cursor-pointer shadow-md flex items-center gap-1.5"
                 >
                   <Wand2 className="w-3.5 h-3.5" />
-                  <span>⚡ Tạo Lộ Trình Theo Số Đo</span>
+                  <span>⚡ Tạo Mới</span>
                 </button>
 
                 <button
@@ -885,6 +1085,17 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
                 >
                   <PlusCircle className="w-3.5 h-3.5 text-emerald-400" />
                   <span>+ Thêm 1 Giai Đoạn</span>
+                </button>
+
+                {/* XÓA BỎ LỘ TRÌNH */}
+                <button
+                  type="button"
+                  onClick={() => setShowDeleteConfirmModal(true)}
+                  className="px-3 py-2 rounded-xl border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1.5"
+                  title="Xóa bỏ hoàn toàn lộ trình hiện tại"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Xóa Lộ Trình</span>
                 </button>
 
                 <button
@@ -2187,18 +2398,24 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
         </div>
       )}
 
-      {/* GENERATOR MODAL: TẠO ĐẠI LỘ TRÌNH CHU KỲ MỚI THEO SỐ ĐO CỦA TỪNG NGƯỜI */}
+      {/* GENERATOR MODAL: TẠO ĐẠI LỘ TRÌNH CHU KỲ MỚI THEO SỐ ĐO (TỰ ĐỘNG HOẶC THỦ CÔNG) */}
       {showGeneratorModal && (
         <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn overflow-y-auto">
           <div className="bg-[#101726] border border-white/20 rounded-3xl max-w-lg w-full p-5 sm:p-6 space-y-4 shadow-2xl text-white my-8">
             <div className="flex items-center justify-between border-b border-white/10 pb-3">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center">
-                  <Wand2 className="w-4 h-4" />
+                  {genMode === 'auto' ? <Wand2 className="w-4 h-4" /> : <PlusCircle className="w-4 h-4 text-emerald-400" />}
                 </div>
                 <div>
-                  <h3 className="text-base font-bold">Tạo Đại Lộ Trình Chu Kỳ CTG Tự Động</h3>
-                  <p className="text-[11px] text-white/50">Tối ưu hóa các đợt Tăng Cơ &amp; Mini-cut theo thể trạng riêng</p>
+                  <h3 className="text-base font-bold">
+                    {genMode === 'auto' ? 'Tạo Đại Lộ Trình Chu Kỳ Tự Động' : 'Tạo Lộ Trình Thể Hình Thủ Công (Trống)'}
+                  </h3>
+                  <p className="text-[11px] text-white/50">
+                    {genMode === 'auto'
+                      ? 'Tự động tính chu kỳ Tăng Cơ & Mini-cut theo số đo cá nhân'
+                      : 'Tạo lộ trình trắng từ con số 0 và thêm các giai đoạn tùy biến'}
+                  </p>
                 </div>
               </div>
               <button
@@ -2210,185 +2427,454 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
               </button>
             </div>
 
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                handleGenerateNewRoadmap();
-              }}
-              className="space-y-4 text-xs"
-            >
-              {/* Giới tính */}
-              <div>
-                <label className="block text-[11px] font-semibold uppercase text-white/50 mb-1.5">Giới tính</label>
-                <div className="grid grid-cols-2 gap-2">
+            {/* Mode Switcher Tabs */}
+            <div className="flex items-center gap-2 p-1 rounded-2xl bg-white/5 border border-white/10">
+              <button
+                type="button"
+                onClick={() => setGenMode('auto')}
+                className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                  genMode === 'auto'
+                    ? 'bg-blue-600 text-white shadow-xs'
+                    : 'text-white/60 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                <Wand2 className="w-3.5 h-3.5" />
+                <span>⚡ Tự Động Theo Thể Trạng (AI)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setGenMode('blank')}
+                className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                  genMode === 'blank'
+                    ? 'bg-emerald-600 text-white shadow-xs'
+                    : 'text-white/60 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                <PlusCircle className="w-3.5 h-3.5" />
+                <span>📝 Tạo Thủ Công (Trống)</span>
+              </button>
+            </div>
+
+            {/* TAB 1: TỰ ĐỘNG THEO THỂ TRẠNG */}
+            {genMode === 'auto' ? (
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleGenerateNewRoadmap();
+                }}
+                className="space-y-4 text-xs"
+              >
+                {/* Giới tính */}
+                <div>
+                  <label className="block text-[11px] font-semibold uppercase text-white/50 mb-1.5">Giới tính</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setGenSex('male');
+                        setGenTargetFfmi('22.0');
+                      }}
+                      className={`py-2 rounded-xl font-bold border transition-colors cursor-pointer text-center ${
+                        genSex === 'male'
+                          ? 'bg-blue-600 border-blue-500 text-white'
+                          : 'bg-white/5 border-white/10 text-white/60 hover:text-white'
+                      }`}
+                    >
+                      Nam (Male)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setGenSex('female');
+                        setGenTargetFfmi('19.5');
+                      }}
+                      className={`py-2 rounded-xl font-bold border transition-colors cursor-pointer text-center ${
+                        genSex === 'female'
+                          ? 'bg-rose-600 border-rose-500 text-white'
+                          : 'bg-white/5 border-white/10 text-white/60 hover:text-white'
+                      }`}
+                    >
+                      Nữ (Female)
+                    </button>
+                  </div>
+                </div>
+
+                {/* Chiều cao, cân nặng, % mỡ */}
+                <div className="grid grid-cols-3 gap-2.5">
+                  <div>
+                    <label className="block text-[10px] font-semibold uppercase text-white/50 mb-1">Chiều cao (cm)</label>
+                    <input
+                      type="number"
+                      required
+                      min={120}
+                      max={230}
+                      value={genHeight}
+                      onChange={(e) => setGenHeight(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/15 text-white font-mono focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-semibold uppercase text-white/50 mb-1">Cân nặng (kg)</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      required
+                      min={30}
+                      max={200}
+                      value={genWeight}
+                      onChange={(e) => setGenWeight(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/15 text-white font-mono focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-semibold uppercase text-white/50 mb-1">% Mỡ cơ thể</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      required
+                      min={5}
+                      max={50}
+                      value={genBodyFat}
+                      onChange={(e) => setGenBodyFat(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/15 text-white font-mono focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+                </div>
+
+                {/* Mục tiêu FFMI & Ngày bắt đầu */}
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div>
+                    <label className="block text-[10px] font-semibold uppercase text-white/50 mb-1">Mục tiêu FFMI</label>
+                    <select
+                      value={genTargetFfmi}
+                      onChange={(e) => setGenTargetFfmi(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl bg-[#1a233a] border border-white/15 text-white font-mono focus:outline-none focus:border-blue-500 cursor-pointer"
+                    >
+                      {genSex === 'male' ? (
+                        <>
+                          <option value="20.0">20.0 - Săn chắc Thể thao</option>
+                          <option value="21.0">21.0 - Cơ bắp Lực lưỡng</option>
+                          <option value="22.0">22.0 - Đỉnh cao Tự nhiên (Khuyên dùng)</option>
+                          <option value="23.0">23.0 - Đỉnh cao Vận động viên</option>
+                        </>
+                      ) : (
+                        <>
+                          <option value="17.5">17.5 - Thon gọn Săn chắc</option>
+                          <option value="18.5">18.5 - Thể thao Athletic</option>
+                          <option value="19.5">19.5 - Fitness Đỉnh cao (Khuyên dùng)</option>
+                          <option value="20.5">20.5 - Vận động viên Nữ</option>
+                        </>
+                      )}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-semibold uppercase text-white/50 mb-1">Ngày bắt đầu</label>
+                    <input
+                      type="text"
+                      value={genStartDate}
+                      onChange={(e) => setGenStartDate(e.target.value)}
+                      placeholder="DD/MM/YYYY"
+                      className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/15 text-white font-mono focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+                </div>
+
+                {/* Dự phóng nhanh */}
+                {(() => {
+                  const hM = (Number(genHeight) || 172) / 100;
+                  const hSq = hM * hM;
+                  const w = Number(genWeight) || 68;
+                  const bf = Number(genBodyFat) || 18;
+                  const curLbm = Math.round(w * (1 - bf / 100) * 10) / 10;
+                  const curFfmi = Math.round((curLbm / hSq) * 10) / 10;
+                  const targetF = Number(genTargetFfmi) || 22.0;
+                  const targetL = Math.round(targetF * hSq * 10) / 10;
+                  const netLbm = Math.round((targetL - curLbm) * 10) / 10;
+                  const finalBf = genSex === 'female' ? 20 : 16;
+                  const finalW = Math.round((targetL / (1 - finalBf / 100)) * 10) / 10;
+
+                  return (
+                    <div className="p-3.5 rounded-2xl bg-blue-500/10 border border-blue-500/20 space-y-1.5">
+                      <div className="text-[10px] font-bold uppercase tracking-wider text-blue-300">
+                        Dự Phóng Phân Kỳ Chu Kỳ Khoa Học
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 text-white/80 pt-1">
+                        <div>
+                          Hiện tại: <span className="font-mono text-white font-bold">{curLbm}kg LBM</span> (FFMI {curFfmi})
+                        </div>
+                        <div>
+                          Đích đến: <span className="font-mono text-emerald-400 font-bold">{finalW}kg</span> ({finalBf}% mỡ)
+                        </div>
+                        <div>
+                          Cơ nạc tích lũy: <span className="font-mono text-indigo-300 font-bold">+{netLbm > 0 ? netLbm : 0}kg LBM</span>
+                        </div>
+                        <div>
+                          FFMI cực đại: <span className="font-mono text-amber-300 font-bold">{targetF}</span>
+                        </div>
+                      </div>
+                      <p className="text-[10px] text-white/50 pt-1 leading-relaxed border-t border-white/5 mt-1">
+                        Thuật toán sẽ tự động phân giải thành chuỗi chu kỳ sóng Tăng Cơ (~12 tuần) xen kẽ các đợt Mini-cut (2–4 tuần) siết mỡ sâu để bảo toàn độ nhạy insulin và phát triển tối đa cơ nạc.
+                      </p>
+                    </div>
+                  );
+                })()}
+
+                <div className="flex items-center justify-end gap-2 pt-2 border-t border-white/10">
                   <button
                     type="button"
-                    onClick={() => {
-                      setGenSex('male');
-                      setGenTargetFfmi('22.0');
-                    }}
-                    className={`py-2 rounded-xl font-bold border transition-colors cursor-pointer text-center ${
-                      genSex === 'male'
-                        ? 'bg-blue-600 border-blue-500 text-white'
-                        : 'bg-white/5 border-white/10 text-white/60 hover:text-white'
-                    }`}
+                    onClick={() => setShowGeneratorModal(false)}
+                    className="px-4 py-2 rounded-xl border border-white/20 text-white/70 hover:bg-white/5 cursor-pointer font-semibold"
                   >
-                    Nam (Male)
+                    Hủy
                   </button>
                   <button
-                    type="button"
-                    onClick={() => {
-                      setGenSex('female');
-                      setGenTargetFfmi('19.5');
-                    }}
-                    className={`py-2 rounded-xl font-bold border transition-colors cursor-pointer text-center ${
-                      genSex === 'female'
-                        ? 'bg-rose-600 border-rose-500 text-white'
-                        : 'bg-white/5 border-white/10 text-white/60 hover:text-white'
-                    }`}
+                    type="submit"
+                    className="px-5 py-2 rounded-xl bg-linear-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold cursor-pointer transition-all shadow-md flex items-center gap-1.5"
                   >
-                    Nữ (Female)
+                    <Wand2 className="w-4 h-4" />
+                    <span>⚡ Tạo Đại Lộ Trình Ngay</span>
                   </button>
                 </div>
-              </div>
-
-              {/* Chiều cao, cân nặng, % mỡ */}
-              <div className="grid grid-cols-3 gap-2.5">
+              </form>
+            ) : (
+              /* TAB 2: TẠO THỦ CÔNG TRỐNG */
+              <form onSubmit={handleCreateBlankRoadmap} className="space-y-4 text-xs">
                 <div>
-                  <label className="block text-[10px] font-semibold uppercase text-white/50 mb-1">Chiều cao (cm)</label>
-                  <input
-                    type="number"
-                    required
-                    min={120}
-                    max={230}
-                    value={genHeight}
-                    onChange={(e) => setGenHeight(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/15 text-white font-mono focus:outline-none focus:border-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-semibold uppercase text-white/50 mb-1">Cân nặng (kg)</label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    required
-                    min={30}
-                    max={200}
-                    value={genWeight}
-                    onChange={(e) => setGenWeight(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/15 text-white font-mono focus:outline-none focus:border-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-semibold uppercase text-white/50 mb-1">% Mỡ cơ thể</label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    required
-                    min={5}
-                    max={50}
-                    value={genBodyFat}
-                    onChange={(e) => setGenBodyFat(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/15 text-white font-mono focus:outline-none focus:border-blue-500"
-                  />
-                </div>
-              </div>
-
-              {/* Mục tiêu FFMI & Ngày bắt đầu */}
-              <div className="grid grid-cols-2 gap-2.5">
-                <div>
-                  <label className="block text-[10px] font-semibold uppercase text-white/50 mb-1">Mục tiêu FFMI</label>
-                  <select
-                    value={genTargetFfmi}
-                    onChange={(e) => setGenTargetFfmi(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-[#1a233a] border border-white/15 text-white font-mono focus:outline-none focus:border-blue-500 cursor-pointer"
-                  >
-                    {genSex === 'male' ? (
-                      <>
-                        <option value="20.0">20.0 - Săn chắc Thể thao</option>
-                        <option value="21.0">21.0 - Cơ bắp Lực lưỡng</option>
-                        <option value="22.0">22.0 - Đỉnh cao Tự nhiên (Khuyên dùng)</option>
-                        <option value="23.0">23.0 - Đỉnh cao Vận động viên</option>
-                      </>
-                    ) : (
-                      <>
-                        <option value="17.5">17.5 - Thon gọn Săn chắc</option>
-                        <option value="18.5">18.5 - Thể thao Athletic</option>
-                        <option value="19.5">19.5 - Fitness Đỉnh cao (Khuyên dùng)</option>
-                        <option value="20.5">20.5 - Vận động viên Nữ</option>
-                      </>
-                    )}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-[10px] font-semibold uppercase text-white/50 mb-1">Ngày bắt đầu</label>
+                  <label className="block text-[11px] font-semibold uppercase text-white/50 mb-1">
+                    Tên lộ trình
+                  </label>
                   <input
                     type="text"
-                    value={genStartDate}
-                    onChange={(e) => setGenStartDate(e.target.value)}
-                    placeholder="DD/MM/YYYY"
-                    className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/15 text-white font-mono focus:outline-none focus:border-blue-500"
+                    required
+                    value={blankTitle}
+                    onChange={(e) => setBlankTitle(e.target.value)}
+                    placeholder="Ví dụ: Lộ Trình Cá Nhân Hóa 2026..."
+                    className="w-full px-3 py-2.5 rounded-xl bg-white/5 border border-white/15 text-white font-semibold focus:outline-none focus:border-emerald-500"
                   />
                 </div>
-              </div>
 
-              {/* Dự phóng nhanh */}
-              {(() => {
-                const hM = (Number(genHeight) || 172) / 100;
-                const hSq = hM * hM;
-                const w = Number(genWeight) || 68;
-                const bf = Number(genBodyFat) || 18;
-                const curLbm = Math.round(w * (1 - bf / 100) * 10) / 10;
-                const curFfmi = Math.round((curLbm / hSq) * 10) / 10;
-                const targetF = Number(genTargetFfmi) || 22.0;
-                const targetL = Math.round(targetF * hSq * 10) / 10;
-                const netLbm = Math.round((targetL - curLbm) * 10) / 10;
-                const finalBf = genSex === 'female' ? 20 : 16;
-                const finalW = Math.round((targetL / (1 - finalBf / 100)) * 10) / 10;
-
-                return (
-                  <div className="p-3.5 rounded-2xl bg-blue-500/10 border border-blue-500/20 space-y-1.5">
-                    <div className="text-[10px] font-bold uppercase tracking-wider text-blue-300">
-                      Dự Phóng Phân Kỳ Chu Kỳ Khoa Học
-                    </div>
-                    <div className="grid grid-cols-2 gap-2 text-white/80 pt-1">
-                      <div>
-                        Hiện tại: <span className="font-mono text-white font-bold">{curLbm}kg LBM</span> (FFMI {curFfmi})
-                      </div>
-                      <div>
-                        Đích đến: <span className="font-mono text-emerald-400 font-bold">{finalW}kg</span> ({finalBf}% mỡ)
-                      </div>
-                      <div>
-                        Cơ nạc tích lũy: <span className="font-mono text-indigo-300 font-bold">+{netLbm > 0 ? netLbm : 0}kg LBM</span>
-                      </div>
-                      <div>
-                        FFMI cực đại: <span className="font-mono text-amber-300 font-bold">{targetF}</span>
-                      </div>
-                    </div>
-                    <p className="text-[10px] text-white/50 pt-1 leading-relaxed border-t border-white/5 mt-1">
-                      Thuật toán sẽ tự động phân giải thành chuỗi chu kỳ sóng Tăng Cơ (~12 tuần) xen kẽ các đợt Mini-cut (2–4 tuần) siết mỡ sâu để bảo toàn độ nhạy insulin và phát triển tối đa cơ nạc.
-                    </p>
+                <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 space-y-2 text-white/80">
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">
+                    Số đo khởi điểm của bạn
                   </div>
-                );
-              })()}
+                  <div className="grid grid-cols-3 gap-2 font-mono text-xs pt-1">
+                    <div>Chiều cao: <strong className="text-white">{profile.heightCm || 172} cm</strong></div>
+                    <div>Cân nặng: <strong className="text-white">{currentWeight} kg</strong></div>
+                    <div>% Mỡ: <strong className="text-white">{currentBf}%</strong></div>
+                  </div>
+                  <p className="text-[11px] text-white/60 leading-relaxed pt-2 border-t border-white/5">
+                    Lộ trình mới sẽ được khởi tạo ở trạng thái trống. Ngay sau khi tạo, cửa sổ thêm giai đoạn sẽ mở ra để bạn tự do điền mốc ngày, cân nặng mục tiêu, calo và đạm tùy thích.
+                  </p>
+                </div>
 
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-white/10">
-                <button
-                  type="button"
-                  onClick={() => setShowGeneratorModal(false)}
-                  className="px-4 py-2 rounded-xl border border-white/20 text-white/70 hover:bg-white/5 cursor-pointer font-semibold"
-                >
-                  Hủy
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2 rounded-xl bg-linear-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold cursor-pointer transition-all shadow-md flex items-center gap-1.5"
-                >
-                  <Wand2 className="w-4 h-4" />
-                  <span>⚡ Tạo Đại Lộ Trình Ngay</span>
-                </button>
+                <div className="flex items-center justify-end gap-2 pt-2 border-t border-white/10">
+                  <button
+                    type="button"
+                    onClick={() => setShowGeneratorModal(false)}
+                    className="px-4 py-2 rounded-xl border border-white/20 text-white/70 hover:bg-white/5 cursor-pointer font-semibold"
+                  >
+                    Hủy
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold cursor-pointer transition-all shadow-md flex items-center gap-1.5"
+                  >
+                    <PlusCircle className="w-4 h-4" />
+                    <span>📝 Tạo Lộ Trình &amp; Thêm Giai Đoạn</span>
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ROADMAP MANAGER MODAL: QUẢN LÝ / CHUYỂN ĐỔI CÁC LỘ TRÌNH ĐÃ LƯU */}
+      {showRoadmapManagerModal && (
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn overflow-y-auto">
+          <div className="bg-[#101726] border border-white/20 rounded-3xl max-w-xl w-full p-5 sm:p-6 space-y-4 shadow-2xl text-white my-8">
+            <div className="flex items-center justify-between border-b border-white/10 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center">
+                  <FolderOpen className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold">Thư Viện Lộ Trình Thể Hình</h3>
+                  <p className="text-[11px] text-white/50">Quản lý, chuyển đổi hoặc xóa các lộ trình đã tạo</p>
+                </div>
               </div>
-            </form>
+              <button
+                type="button"
+                onClick={() => setShowRoadmapManagerModal(false)}
+                className="text-white/40 hover:text-white cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* List of saved roadmaps */}
+            <div className="space-y-2.5 max-h-[60vh] overflow-y-auto pr-1">
+              {(() => {
+                const list = [...savedCtgRoadmaps];
+                if (activeRoadmap && !list.some((r) => r.id === activeRoadmap.id)) {
+                  list.unshift(activeRoadmap);
+                }
+                if (list.length === 0) {
+                  return (
+                    <div className="py-8 text-center text-xs text-white/40">
+                      Chưa có lộ trình nào được lưu.
+                    </div>
+                  );
+                }
+                return list.map((rm) => {
+                  const isActive = activeRoadmap?.id === rm.id;
+                  const phaseCount = rm.phases?.length || 0;
+                  const firstP = rm.phases?.[0];
+                  const lastP = rm.phases?.[phaseCount - 1];
+
+                  return (
+                    <div
+                      key={rm.id}
+                      className={`p-4 rounded-2xl border transition-all ${
+                        isActive
+                          ? 'bg-blue-950/40 border-blue-500/50'
+                          : 'bg-white/5 border-white/10 hover:border-white/20'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-sm text-white">{rm.title || 'Lộ Trình Chu Kỳ'}</span>
+                            {isActive && (
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                                Đang Kích Hoạt
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-xs text-white/60 flex flex-wrap items-center gap-2">
+                            <span>{phaseCount} giai đoạn</span>
+                            {firstP && lastP && (
+                              <>
+                                <span>·</span>
+                                <span className="font-mono text-white/70">
+                                  {firstP.startWeightKg}kg → {lastP.targetWeightKg}kg
+                                </span>
+                                <span>·</span>
+                                <span className="text-emerald-400 font-mono font-bold">
+                                  FFMI {lastP.targetFfmi}
+                                </span>
+                              </>
+                            )}
+                          </div>
+                          {rm.heightCm && (
+                            <div className="text-[11px] text-white/40 font-mono">
+                              Thể trạng: {rm.heightCm}cm · {rm.initialWeightKg}kg · {rm.initialBodyFatPct}% mỡ
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0">
+                          {!isActive && onSwitchCtgRoadmap && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                onSwitchCtgRoadmap(rm.id);
+                                setShowRoadmapManagerModal(false);
+                                setAppliedBanner(`Đã kích hoạt lộ trình "${rm.title}"!`);
+                                setTimeout(() => setAppliedBanner(null), 5000);
+                              }}
+                              className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs cursor-pointer shadow-xs transition-colors"
+                            >
+                              Kích Hoạt
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (window.confirm(`Xóa lộ trình "${rm.title}" khỏi danh sách?`)) {
+                                if (onDeleteCtgRoadmap) {
+                                  onDeleteCtgRoadmap(rm.id);
+                                }
+                                if (isActive) {
+                                  handleConfirmDeleteCurrentRoadmap();
+                                }
+                              }
+                            }}
+                            className="p-1.5 rounded-xl hover:bg-rose-500/20 text-white/40 hover:text-rose-400 transition-colors cursor-pointer"
+                            title="Xóa lộ trình này"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                });
+              })()}
+            </div>
+
+            {/* Bottom Actions */}
+            <div className="flex items-center justify-between pt-3 border-t border-white/10">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowRoadmapManagerModal(false);
+                  setGenMode('auto');
+                  setShowGeneratorModal(true);
+                }}
+                className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5"
+              >
+                <PlusCircle className="w-4 h-4" />
+                <span>+ Tạo Lộ Trình Mới</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowRoadmapManagerModal(false)}
+                className="px-4 py-2 rounded-xl border border-white/20 text-white/70 hover:bg-white/5 cursor-pointer font-semibold text-xs"
+              >
+                Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* DELETE ROADMAP CONFIRMATION MODAL */}
+      {showDeleteConfirmModal && (
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-[#101726] border border-rose-500/40 rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl text-white">
+            <div className="w-12 h-12 rounded-2xl bg-rose-500/20 text-rose-400 flex items-center justify-center mx-auto">
+              <Trash2 className="w-6 h-6" />
+            </div>
+
+            <div className="text-center space-y-1.5">
+              <h3 className="text-lg font-bold text-white">Xóa Bỏ Lộ Trình Này?</h3>
+              <p className="text-xs text-white/60 leading-relaxed">
+                Bạn có chắc chắn muốn xóa lộ trình <strong className="text-white">"{activeRoadmap?.title || 'Lộ Trình Chu Kỳ CTG'}"</strong> gồm <strong className="text-rose-400">{phases.length} giai đoạn</strong> không?
+              </p>
+              <p className="text-[11px] text-white/40">
+                Sau khi xóa, bạn có thể tạo lại lộ trình mới hoặc khôi phục lại mẫu chuẩn bất cứ lúc nào.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowDeleteConfirmModal(false)}
+                className="py-2.5 rounded-xl border border-white/20 text-white/70 hover:bg-white/5 cursor-pointer font-semibold text-xs"
+              >
+                Hủy bỏ
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDeleteCurrentRoadmap}
+                className="py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold cursor-pointer transition-colors shadow-sm text-xs flex items-center justify-center gap-1.5"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>Xác Nhận Xóa</span>
+              </button>
+            </div>
           </div>
         </div>
       )}

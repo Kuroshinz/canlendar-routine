@@ -80,6 +80,7 @@ const KEYS = {
   bodyPhotos: 'gcal_prod_body_photos',
   savedRoadmaps: 'gcal_prod_saved_roadmaps',
   ctgPeriodizedRoadmap: 'gcal_ctg_periodized_roadmap',
+  savedCtgRoadmaps: 'gcal_ctg_saved_roadmaps',
   customExercises: 'gcal_prod_custom_exercises',
 } as const;
 
@@ -149,9 +150,14 @@ export interface ProductivityStore {
   savedRoadmaps: SavedRoadmap[];
   addSavedRoadmap: (roadmap: Omit<SavedRoadmap, 'id' | 'createdAt'>) => SavedRoadmap;
   deleteSavedRoadmap: (id: string) => void;
-  ctgPeriodizedRoadmap: CtgPeriodizedRoadmap;
-  updateCtgPeriodizedRoadmap: (roadmap: CtgPeriodizedRoadmap) => void;
+  ctgPeriodizedRoadmap: CtgPeriodizedRoadmap | null;
+  savedCtgRoadmaps: CtgPeriodizedRoadmap[];
+  updateCtgPeriodizedRoadmap: (roadmap: CtgPeriodizedRoadmap | null) => void;
   setActiveRoadmapPhase: (phaseId: string) => void;
+  saveCtgRoadmapToList: (roadmap: CtgPeriodizedRoadmap) => void;
+  deleteCtgRoadmapFromList: (roadmapId: string) => void;
+  switchActiveCtgRoadmap: (roadmapId: string) => void;
+  deleteCurrentCtgRoadmap: () => void;
   customExercises: Exercise[];
   addCustomExercise: (exercise: Omit<Exercise, 'id'>) => Exercise;
   deleteCustomExercise: (id: string) => void;
@@ -231,9 +237,13 @@ export function useProductivityStore(): ProductivityStore {
   );
   const [bodyPhotos, setBodyPhotos] = usePersistentState<BodyCheckPhoto[]>(KEYS.bodyPhotos, []);
   const [savedRoadmaps, setSavedRoadmaps] = usePersistentState<SavedRoadmap[]>(KEYS.savedRoadmaps, []);
-  const [ctgPeriodizedRoadmap, setCtgPeriodizedRoadmap] = usePersistentState<CtgPeriodizedRoadmap>(
+  const [ctgPeriodizedRoadmap, setCtgPeriodizedRoadmap] = usePersistentState<CtgPeriodizedRoadmap | null>(
     KEYS.ctgPeriodizedRoadmap,
     SEED_CTG_PERIODIZED_ROADMAP
+  );
+  const [savedCtgRoadmaps, setSavedCtgRoadmaps] = usePersistentState<CtgPeriodizedRoadmap[]>(
+    KEYS.savedCtgRoadmaps,
+    [SEED_CTG_PERIODIZED_ROADMAP]
   );
   const [customExercises, setCustomExercises] = usePersistentState<Exercise[]>(KEYS.customExercises, []);
 
@@ -681,25 +691,87 @@ export function useProductivityStore(): ProductivityStore {
   );
 
   const updateCtgPeriodizedRoadmap = useCallback(
-    (roadmap: CtgPeriodizedRoadmap) => {
+    (roadmap: CtgPeriodizedRoadmap | null) => {
       setCtgPeriodizedRoadmap(roadmap);
+      if (roadmap && roadmap.phases && roadmap.phases.length > 0) {
+        setSavedCtgRoadmaps((prev) => {
+          const idx = prev.findIndex((r) => r.id === roadmap.id);
+          if (idx >= 0) {
+            const next = [...prev];
+            next[idx] = roadmap;
+            return next;
+          }
+          return [roadmap, ...prev];
+        });
+      }
     },
-    [setCtgPeriodizedRoadmap]
+    [setCtgPeriodizedRoadmap, setSavedCtgRoadmaps]
   );
 
   const setActiveRoadmapPhase = useCallback(
     (phaseId: string) => {
-      setCtgPeriodizedRoadmap((prev) => ({
-        ...prev,
-        activePhaseId: phaseId,
-        phases: prev.phases.map((p) => ({
-          ...p,
-          isCurrent: p.id === phaseId,
-        })),
-      }));
+      setCtgPeriodizedRoadmap((prev) => {
+        if (!prev) return null;
+        const updated = {
+          ...prev,
+          activePhaseId: phaseId,
+          phases: prev.phases.map((p) => ({
+            ...p,
+            isCurrent: p.id === phaseId,
+          })),
+        };
+        setSavedCtgRoadmaps((list) => list.map((item) => (item.id === updated.id ? updated : item)));
+        return updated;
+      });
     },
-    [setCtgPeriodizedRoadmap]
+    [setCtgPeriodizedRoadmap, setSavedCtgRoadmaps]
   );
+
+  const saveCtgRoadmapToList = useCallback(
+    (roadmap: CtgPeriodizedRoadmap) => {
+      setSavedCtgRoadmaps((prev) => {
+        const idx = prev.findIndex((r) => r.id === roadmap.id);
+        if (idx >= 0) {
+          const next = [...prev];
+          next[idx] = roadmap;
+          return next;
+        }
+        return [roadmap, ...prev];
+      });
+    },
+    [setSavedCtgRoadmaps]
+  );
+
+  const deleteCtgRoadmapFromList = useCallback(
+    (roadmapId: string) => {
+      setSavedCtgRoadmaps((prev) => prev.filter((r) => r.id !== roadmapId));
+      setCtgPeriodizedRoadmap((current) => {
+        if (current?.id === roadmapId) {
+          const remaining = savedCtgRoadmaps.filter((r) => r.id !== roadmapId);
+          return remaining[0] || null;
+        }
+        return current;
+      });
+    },
+    [savedCtgRoadmaps, setSavedCtgRoadmaps, setCtgPeriodizedRoadmap]
+  );
+
+  const switchActiveCtgRoadmap = useCallback(
+    (roadmapId: string) => {
+      const found = savedCtgRoadmaps.find((r) => r.id === roadmapId);
+      if (found) {
+        setCtgPeriodizedRoadmap(found);
+      }
+    },
+    [savedCtgRoadmaps, setCtgPeriodizedRoadmap]
+  );
+
+  const deleteCurrentCtgRoadmap = useCallback(() => {
+    if (ctgPeriodizedRoadmap) {
+      setSavedCtgRoadmaps((prev) => prev.filter((r) => r.id !== ctgPeriodizedRoadmap.id));
+    }
+    setCtgPeriodizedRoadmap(null);
+  }, [ctgPeriodizedRoadmap, setSavedCtgRoadmaps, setCtgPeriodizedRoadmap]);
 
   const addCustomExercise = useCallback(
     (input: Omit<Exercise, 'id'>) => {
@@ -933,6 +1005,7 @@ export function useProductivityStore(): ProductivityStore {
     setBodyPhotos([]);
     setSavedRoadmaps([]);
     setCtgPeriodizedRoadmap(SEED_CTG_PERIODIZED_ROADMAP);
+    setSavedCtgRoadmaps([SEED_CTG_PERIODIZED_ROADMAP]);
     setCustomExercises([]);
   }, [
     setTasks,
@@ -955,6 +1028,7 @@ export function useProductivityStore(): ProductivityStore {
     setBodyPhotos,
     setSavedRoadmaps,
     setCtgPeriodizedRoadmap,
+    setSavedCtgRoadmaps,
     setCustomExercises,
   ]);
 
@@ -983,7 +1057,8 @@ export function useProductivityStore(): ProductivityStore {
       setNutritionSettings(DEFAULT_NUTRITION_SETTINGS);
       setBodyPhotos([]);
       setSavedRoadmaps([]);
-      setCtgPeriodizedRoadmap(SEED_CTG_PERIODIZED_ROADMAP);
+      setCtgPeriodizedRoadmap(null);
+      setSavedCtgRoadmaps([]);
       setCustomExercises([]);
     },
     [
@@ -1066,8 +1141,13 @@ export function useProductivityStore(): ProductivityStore {
     addSavedRoadmap,
     deleteSavedRoadmap,
     ctgPeriodizedRoadmap,
+    savedCtgRoadmaps,
     updateCtgPeriodizedRoadmap,
     setActiveRoadmapPhase,
+    saveCtgRoadmapToList,
+    deleteCtgRoadmapFromList,
+    switchActiveCtgRoadmap,
+    deleteCurrentCtgRoadmap,
     customExercises,
     addCustomExercise,
     deleteCustomExercise,

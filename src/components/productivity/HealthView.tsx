@@ -96,9 +96,14 @@ export interface HealthViewProps {
   savedRoadmaps?: SavedRoadmap[];
   onAddSavedRoadmap?: (roadmap: Omit<SavedRoadmap, 'id' | 'createdAt'>) => SavedRoadmap;
   onDeleteSavedRoadmap?: (id: string) => void;
-  ctgPeriodizedRoadmap?: CtgPeriodizedRoadmap;
-  onUpdateCtgPeriodizedRoadmap?: (roadmap: CtgPeriodizedRoadmap) => void;
+  ctgPeriodizedRoadmap?: CtgPeriodizedRoadmap | null;
+  savedCtgRoadmaps?: CtgPeriodizedRoadmap[];
+  onUpdateCtgPeriodizedRoadmap?: (roadmap: CtgPeriodizedRoadmap | null) => void;
   onSetActiveRoadmapPhase?: (phaseId: string) => void;
+  onSaveCtgRoadmap?: (roadmap: CtgPeriodizedRoadmap) => void;
+  onDeleteCtgRoadmap?: (roadmapId: string) => void;
+  onSwitchCtgRoadmap?: (roadmapId: string) => void;
+  onDeleteCurrentCtgRoadmap?: () => void;
   customExercises?: Exercise[];
   onAddCustomExercise?: (exercise: Omit<Exercise, 'id'>) => Exercise;
   onDeleteCustomExercise?: (id: string) => void;
@@ -158,8 +163,13 @@ export const HealthView: React.FC<HealthViewProps> = ({
   onAddSavedRoadmap = (r) => ({ ...r, id: 'tmp', createdAt: Date.now() }),
   onDeleteSavedRoadmap = () => {},
   ctgPeriodizedRoadmap,
+  savedCtgRoadmaps = [],
   onUpdateCtgPeriodizedRoadmap,
   onSetActiveRoadmapPhase,
+  onSaveCtgRoadmap,
+  onDeleteCtgRoadmap,
+  onSwitchCtgRoadmap,
+  onDeleteCurrentCtgRoadmap,
   customExercises = [],
   onAddCustomExercise = (e) => ({ ...e, id: 'tmp', isCustom: true }),
   onDeleteCustomExercise = () => {},
@@ -490,8 +500,13 @@ export const HealthView: React.FC<HealthViewProps> = ({
           lang={lang}
           bodyPoints={bodyPoints}
           ctgPeriodizedRoadmap={ctgPeriodizedRoadmap}
+          savedCtgRoadmaps={savedCtgRoadmaps}
           onUpdateCtgPeriodizedRoadmap={onUpdateCtgPeriodizedRoadmap}
           onSetActiveRoadmapPhase={onSetActiveRoadmapPhase}
+          onSaveCtgRoadmap={onSaveCtgRoadmap}
+          onDeleteCtgRoadmap={onDeleteCtgRoadmap}
+          onSwitchCtgRoadmap={onSwitchCtgRoadmap}
+          onDeleteCurrentCtgRoadmap={onDeleteCurrentCtgRoadmap}
           savedRoadmaps={savedRoadmaps}
           onAddSavedRoadmap={onAddSavedRoadmap}
           onDeleteSavedRoadmap={onDeleteSavedRoadmap}
