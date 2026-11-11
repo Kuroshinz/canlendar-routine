@@ -174,13 +174,23 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
   onSwitchCtgRoadmap,
   onDeleteCurrentCtgRoadmap,
 }) => {
-  // View mode switcher: CTG Master Periodization vs Single Snapshot vs Saved Milestones
-  const [activeViewMode, setActiveViewMode] = useState<'ctg_periodized' | 'single_analyzer' | 'saved_milestones'>('ctg_periodized');
+  // View mode switcher: CTG Master Periodization vs Saved Roadmaps vs Single Snapshot vs Saved Milestones
+  const [activeViewMode, setActiveViewMode] = useState<'ctg_periodized' | 'saved_roadmaps' | 'single_analyzer' | 'saved_milestones'>('ctg_periodized');
+  const [expandedRoadmapId, setExpandedRoadmapId] = useState<string | null>(null);
+  const [roadmapToDelete, setRoadmapToDelete] = useState<CtgPeriodizedRoadmap | null>(null);
   const [phaseFilter, setPhaseFilter] = useState<'all' | 'current' | 'completed' | 'upcoming' | 'bulk' | 'cut'>('all');
   const [selectedPhase, setSelectedPhase] = useState<CtgRoadmapPhase | null>(null);
 
   const activeRoadmap = ctgPeriodizedRoadmap ?? null;
   const phases = activeRoadmap?.phases || [];
+
+  const allSavedCtgRoadmaps = useMemo(() => {
+    const list = [...savedCtgRoadmaps];
+    if (activeRoadmap && !list.some((r) => r.id === activeRoadmap.id)) {
+      list.unshift(activeRoadmap);
+    }
+    return list;
+  }, [savedCtgRoadmaps, activeRoadmap]);
 
   // Sorted BodyPoints and latest point
   const sortedPoints = useMemo(() => {
@@ -650,6 +660,36 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
     setTimeout(() => setAppliedBanner(null), 4000);
   };
 
+  const handleSwitchRoadmap = (rm: CtgPeriodizedRoadmap) => {
+    if (onSwitchCtgRoadmap) {
+      onSwitchCtgRoadmap(rm.id);
+    } else {
+      onUpdateCtgPeriodizedRoadmap?.(rm);
+    }
+    const targetPhase = rm.phases?.find((p) => p.id === rm.activePhaseId) || rm.phases?.[0];
+    if (targetPhase) {
+      handleApplySinglePhase(targetPhase);
+    }
+    setAppliedBanner(`Đã kích hoạt lộ trình "${rm.title || 'Mới'}"!`);
+    setTimeout(() => setAppliedBanner(null), 5000);
+    setActiveViewMode('ctg_periodized');
+  };
+
+  const handleDeleteSavedRoadmap = (rmId: string) => {
+    if (activeRoadmap?.id === rmId) {
+      if (onDeleteCurrentCtgRoadmap) {
+        onDeleteCurrentCtgRoadmap();
+      } else {
+        onUpdateCtgPeriodizedRoadmap?.(null);
+      }
+    } else {
+      onDeleteCtgRoadmap?.(rmId);
+    }
+    setAppliedBanner('Đã xóa lộ trình khỏi danh sách.');
+    setTimeout(() => setAppliedBanner(null), 4000);
+    setRoadmapToDelete(null);
+  };
+
   const handleAddCustomPhaseSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const hMeter = (Number(profile.heightCm) || 172) / 100;
@@ -940,6 +980,22 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
 
         <button
           type="button"
+          onClick={() => setActiveViewMode('saved_roadmaps')}
+          className={`flex-1 sm:flex-initial px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-2 ${
+            activeViewMode === 'saved_roadmaps'
+              ? 'bg-[#2563EB] text-white shadow-md shadow-blue-500/20'
+              : 'text-white/60 hover:text-white hover:bg-white/5'
+          }`}
+        >
+          <FolderOpen className="w-4 h-4" />
+          <span>Lộ Trình Đã Tạo</span>
+          <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-white/20 text-white font-mono">
+            {allSavedCtgRoadmaps.length}
+          </span>
+        </button>
+
+        <button
+          type="button"
           onClick={() => setActiveViewMode('single_analyzer')}
           className={`flex-1 sm:flex-initial px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-2 ${
             activeViewMode === 'single_analyzer'
@@ -1062,11 +1118,11 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
             <div className="pt-4 border-t border-white/10 max-w-md mx-auto">
               <button
                 type="button"
-                onClick={() => setShowRoadmapManagerModal(true)}
+                onClick={() => setActiveViewMode('saved_roadmaps')}
                 className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-bold transition-all cursor-pointer"
               >
                 <FolderOpen className="w-4 h-4 text-blue-400" />
-                <span>Xem danh sách các lộ trình đã lưu ({savedCtgRoadmaps.length})</span>
+                <span>Xem danh sách các lộ trình đã lưu ({allSavedCtgRoadmaps.length})</span>
                 <ChevronRight className="w-3.5 h-3.5 text-white/40" />
               </button>
             </div>
@@ -1117,6 +1173,16 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
 
               {/* Thanh công cụ thao tác */}
               <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setActiveViewMode('saved_roadmaps')}
+                  className="px-3.5 py-2 rounded-xl border border-blue-500/30 bg-blue-500/10 hover:bg-blue-500/20 text-blue-300 text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1.5"
+                  title="Xem danh sách tất cả các lộ trình đã tạo trong thư viện"
+                >
+                  <FolderOpen className="w-3.5 h-3.5 text-blue-400" />
+                  <span>📁 Lộ Trình Đã Tạo ({allSavedCtgRoadmaps.length})</span>
+                </button>
+
                 <button
                   type="button"
                   onClick={() => {
@@ -1646,6 +1712,288 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
                   </button>
                 </div>
               </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* VIEW: DANH SÁCH TẤT CẢ LỘ TRÌNH ĐÃ TẠO (ALL CREATED ROADMAPS) */}
+      {activeViewMode === 'saved_roadmaps' && (
+        <div className="space-y-5 animate-fadeIn">
+          {/* Header Bar */}
+          <div className="bg-[#0b101b] rounded-3xl border border-white/10 p-5 sm:p-6 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-2xl bg-blue-500/20 border border-blue-500/30 text-blue-400 flex items-center justify-center shrink-0">
+                  <FolderOpen className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-black text-white tracking-tight flex items-center gap-2">
+                    <span>Lộ Trình Đã Tạo</span>
+                    <span className="px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-blue-500/20 text-blue-400 border border-blue-500/30">
+                      {allSavedCtgRoadmaps.length} Lộ Trình
+                    </span>
+                  </h3>
+                  <p className="text-xs text-white/50">
+                    Xem lại, so sánh mục tiêu, kích hoạt hoặc quản lý tất cả các lộ trình chu kỳ đã thiết lập
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setGenMode('auto');
+                  setGenHeight(String(profile.heightCm || 172));
+                  setGenWeight(String(currentWeight || 68));
+                  setGenBodyFat(String(currentBf || 18));
+                  setGenSex(profile.sex || 'male');
+                  setShowGeneratorModal(true);
+                }}
+                className="px-4 py-2.5 rounded-xl bg-linear-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold transition-all cursor-pointer shadow-md flex items-center gap-1.5"
+              >
+                <Wand2 className="w-3.5 h-3.5" />
+                <span>+ Tạo Lộ Trình Mới</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleResetToSeedRoadmap}
+                className="px-3.5 py-2.5 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-white/70 hover:text-white text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1.5"
+                title="Khôi phục hoặc thêm mẫu chuẩn 17 giai đoạn"
+              >
+                <RefreshCw className="w-3.5 h-3.5 text-amber-400" />
+                <span>↺ Nạp Mẫu Chuẩn</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Empty State */}
+          {allSavedCtgRoadmaps.length === 0 ? (
+            <div className="bg-[#0b101b] rounded-3xl border border-white/10 p-12 text-center shadow-xl space-y-4">
+              <div className="w-14 h-14 rounded-2xl bg-white/5 text-white/40 mx-auto flex items-center justify-center">
+                <FolderOpen className="w-7 h-7" />
+              </div>
+              <div className="space-y-1">
+                <h4 className="text-base font-bold text-white">Chưa Có Lộ Trình Nào Trong Thư Viện</h4>
+                <p className="text-xs text-white/50 max-w-sm mx-auto">
+                  Bạn có thể tạo tự động theo thể trạng hoặc nạp mẫu 17 giai đoạn chuẩn để bắt đầu.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setGenMode('auto');
+                  setShowGeneratorModal(true);
+                }}
+                className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-colors cursor-pointer"
+              >
+                ⚡ Tạo Lộ Trình Đầu Tiên
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {allSavedCtgRoadmaps.map((rm, idx) => {
+                const isActive = activeRoadmap?.id === rm.id;
+                const rmPhases = rm.phases || [];
+                const firstP = rmPhases[0];
+                const lastP = rmPhases[rmPhases.length - 1];
+                const isExpanded = expandedRoadmapId === rm.id;
+                const totalLbm =
+                  firstP && lastP
+                    ? Math.round((lastP.targetLbmKg - firstP.startLbmKg) * 10) / 10
+                    : 0;
+
+                return (
+                  <div
+                    key={rm.id || idx}
+                    className={`rounded-3xl border transition-all p-5 sm:p-6 space-y-4 ${
+                      isActive
+                        ? 'bg-linear-to-b from-[#111c38] to-[#0c1326] border-blue-500/80 shadow-xl shadow-blue-500/10 ring-1 ring-blue-500/40'
+                        : 'bg-[#0b101b] border-white/10 hover:border-white/20'
+                    }`}
+                  >
+                    {/* Header: Title, Active Badge, Date span, Actions */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-white/5">
+                      <div className="space-y-1">
+                        <div className="flex flex-wrap items-center gap-2.5">
+                          <h4 className="text-lg font-black text-white tracking-tight">
+                            {rm.title || `Lộ Trình Chu Kỳ #${idx + 1}`}
+                          </h4>
+                          {isActive ? (
+                            <span className="px-3 py-0.5 rounded-full text-[11px] font-extrabold uppercase tracking-wider bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center gap-1.5">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                              <span>Đang Sử Dụng</span>
+                            </span>
+                          ) : (
+                            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-white/10 text-white/60">
+                              Lộ Trình Đã Lưu
+                            </span>
+                          )}
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-blue-500/20 text-blue-400 border border-blue-500/30">
+                            {rmPhases.length} Giai Đoạn
+                          </span>
+                        </div>
+                        <div className="text-xs font-mono text-white/50 flex flex-wrap items-center gap-2">
+                          {firstP && lastP && (
+                            <>
+                              <Calendar className="w-3.5 h-3.5 text-white/40" />
+                              <span>
+                                {firstP.startDate} – {lastP.endDate}
+                              </span>
+                              <span>·</span>
+                            </>
+                          )}
+                          {rm.heightCm && (
+                            <span>
+                              Thể trạng gốc: {rm.heightCm}cm / {rm.initialWeightKg}kg ({rm.initialBodyFatPct}% mỡ)
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Right action buttons */}
+                      <div className="flex flex-wrap items-center gap-2 shrink-0">
+                        {isActive ? (
+                          <button
+                            type="button"
+                            onClick={() => setActiveViewMode('ctg_periodized')}
+                            className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all cursor-pointer shadow-xs flex items-center gap-1.5"
+                          >
+                            <span>Xem Chi Tiết Mốc</span>
+                            <ArrowRight className="w-3.5 h-3.5" />
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => handleSwitchRoadmap(rm)}
+                            className="px-3.5 py-2 rounded-xl bg-linear-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold transition-all cursor-pointer shadow-xs flex items-center gap-1.5"
+                          >
+                            <Zap className="w-3.5 h-3.5" />
+                            <span>Kích Hoạt Lộ Trình Này</span>
+                          </button>
+                        )}
+
+                        <button
+                          type="button"
+                          onClick={() => setExpandedRoadmapId(isExpanded ? null : rm.id)}
+                          className="px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 hover:text-white text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1.5"
+                        >
+                          <Layers className="w-3.5 h-3.5 text-blue-400" />
+                          <span>{isExpanded ? 'Ẩn Giai Đoạn' : `Xem ${rmPhases.length} Giai Đoạn`}</span>
+                          <ChevronDown
+                            className={`w-3.5 h-3.5 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                          />
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setRoadmapToDelete(rm)}
+                          className="p-2 rounded-xl bg-white/5 hover:bg-rose-500/20 text-white/40 hover:text-rose-400 transition-colors cursor-pointer"
+                          title="Xóa lộ trình này"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* 4 Metric Summary Cards */}
+                    {firstP && lastP && (
+                      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
+                        <div className="p-3.5 rounded-2xl bg-white/5 border border-white/5 space-y-1">
+                          <div className="text-[11px] text-white/50 font-medium">Xuất phát</div>
+                          <div className="text-base font-bold font-mono text-white">
+                            {firstP.startWeightKg} kg
+                            <span className="text-xs text-white/50 ml-1.5 font-normal">
+                              ({firstP.startBodyFatPct}%)
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="p-3.5 rounded-2xl bg-white/5 border border-white/5 space-y-1">
+                          <div className="text-[11px] text-blue-400/80 font-medium">Đích đến cuối</div>
+                          <div className="text-base font-bold font-mono text-blue-300">
+                            {lastP.targetWeightKg} kg
+                            <span className="text-xs text-blue-300/60 ml-1.5 font-normal">
+                              ({lastP.targetBodyFatPct}%)
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="p-3.5 rounded-2xl bg-white/5 border border-white/5 space-y-1">
+                          <div className="text-[11px] text-emerald-400/80 font-medium">Tiềm năng cơ nạc</div>
+                          <div className="text-base font-bold font-mono text-emerald-300">
+                            +{totalLbm > 0 ? totalLbm : 0} kg nạc
+                          </div>
+                        </div>
+
+                        <div className="p-3.5 rounded-2xl bg-white/5 border border-white/5 space-y-1">
+                          <div className="text-[11px] text-purple-400/80 font-medium">FFMI đỉnh cao</div>
+                          <div className="text-base font-bold font-mono text-purple-300">
+                            {lastP.targetFfmi || rm.targetFfmi || '22.0'}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Accordion Preview of all phases */}
+                    {isExpanded && (
+                      <div className="pt-3 border-t border-white/5 space-y-2 animate-fadeIn">
+                        <div className="text-xs font-bold text-white/70 flex items-center justify-between pb-1">
+                          <span>Chi tiết các giai đoạn trong lộ trình:</span>
+                          <span className="text-[11px] text-white/40">
+                            {rmPhases.length} giai đoạn tuần tự
+                          </span>
+                        </div>
+                        <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
+                          {rmPhases.map((p, pIdx) => (
+                            <div
+                              key={p.id || pIdx}
+                              className="p-3 rounded-xl bg-black/30 border border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs"
+                            >
+                              <div className="space-y-0.5">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-mono text-white/40 font-bold">
+                                    #{String(pIdx + 1).padStart(2, '0')}
+                                  </span>
+                                  <span className="font-bold text-white">{p.name}</span>
+                                  <span className="text-[10px] font-mono text-white/50">
+                                    {p.startDate} – {p.endDate}
+                                  </span>
+                                </div>
+                                <div className="text-[11px] text-white/60 flex items-center gap-3 font-mono">
+                                  <span>
+                                    Cân nặng:{' '}
+                                    <strong className="text-white">
+                                      {p.startWeightKg} → {p.targetWeightKg}kg
+                                    </strong>
+                                  </span>
+                                  <span>
+                                    Mỡ:{' '}
+                                    <strong className="text-orange-300">
+                                      {p.startBodyFatPct}% → {p.targetBodyFatPct}%
+                                    </strong>
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2 font-mono text-[11px] shrink-0">
+                                <span className="px-2 py-1 rounded-lg bg-blue-500/10 text-blue-300 font-bold">
+                                  {p.targetKcal} kcal
+                                </span>
+                                <span className="text-white/40">
+                                  {p.macros.protein}P / {p.macros.carbs}C / {p.macros.fat}F
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
@@ -3438,6 +3786,38 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* DELETE ROADMAP CONFIRMATION MODAL */}
+      {roadmapToDelete && (
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-[#101726] border border-white/20 rounded-3xl max-w-sm w-full p-6 space-y-4 shadow-2xl text-white">
+            <div className="w-12 h-12 rounded-2xl bg-rose-500/20 text-rose-400 flex items-center justify-center mx-auto">
+              <Trash2 className="w-6 h-6" />
+            </div>
+            <div className="text-center space-y-1">
+              <h3 className="text-base font-bold">Xác Nhận Xóa Lộ Trình</h3>
+              <p className="text-xs text-white/60">
+                Bạn có chắc chắn muốn xóa "{roadmapToDelete.title || 'Lộ trình này'}"? Hành động này không thể hoàn tác.
+              </p>
+            </div>
+            <div className="flex items-center gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setRoadmapToDelete(null)}
+                className="flex-1 py-2.5 rounded-xl border border-white/10 hover:bg-white/10 text-white text-xs font-semibold cursor-pointer"
+              >
+                Hủy bỏ
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDeleteSavedRoadmap(roadmapToDelete.id)}
+                className="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold cursor-pointer"
+              >
+                Xóa ngay
+              </button>
+            </div>
           </div>
         </div>
       )}
