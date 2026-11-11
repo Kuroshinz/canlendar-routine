@@ -816,106 +816,104 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
 
       {/* VIEW 1: CTG MASTER PERIODIZED ROADMAP */}
       {activeViewMode === 'ctg_periodized' && (
-        <div className="space-y-6 animate-fadeIn">
-          {/* Hero Banner for CTG Master Periodization */}
-          <div className="bg-[#0b101b] rounded-3xl border border-white/10 p-5 sm:p-6 shadow-xl relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-80 h-80 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
-            <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div>
+        <div className="space-y-5 animate-fadeIn">
+          {/* 1. TỔNG QUAN HÀNH TRÌNH CHUYỂN HÓA & CÔNG CỤ */}
+          <div className="bg-[#0b101b] rounded-3xl border border-white/10 p-5 shadow-xl relative overflow-hidden">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+              <div className="space-y-2.5">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="font-display font-extrabold text-2xl tracking-tight text-white">
-                    CTG<span className="text-[#2563EB]">.</span>Periodization
+                  <span className="font-display font-extrabold text-xl tracking-tight text-white">
+                    Lộ Trình Chu Kỳ CTG
                   </span>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-orange-500/20 text-orange-400 border border-orange-500/30">
-                    {firstPhase?.startDate} – {lastPhase?.endDate}
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-blue-500/20 text-blue-400 border border-blue-500/30">
+                    {phases.length} Giai Đoạn · {firstPhase?.startDate} – {lastPhase?.endDate}
                   </span>
                   {activeRoadmap.heightCm && (
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30">
-                      {activeRoadmap.heightCm} cm · {activeRoadmap.initialWeightKg} kg
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-white/10 text-white/70">
+                      {activeRoadmap.heightCm}cm · {activeRoadmap.initialWeightKg}kg
                     </span>
                   )}
                 </div>
-                <h2 className="text-lg sm:text-xl font-bold text-white mt-1">
-                  {activeRoadmap.title || `Đại Lộ Trình Phân Kỳ Chu Kỳ (${phases.length} Giai Đoạn)`}
-                </h2>
-                <p className="text-xs text-white/60 mt-1 max-w-2xl leading-relaxed">
-                  Chiến lược phân kỳ chu kỳ dài hạn kết hợp các đợt Tăng Cơ (Hypertrophy Surplus) và Mini-cut siết mỡ sâu (Fast Deficit). Giúp tối đa hóa lượng cơ nạc LBM mà không làm tích mỡ dư thừa theo đúng thể trạng riêng của bạn.
-                </p>
 
-                {/* Creator and Modifier Action Bar */}
-                <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-white/10">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setGenHeight(String(profile.heightCm || 172));
-                      setGenWeight(String(currentWeight || 68));
-                      setGenBodyFat(String(currentBf || 18));
-                      setGenSex(profile.sex || 'male');
-                      setShowGeneratorModal(true);
-                    }}
-                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-linear-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold transition-all cursor-pointer shadow-md shadow-blue-500/20"
-                  >
-                    <Wand2 className="w-3.5 h-3.5" />
-                    <span>⚡ Tạo Lộ Trình Mới Theo Thể Trạng</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setNewStartWeight(String(currentWeight));
-                      setNewTargetWeight(String(Math.round((currentWeight + (isBulkPhase ? 4 : -3)) * 10) / 10));
-                      setNewStartBf(String(currentBf));
-                      setNewTargetBf(String(Math.round((currentBf + (isBulkPhase ? 1.5 : -2)) * 10) / 10));
-                      setShowAddPhaseModal(true);
-                    }}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-white/15 bg-white/5 hover:bg-white/10 text-white text-xs font-semibold transition-colors cursor-pointer"
-                  >
-                    <PlusCircle className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>+ Thêm 1 Giai Đoạn</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={handleResetToSeedRoadmap}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-white/10 hover:bg-white/5 text-white/50 hover:text-white text-xs transition-colors cursor-pointer"
-                    title="Khôi phục lại lộ trình 17 giai đoạn chuẩn mẫu"
-                  >
-                    <RefreshCw className="w-3 h-3" />
-                    <span>Khôi phục mẫu chuẩn</span>
-                  </button>
+                {/* Thanh hành trình chuyển hóa trực quan */}
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs text-white/70">
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 border border-white/5 font-mono">
+                    <span className="text-white/40 text-[10px] uppercase font-sans">Xuất phát:</span>
+                    <span className="text-white font-bold">{firstPhase?.startWeightKg}kg</span>
+                    <span className="text-white/50">({firstPhase?.startBodyFatPct}%)</span>
+                  </div>
+                  <ArrowRight className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-500/10 border border-blue-500/20 font-mono">
+                    <span className="text-blue-400 text-[10px] uppercase font-sans font-bold">Đích đến:</span>
+                    <span className="text-blue-300 font-bold">{lastPhase?.targetWeightKg}kg</span>
+                    <span className="text-blue-300/70">({lastPhase?.targetBodyFatPct}%)</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 font-mono text-emerald-300 font-bold">
+                    <span>+{totalLbmGain >= 0 ? totalLbmGain : 0}kg Cơ nạc</span>
+                    <span className="text-emerald-300/60 font-normal">· FFMI {lastPhase?.targetFfmi}</span>
+                  </div>
                 </div>
               </div>
 
-              <div className="flex flex-col sm:flex-row md:flex-col gap-2 shrink-0 self-start md:self-center">
+              {/* Thanh công cụ thao tác */}
+              <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => handleApplySinglePhase(activePhase)}
-                  className="flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl border border-blue-500/40 bg-blue-500/15 hover:bg-blue-500/25 text-blue-300 text-xs font-bold transition-all cursor-pointer shadow-xs"
+                  onClick={() => {
+                    setGenHeight(String(profile.heightCm || 172));
+                    setGenWeight(String(currentWeight || 68));
+                    setGenBodyFat(String(currentBf || 18));
+                    setGenSex(profile.sex || 'male');
+                    setShowGeneratorModal(true);
+                  }}
+                  className="px-3.5 py-2 rounded-xl bg-linear-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold transition-all cursor-pointer shadow-md flex items-center gap-1.5"
                 >
-                  <Target className="w-4 h-4 text-blue-400" />
-                  <span>🎯 Áp Dụng 1 Giai Đoạn Này ({activePhase.name})</span>
+                  <Wand2 className="w-3.5 h-3.5" />
+                  <span>⚡ Tạo Lộ Trình Theo Số Đo</span>
                 </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setNewStartWeight(String(currentWeight));
+                    setNewTargetWeight(String(Math.round((currentWeight + (isBulkPhase ? 4 : -3)) * 10) / 10));
+                    setNewStartBf(String(currentBf));
+                    setNewTargetBf(String(Math.round((currentBf + (isBulkPhase ? 1.5 : -2)) * 10) / 10));
+                    setShowAddPhaseModal(true);
+                  }}
+                  className="px-3 py-2 rounded-xl border border-white/15 bg-white/5 hover:bg-white/10 text-white text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1.5"
+                >
+                  <PlusCircle className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>+ Thêm 1 Giai Đoạn</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleResetToSeedRoadmap}
+                  className="p-2 rounded-xl border border-white/10 hover:bg-white/10 text-white/50 hover:text-white transition-colors cursor-pointer"
+                  title="Khôi phục lộ trình 17 giai đoạn chuẩn"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                </button>
+
                 <button
                   type="button"
                   onClick={handleApplyFullRoadmap}
-                  className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-orange-600 hover:bg-orange-500 text-white text-xs font-bold transition-all shadow-md cursor-pointer hover:shadow-orange-500/30"
+                  className="px-4 py-2 rounded-xl bg-orange-600 hover:bg-orange-500 text-white text-xs font-bold transition-all shadow-md cursor-pointer flex items-center gap-1.5"
                 >
-                  <Zap className="w-4 h-4" />
-                  <span>⚡ Kích Hoạt Cả Lộ Trình ({phases.length} Giai Đoạn)</span>
+                  <Zap className="w-3.5 h-3.5" />
+                  <span>Kích Hoạt Cả Lộ Trình</span>
                 </button>
               </div>
             </div>
           </div>
 
-          {/* ACTIVE PHASE HERO CARD: MỐC ĐANG ĐẠT ĐƯỢC & TIẾN ĐỘ THỰC TẾ */}
-          <div className="rounded-3xl border border-blue-500/30 bg-linear-to-b from-[#10192e] to-[#0b101b] p-5 sm:p-6 shadow-xl space-y-5 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 rounded-full blur-2xl pointer-events-none" />
-
-            {/* Header: Phase info + Status Badge */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-4 relative z-10">
+          {/* 2. GIAI ĐOẠN ĐANG THỰC HIỆN (LIVE MILESTONE TRACKING - SÚC TÍCH, RÕ RÀNG) */}
+          <div className="rounded-3xl border border-blue-500/40 bg-linear-to-b from-[#10192e] to-[#0b101b] p-5 sm:p-6 shadow-xl space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-3">
               <div className="flex items-center gap-3">
-                <div className="w-11 h-11 rounded-2xl bg-blue-500/20 border border-blue-500/30 text-blue-400 flex items-center justify-center shrink-0">
-                  <PlayCircle className="w-6 h-6" />
+                <div className="w-10 h-10 rounded-2xl bg-blue-500/20 border border-blue-500/30 text-blue-400 flex items-center justify-center shrink-0">
+                  <PlayCircle className="w-5 h-5" />
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
@@ -925,11 +923,14 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
                     <span className="text-xs text-white/50 font-mono">
                       {activePhase.startDate} – {activePhase.endDate}
                     </span>
+                    <span className="text-[11px] text-amber-400 font-semibold">
+                      (Còn ~{daysRemaining} ngày)
+                    </span>
                   </div>
-                  <h3 className="text-lg font-extrabold text-white mt-0.5 flex items-center gap-2">
+                  <h3 className="text-lg font-extrabold text-white mt-0.5">
                     {activePhase.name}
-                    <span className="text-xs font-normal text-white/50">
-                      ({activePhase.phaseType === 'bulk' ? 'Tăng cơ có kiểm soát' : activePhase.phaseType === 'minicut' ? 'Mini-cut siết mỡ bảo toàn cơ' : activePhase.phaseType === 'cut' ? 'Cắt mỡ' : 'Giảm mỡ hoàn thiện'})
+                    <span className="text-xs font-normal text-white/50 ml-2">
+                      ({activePhase.phaseType === 'bulk' ? 'Tăng cơ' : activePhase.phaseType === 'minicut' ? 'Mini-cut' : activePhase.phaseType === 'cut' ? 'Giảm mỡ' : 'Hoàn thiện'})
                     </span>
                   </h3>
                 </div>
@@ -939,249 +940,111 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
                 <button
                   type="button"
                   onClick={() => handleApplySinglePhase(activePhase)}
-                  className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
+                  className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
                 >
                   <Sparkles className="w-3.5 h-3.5" />
                   <span>Áp Dụng Dinh Dưỡng Này</span>
                 </button>
-                <button
-                  type="button"
-                  onClick={() => setSelectedPhase(activePhase)}
-                  className="p-2 rounded-xl border border-white/10 hover:bg-white/10 text-white/70 hover:text-white transition-colors cursor-pointer"
-                  title="Xem chi tiết"
-                >
-                  <Eye className="w-4 h-4" />
-                </button>
               </div>
             </div>
 
-            {/* LIVE COMPARISON: Thống kê đối soát với thực tế */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 relative z-10">
-              {/* Cân nặng */}
-              <div className="p-3.5 rounded-2xl bg-white/5 border border-white/5 space-y-1">
-                <span className="text-[10px] font-bold uppercase text-white/40 block">Cân nặng</span>
-                <div className="flex items-baseline gap-1.5">
-                  <span className="text-xl font-extrabold text-white font-mono">{currentWeight}</span>
-                  <span className="text-xs text-white/40">/ {activePhase.targetWeightKg} kg</span>
+            {/* 3 Cột chỉ số trực quan */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+              {/* Cột 1: Cân nặng & Tiến độ */}
+              <div className="p-3.5 rounded-2xl bg-white/5 border border-white/5 space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-white/40 uppercase font-bold text-[10px]">Cân Nặng Thực Tế</span>
+                  <span className="font-bold font-mono text-blue-400">{weightProgress}% mục tiêu</span>
                 </div>
-                <div className="text-[10px] text-white/50 flex items-center justify-between pt-0.5 border-t border-white/5">
-                  <span>Ban đầu: {activePhase.startWeightKg} kg</span>
-                  <span className={`font-bold font-mono ${wDelta >= 0 ? 'text-amber-400' : 'text-emerald-400'}`}>
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-2xl font-extrabold text-white font-mono">{currentWeight}</span>
+                  <span className="text-xs text-white/40">/ {activePhase.targetWeightKg} kg</span>
+                  <span className={`text-xs font-bold font-mono ml-auto ${wDelta >= 0 ? 'text-amber-400' : 'text-emerald-400'}`}>
                     {wDelta > 0 ? `+${wDelta}` : wDelta} kg
                   </span>
                 </div>
-              </div>
-
-              {/* % Mỡ cơ thể */}
-              <div className="p-3.5 rounded-2xl bg-white/5 border border-white/5 space-y-1">
-                <span className="text-[10px] font-bold uppercase text-white/40 block">% Mỡ cơ thể</span>
-                <div className="flex items-baseline gap-1.5">
-                  <span className="text-xl font-extrabold text-orange-400 font-mono">{currentBf}%</span>
-                  <span className="text-xs text-white/40">/ {activePhase.targetBodyFatPct}%</span>
-                </div>
-                <div className="text-[10px] text-white/50 flex items-center justify-between pt-0.5 border-t border-white/5">
-                  <span>Ban đầu: {activePhase.startBodyFatPct}%</span>
-                  <span className="font-bold text-orange-300 font-mono">
-                    Đích: {activePhase.targetBodyFatPct}%
-                  </span>
-                </div>
-              </div>
-
-              {/* Khối cơ nạc LBM */}
-              <div className="p-3.5 rounded-2xl bg-white/5 border border-white/5 space-y-1">
-                <span className="text-[10px] font-bold uppercase text-white/40 block">Khối nạc (LBM)</span>
-                <div className="flex items-baseline gap-1.5">
-                  <span className="text-xl font-extrabold text-indigo-400 font-mono">{currentLbm}</span>
-                  <span className="text-xs text-white/40">/ {activePhase.targetLbmKg} kg</span>
-                </div>
-                <div className="text-[10px] text-white/50 flex items-center justify-between pt-0.5 border-t border-white/5">
-                  <span>Ban đầu: {activePhase.startLbmKg} kg</span>
-                  <span className={`font-bold font-mono ${lbmGain >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                    {lbmGain > 0 ? `+${lbmGain}` : lbmGain} kg LBM
-                  </span>
-                </div>
-              </div>
-
-              {/* FFMI */}
-              <div className="p-3.5 rounded-2xl bg-white/5 border border-white/5 space-y-1">
-                <span className="text-[10px] font-bold uppercase text-white/40 block">Chỉ số FFMI</span>
-                <div className="flex items-baseline gap-1.5">
-                  <span className="text-xl font-extrabold text-emerald-400 font-mono">{currentFfmi}</span>
-                  <span className="text-xs text-white/40">/ {activePhase.targetFfmi}</span>
-                </div>
-                <div className="text-[10px] text-white/50 flex items-center justify-between pt-0.5 border-t border-white/5">
-                  <span>Ban đầu: {activePhase.startFfmi}</span>
-                  <span className="font-bold text-emerald-300 font-mono">
-                    Mục tiêu: {activePhase.targetFfmi}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* DUAL PROGRESS BARS: Tiến độ Cân Nặng Mục Tiêu & Tiến Độ Thời Gian */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 p-3.5 rounded-2xl bg-black/30 border border-white/5 relative z-10">
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-white/60 font-semibold flex items-center gap-1.5">
-                    <Scale className="w-3.5 h-3.5 text-blue-400" />
-                    Tiến độ cân nặng giai đoạn
-                  </span>
-                  <span className="font-bold text-blue-400 font-mono">{weightProgress}%</span>
-                </div>
-                <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
+                <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-linear-to-r from-blue-500 to-indigo-500 transition-all duration-500"
+                    className="h-full bg-linear-to-r from-blue-500 to-indigo-500"
                     style={{ width: `${weightProgress}%` }}
                   />
                 </div>
-                <div className="flex items-center justify-between text-[10px] text-white/40">
-                  <span>{activePhase.startWeightKg} kg</span>
-                  <span>Hiện tại: {currentWeight} kg</span>
-                  <span>Đích: {activePhase.targetWeightKg} kg</span>
+                <div className="text-[10px] text-white/40 flex justify-between font-mono">
+                  <span>Bắt đầu: {activePhase.startWeightKg}kg</span>
+                  <span>Đích: {activePhase.targetWeightKg}kg</span>
                 </div>
               </div>
 
-              <div className="space-y-1.5">
+              {/* Cột 2: Mỡ & Khối Nạc */}
+              <div className="p-3.5 rounded-2xl bg-white/5 border border-white/5 space-y-2">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-white/60 font-semibold flex items-center gap-1.5">
-                    <Clock className="w-3.5 h-3.5 text-orange-400" />
-                    Tiến độ thời gian giai đoạn
-                  </span>
-                  <span className="font-bold text-orange-400 font-mono">
-                    {timeProgress}% (còn ~{daysRemaining} ngày)
-                  </span>
+                  <span className="text-white/40 uppercase font-bold text-[10px]">Mỡ &amp; Khối Nạc (LBM)</span>
+                  <span className="font-mono text-xs text-orange-400 font-bold">{currentBf}% mỡ</span>
                 </div>
-                <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-linear-to-r from-orange-500 to-amber-500 transition-all duration-500"
-                    style={{ width: `${timeProgress}%` }}
-                  />
+                <div className="flex items-baseline gap-2">
+                  <span className="text-2xl font-extrabold text-indigo-300 font-mono">{currentLbm}</span>
+                  <span className="text-xs text-white/40">/ {activePhase.targetLbmKg} kg LBM</span>
+                  <span className="text-xs font-mono font-bold text-emerald-400 ml-auto">FFMI {currentFfmi}</span>
                 </div>
-                <div className="flex items-center justify-between text-[10px] text-white/40">
-                  <span>{activePhase.startDate}</span>
-                  <span>Thời gian kế hoạch</span>
-                  <span>{activePhase.endDate}</span>
+                <div className="text-[11px] text-white/60 pt-1 border-t border-white/5 flex justify-between">
+                  <span>Mục tiêu mỡ: <strong className="text-orange-300">{activePhase.targetBodyFatPct}%</strong></span>
+                  <span>Đích FFMI: <strong className="text-emerald-300">{activePhase.targetFfmi}</strong></span>
                 </div>
               </div>
-            </div>
 
-            {/* Dinh dưỡng đã lưu cho giai đoạn hiện tại */}
-            <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3 relative z-10">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-orange-500/20 text-orange-400 flex items-center justify-center shrink-0">
-                  <Utensils className="w-5 h-5" />
-                </div>
-                <div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-white/40 block">
-                    Dinh Dưỡng Đã Lưu Cho Giai Đoạn Này
+              {/* Cột 3: Dinh Dưỡng Giai Đoạn */}
+              <div className="p-3.5 rounded-2xl bg-white/5 border border-white/5 space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-white/40 uppercase font-bold text-[10px]">Dinh Dưỡng Mỗi Ngày</span>
+                  <span className="font-mono text-sm font-extrabold text-white">
+                    {activePhase.targetKcal.toLocaleString('vi-VN')} kcal
                   </span>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <span className="text-base font-extrabold text-white font-mono">
-                      {activePhase.targetKcal.toLocaleString('vi-VN')} kcal/ngày
-                    </span>
-                    <span className="text-xs text-white/50">·</span>
-                    <span className="text-xs text-rose-300 font-semibold">{activePhase.macros.protein}g Đạm</span>
-                    <span className="text-xs text-amber-300 font-semibold">{activePhase.macros.carbs}g Tinh bột</span>
-                    <span className="text-xs text-emerald-300 font-semibold">{activePhase.macros.fat}g Chất béo</span>
+                </div>
+                <div className="grid grid-cols-3 gap-1.5 text-center text-xs pt-1">
+                  <div className="p-1.5 rounded-lg bg-rose-500/15 text-rose-300 font-mono font-bold">
+                    <div className="text-[9px] uppercase font-sans text-rose-300/80">Đạm</div>
+                    {activePhase.macros.protein}g
+                  </div>
+                  <div className="p-1.5 rounded-lg bg-amber-500/15 text-amber-300 font-mono font-bold">
+                    <div className="text-[9px] uppercase font-sans text-amber-300/80">Carb</div>
+                    {activePhase.macros.carbs}g
+                  </div>
+                  <div className="p-1.5 rounded-lg bg-emerald-500/15 text-emerald-300 font-mono font-bold">
+                    <div className="text-[9px] uppercase font-sans text-emerald-300/80">Fat</div>
+                    {activePhase.macros.fat}g
                   </div>
                 </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => handleApplySinglePhase(activePhase)}
-                className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition-colors cursor-pointer flex items-center justify-center gap-1.5 self-start sm:self-auto"
-              >
-                <Check className="w-4 h-4 text-emerald-400" />
-                <span>Đồng Bộ Vào Mục Tiêu Dinh Dưỡng</span>
-              </button>
-            </div>
-          </div>
-
-          {/* TRANSFORMATION MASTER SUMMARY */}
-          <div className="bg-[#0b101b] rounded-3xl border border-white/10 p-5 sm:p-6 shadow-xl space-y-4">
-            <div className="flex items-center justify-between border-b border-white/10 pb-3">
-              <div className="flex items-center gap-2.5">
-                <Award className="w-5 h-5 text-amber-400" />
-                <div>
-                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                    Tổng Quan Chuyển Hóa Cơ Thể {firstPhase?.startDate ? `(${firstPhase.startDate} – ${lastPhase?.endDate || ''})` : ''}
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30">
-                      {phases.length} Chu Kỳ Sóng
-                    </span>
-                  </h3>
-                  <p className="text-xs text-white/50 mt-0.5">
-                    Chiến lược phân kỳ chu kỳ dài hạn tối ưu hóa theo thể trạng cá nhân
+                {activePhase.note && (
+                  <p className="text-[10px] text-white/50 italic line-clamp-1">
+                    💡 {activePhase.note}
                   </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
-              <div className="p-3.5 rounded-2xl bg-[#131b2e] border border-white/5">
-                <span className="text-[10px] text-white/40 uppercase font-semibold block">
-                  Xuất Phát ({firstPhase?.startDate || 'Ban đầu'})
-                </span>
-                <div className="text-base font-extrabold text-white font-mono mt-1">
-                  {firstPhase?.startWeightKg ?? 63.55} kg
-                </div>
-                <div className="text-[10px] text-white/50 mt-0.5">
-                  {firstPhase?.startBodyFatPct ?? 17.5}% mỡ · {firstPhase?.startLbmKg ?? 52.4}kg LBM · FFMI {firstPhase?.startFfmi ?? 16.9}
-                </div>
-              </div>
-
-              <div className="p-3.5 rounded-2xl bg-[#131b2e] border border-white/5">
-                <span className="text-[10px] text-white/40 uppercase font-semibold block">
-                  Đích Đến ({lastPhase?.endDate || 'Kết thúc'})
-                </span>
-                <div className="text-base font-extrabold text-blue-400 font-mono mt-1">
-                  {lastPhase?.targetWeightKg ?? 81.23} kg
-                </div>
-                <div className="text-[10px] text-white/50 mt-0.5">
-                  {lastPhase?.targetBodyFatPct ?? 16.0}% mỡ · {lastPhase?.targetLbmKg ?? 68.2}kg LBM · FFMI {lastPhase?.targetFfmi ?? 22.0}
-                </div>
-              </div>
-
-              <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20">
-                <span className="text-[10px] text-emerald-400 uppercase font-semibold block">Cơ Nạc Tăng Trưởng</span>
-                <div className="text-base font-extrabold text-emerald-300 font-mono mt-1">
-                  {totalLbmGain >= 0 ? `+${totalLbmGain}` : totalLbmGain} kg LBM
-                </div>
-                <div className="text-[10px] text-emerald-400/70 mt-0.5">Khối cơ thuần tự nhiên</div>
-              </div>
-
-              <div className="p-3.5 rounded-2xl bg-indigo-500/10 border border-indigo-500/20">
-                <span className="text-[10px] text-indigo-400 uppercase font-semibold block">Chỉ Số FFMI Đạt Được</span>
-                <div className="text-base font-extrabold text-indigo-300 font-mono mt-1">
-                  {lastPhase?.targetFfmi ?? 22.0} ({totalFfmiGain >= 0 ? `+${totalFfmiGain}` : totalFfmiGain})
-                </div>
-                <div className="text-[10px] text-indigo-400/70 mt-0.5">Mức độ phát triển cơ bắp</div>
+                )}
               </div>
             </div>
           </div>
 
-          {/* TIMELINE & LIST */}
+          {/* 3. DÒNG THỜI GIAN LỘ TRÌNH (SEQUENTIAL PIPELINE TIMELINE - 1 CỘT TUẦN TỰ) */}
           <div className="bg-[#0b101b] rounded-3xl border border-white/10 p-5 sm:p-6 shadow-xl space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-3">
               <div>
-                <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                <h3 className="text-base font-bold text-white flex items-center gap-2">
                   <Calendar className="w-4 h-4 text-blue-400" />
-                  Danh Sách {phases.length} Giai Đoạn Chi Tiết
+                  Dòng Thời Gian Lộ Trình ({phases.length} Giai Đoạn)
                 </h3>
                 <p className="text-xs text-white/50 mt-0.5">
-                  Bấm vào từng giai đoạn để xem chi tiết, chỉnh sửa số đo, áp dụng dinh dưỡng hoặc đổi mốc đang thực hiện
+                  Trình tự các chu kỳ sóng từ điểm xuất phát đến khi đạt cực đại cơ bắp tự nhiên
                 </p>
               </div>
 
-              {/* Filter chips */}
+              {/* Filter chips tinh gọn */}
               <div className="flex flex-wrap items-center gap-1.5 text-xs">
                 {[
                   { id: 'all' as const, label: `Tất cả (${phases.length})` },
                   { id: 'current' as const, label: 'Đang diễn ra' },
                   { id: 'completed' as const, label: 'Đã hoàn thành' },
                   { id: 'upcoming' as const, label: 'Sắp tới' },
-                  { id: 'bulk' as const, label: 'Chỉ Tăng cơ' },
-                  { id: 'cut' as const, label: 'Chỉ Mini-cut/Giảm mỡ' },
+                  { id: 'bulk' as const, label: 'Tăng cơ' },
+                  { id: 'cut' as const, label: 'Mini-cut/Giảm mỡ' },
                 ].map((f) => (
                   <button
                     key={f.id}
@@ -1199,173 +1062,166 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
               </div>
             </div>
 
-            {/* Grid of Phase Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+            {/* SEQUENTIAL VERTICAL TIMELINE LIST (1 CỘT TUẦN TỰ) */}
+            <div className="space-y-3 relative before:absolute before:top-4 before:bottom-4 before:left-5 before:w-0.5 before:bg-white/10">
               {filteredPhases.map((phase) => {
                 const status = getPhaseStatus(phase, activeRoadmap.activePhaseId);
                 const isCurrent = status === 'current';
                 const isCompleted = status === 'completed';
+                const realIndex = phases.findIndex((p) => p.id === phase.id) + 1;
+                const formattedIdx = String(realIndex).padStart(2, '0');
+
                 const typeColor =
                   phase.phaseType === 'bulk'
-                    ? 'border-blue-500/40 bg-blue-500/10 text-blue-400'
+                    ? 'border-blue-500/40 bg-blue-500/15 text-blue-400'
                     : phase.phaseType === 'minicut'
-                    ? 'border-rose-500/40 bg-rose-500/10 text-rose-400'
+                    ? 'border-rose-500/40 bg-rose-500/15 text-rose-400'
                     : phase.phaseType === 'cut'
-                    ? 'border-orange-500/40 bg-orange-500/10 text-orange-400'
-                    : 'border-purple-500/40 bg-purple-500/10 text-purple-400';
-
-                const weightDiff = Math.round((phase.targetWeightKg - phase.startWeightKg) * 100) / 100;
-                const bfDiff = Math.round((phase.targetBodyFatPct - phase.startBodyFatPct) * 10) / 10;
-                const lbmDiff = Math.round((phase.targetLbmKg - phase.startLbmKg) * 10) / 10;
-                const ffmiDiff = Math.round((phase.targetFfmi - phase.startFfmi) * 10) / 10;
+                    ? 'border-orange-500/40 bg-orange-500/15 text-orange-400'
+                    : 'border-purple-500/40 bg-purple-500/15 text-purple-400';
 
                 return (
                   <div
                     key={phase.id}
-                    className={`p-4 rounded-2xl border transition-all space-y-3.5 relative overflow-hidden ${
+                    className={`relative pl-12 pr-4 py-3.5 rounded-2xl border transition-all ${
                       isCurrent
-                        ? 'bg-[#121c35] border-blue-500 shadow-md shadow-blue-500/15'
+                        ? 'bg-[#121c35] border-blue-500 shadow-lg shadow-blue-500/15 ring-1 ring-blue-500/50'
                         : isCompleted
-                        ? 'bg-[#0f1422] border-emerald-500/30 opacity-90'
+                        ? 'bg-[#0f1422]/90 border-white/5 opacity-80 hover:opacity-100'
                         : 'bg-[#131b2e] border-white/10 hover:border-white/20'
                     }`}
                   >
-                    {isCurrent && (
-                      <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/20 rounded-full blur-xl pointer-events-none" />
-                    )}
+                    {/* Timeline Node Badge on the left spine */}
+                    <div className="absolute left-2.5 top-4 -translate-x-1/2 flex items-center justify-center">
+                      {isCurrent ? (
+                        <div className="w-6 h-6 rounded-full bg-blue-600 border-2 border-white flex items-center justify-center text-[10px] font-bold text-white shadow-md shadow-blue-500 animate-pulse">
+                          {formattedIdx}
+                        </div>
+                      ) : isCompleted ? (
+                        <div className="w-5 h-5 rounded-full bg-emerald-500 border border-emerald-400 flex items-center justify-center text-white">
+                          <Check className="w-3 h-3 stroke-[3]" />
+                        </div>
+                      ) : (
+                        <div className="w-5 h-5 rounded-full bg-[#1b253b] border border-white/20 flex items-center justify-center text-[9px] font-mono text-white/50">
+                          {formattedIdx}
+                        </div>
+                      )}
+                    </div>
 
-                    {/* Header */}
-                    <div className="flex items-start justify-between gap-2 relative z-10">
-                      <div>
+                    {/* Content Row: Flexible responsive layout */}
+                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+                      {/* Cột 1: Thông tin giai đoạn & Thời gian */}
+                      <div className="space-y-1 min-w-[200px]">
                         <div className="flex items-center gap-2">
                           <span className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full border ${typeColor}`}>
                             {phase.name}
                           </span>
                           {isCurrent && (
-                            <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500 text-white animate-pulse">
-                              🔥 Giai đoạn hiện tại
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-500 text-white">
+                              🔥 Đang thực hiện
                             </span>
                           )}
                           {isCompleted && (
-                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                              ✓ Đã hoàn thành
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400">
+                              ✓ Đã xong
                             </span>
                           )}
                         </div>
-                        <div className="text-xs font-mono text-white/50 mt-1 flex items-center gap-1.5">
+                        <div className="text-xs font-mono text-white/60 flex items-center gap-1.5">
                           <Calendar className="w-3 h-3 text-white/40" />
                           <span>{phase.startDate} – {phase.endDate}</span>
                         </div>
+                        {phase.note && (
+                          <div className="text-[11px] text-white/50 line-clamp-1 italic">
+                            {phase.note}
+                          </div>
+                        )}
                       </div>
 
-                      <button
-                        type="button"
-                        onClick={() => setSelectedPhase(phase)}
-                        className="p-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
-                        title="Xem chi tiết"
-                      >
-                        <ChevronRight className="w-4 h-4" />
-                      </button>
-                    </div>
-
-                    {/* Metrics 4 columns */}
-                    <div className="grid grid-cols-4 gap-2 text-center text-xs relative z-10 pt-1">
-                      <div className="p-2 rounded-xl bg-black/30 border border-white/5">
-                        <div className="text-[9px] uppercase text-white/40 font-semibold">Cân nặng</div>
-                        <div className="font-bold text-white font-mono mt-0.5 text-[11px]">
-                          {phase.startWeightKg} → {phase.targetWeightKg}
+                      {/* Cột 2: Cân nặng, Mỡ, Cơ nạc, FFMI */}
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs py-1">
+                        <div className="p-2 rounded-xl bg-black/25 border border-white/5 text-center min-w-[90px]">
+                          <span className="text-[9px] uppercase text-white/40 block font-semibold">Cân nặng</span>
+                          <span className="font-mono font-bold text-white text-xs">
+                            {phase.startWeightKg} → {phase.targetWeightKg}kg
+                          </span>
                         </div>
-                        <div className={`text-[9px] font-mono font-bold mt-0.2 ${weightDiff >= 0 ? 'text-blue-400' : 'text-emerald-400'}`}>
-                          {weightDiff > 0 ? `+${weightDiff}` : weightDiff} kg
+                        <div className="p-2 rounded-xl bg-black/25 border border-white/5 text-center min-w-[90px]">
+                          <span className="text-[9px] uppercase text-orange-400/80 block font-semibold">% Mỡ</span>
+                          <span className="font-mono font-bold text-orange-300 text-xs">
+                            {phase.startBodyFatPct}% → {phase.targetBodyFatPct}%
+                          </span>
                         </div>
-                      </div>
-
-                      <div className="p-2 rounded-xl bg-black/30 border border-white/5">
-                        <div className="text-[9px] uppercase text-white/40 font-semibold">Mỡ cơ thể</div>
-                        <div className="font-bold text-orange-400 font-mono mt-0.5 text-[11px]">
-                          {phase.startBodyFatPct} → {phase.targetBodyFatPct}%
+                        <div className="p-2 rounded-xl bg-black/25 border border-white/5 text-center min-w-[90px]">
+                          <span className="text-[9px] uppercase text-indigo-400/80 block font-semibold">Khối nạc LBM</span>
+                          <span className="font-mono font-bold text-indigo-300 text-xs">
+                            {phase.startLbmKg} → {phase.targetLbmKg}kg
+                          </span>
                         </div>
-                        <div className="text-[9px] font-mono text-orange-300 mt-0.2">
-                          {bfDiff > 0 ? `+${bfDiff}` : bfDiff}%
-                        </div>
-                      </div>
-
-                      <div className="p-2 rounded-xl bg-black/30 border border-white/5">
-                        <div className="text-[9px] uppercase text-white/40 font-semibold">Khối nạc LBM</div>
-                        <div className="font-bold text-indigo-400 font-mono mt-0.5 text-[11px]">
-                          {phase.startLbmKg} → {phase.targetLbmKg}
-                        </div>
-                        <div className={`text-[9px] font-mono font-bold mt-0.2 ${lbmDiff >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                          {lbmDiff > 0 ? `+${lbmDiff}` : lbmDiff} kg
+                        <div className="p-2 rounded-xl bg-black/25 border border-white/5 text-center min-w-[80px]">
+                          <span className="text-[9px] uppercase text-emerald-400/80 block font-semibold">FFMI</span>
+                          <span className="font-mono font-bold text-emerald-300 text-xs">
+                            {phase.startFfmi} → {phase.targetFfmi}
+                          </span>
                         </div>
                       </div>
 
-                      <div className="p-2 rounded-xl bg-black/30 border border-white/5">
-                        <div className="text-[9px] uppercase text-white/40 font-semibold">FFMI</div>
-                        <div className="font-bold text-emerald-400 font-mono mt-0.5 text-[11px]">
-                          {phase.startFfmi} → {phase.targetFfmi}
+                      {/* Cột 3: Dinh dưỡng & Thao tác */}
+                      <div className="flex flex-wrap sm:flex-nowrap items-center justify-between lg:justify-end gap-2 shrink-0 pt-2 lg:pt-0 border-t lg:border-t-0 border-white/5">
+                        <div className="px-3 py-1.5 rounded-xl bg-white/5 border border-white/5 text-xs font-mono">
+                          <span className="font-bold text-white">{phase.targetKcal.toLocaleString('vi-VN')}</span>
+                          <span className="text-[10px] text-white/40 ml-1">kcal</span>
+                          <span className="text-[10px] text-white/50 ml-1.5">
+                            ({phase.macros.protein}P·{phase.macros.carbs}C·{phase.macros.fat}F)
+                          </span>
                         </div>
-                        <div className="text-[9px] font-mono text-emerald-300 mt-0.2">
-                          {ffmiDiff > 0 ? `+${ffmiDiff}` : ffmiDiff}
+
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedPhase(phase)}
+                            className="p-1.5 rounded-lg border border-white/10 hover:bg-white/10 text-white/60 hover:text-white transition-colors cursor-pointer"
+                            title="Xem chi tiết"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setEditingPhase({ ...phase })}
+                            className="p-1.5 rounded-lg border border-white/10 hover:bg-white/10 text-white/60 hover:text-white transition-colors cursor-pointer"
+                            title="Sửa giai đoạn"
+                          >
+                            <Edit3 className="w-3.5 h-3.5 text-amber-400" />
+                          </button>
+                          {phases.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => handleDeletePhase(phase.id)}
+                              className="p-1.5 rounded-lg border border-rose-500/20 hover:bg-rose-500/20 text-rose-400 transition-colors cursor-pointer"
+                              title="Xóa giai đoạn"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                          {!isCurrent && (
+                            <button
+                              type="button"
+                              onClick={() => handleSetCurrentPhase(phase.id)}
+                              className="px-2.5 py-1.5 rounded-lg border border-white/10 hover:bg-white/10 text-white/70 hover:text-white text-xs font-semibold transition-colors cursor-pointer"
+                            >
+                              Đặt hiện tại
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => handleApplySinglePhase(phase)}
+                            className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-colors cursor-pointer flex items-center gap-1 shadow-xs"
+                          >
+                            <Sparkles className="w-3 h-3" />
+                            <span>Áp dụng</span>
+                          </button>
                         </div>
                       </div>
-                    </div>
-
-                    {/* Nutrition badge */}
-                    <div className="p-2.5 rounded-xl bg-white/5 border border-white/5 flex items-center justify-between text-xs relative z-10">
-                      <div className="flex items-center gap-2">
-                        <Utensils className="w-3.5 h-3.5 text-[#2563EB]" />
-                        <span className="font-mono font-bold text-white text-[11px]">
-                          {phase.targetKcal.toLocaleString('vi-VN')} kcal
-                        </span>
-                        <span className="text-[10px] text-white/50">
-                          ({phase.macros.protein}P · {phase.macros.carbs}C · {phase.macros.fat}F)
-                        </span>
-                      </div>
-                      <span className="text-[10px] text-white/40 uppercase font-semibold">
-                        Dinh dưỡng đã lưu
-                      </span>
-                    </div>
-
-                    {/* Action buttons */}
-                    <div className="flex flex-wrap items-center justify-end gap-1.5 pt-1 relative z-10">
-                      <button
-                        type="button"
-                        onClick={() => setEditingPhase({ ...phase })}
-                        className="px-2.5 py-1.5 rounded-lg border border-white/10 hover:bg-white/10 text-white/70 hover:text-white text-[11px] font-semibold transition-colors cursor-pointer flex items-center gap-1"
-                        title="Chỉnh sửa giai đoạn"
-                      >
-                        <Edit3 className="w-3.5 h-3.5 text-amber-400" />
-                        <span>Sửa</span>
-                      </button>
-                      {phases.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => handleDeletePhase(phase.id)}
-                          className="px-2.5 py-1.5 rounded-lg border border-rose-500/20 hover:bg-rose-500/20 text-rose-400 text-[11px] font-semibold transition-colors cursor-pointer flex items-center gap-1"
-                          title="Xóa giai đoạn"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                          <span>Xóa</span>
-                        </button>
-                      )}
-                      {!isCurrent && (
-                        <button
-                          type="button"
-                          onClick={() => handleSetCurrentPhase(phase.id)}
-                          className="px-2.5 py-1.5 rounded-lg border border-white/10 hover:bg-white/10 text-white/70 hover:text-white text-[11px] font-semibold transition-colors cursor-pointer"
-                        >
-                          Đặt làm hiện tại
-                        </button>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => handleApplySinglePhase(phase)}
-                        className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-bold transition-colors cursor-pointer flex items-center gap-1 shadow-xs"
-                      >
-                        <Sparkles className="w-3.5 h-3.5" />
-                        <span>Áp dụng</span>
-                      </button>
                     </div>
                   </div>
                 );
