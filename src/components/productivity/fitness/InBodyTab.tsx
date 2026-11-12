@@ -21,6 +21,9 @@ import {
   Maximize2,
   Columns,
   Layers,
+  Compass,
+  Zap,
+  Flame,
 } from 'lucide-react';
 import { BodyCheckPhoto, BodyPoint, CtgProfile, GOAL_LABEL, PhotoPose } from '../../../types/productivity';
 import {
@@ -260,6 +263,42 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
     return streak;
   }, [points]);
 
+  // CTG Rolling 7-Day Average & Assessment
+  const weeklyRollingStats = useMemo(() => {
+    if (sorted.length < 2) return null;
+    const now = new Date();
+    const d7Cutoff = new Date(now.getTime() - 7 * 86_400_000).toISOString().slice(0, 10);
+    const d14Cutoff = new Date(now.getTime() - 14 * 86_400_000).toISOString().slice(0, 10);
+
+    const ptsLast7 = sorted.filter((p) => p.date >= d7Cutoff);
+    const ptsPrev7 = sorted.filter((p) => p.date >= d14Cutoff && p.date < d7Cutoff);
+
+    const recentPoints = ptsLast7.length >= 2 ? ptsLast7 : sorted.slice(-4);
+    const priorPoints = ptsPrev7.length >= 1 ? ptsPrev7 : sorted.slice(-8, -4);
+
+    if (recentPoints.length === 0) return null;
+
+    const curAvgW = Math.round((recentPoints.reduce((s, p) => s + p.weightKg, 0) / recentPoints.length) * 10) / 10;
+    const curAvgBf = Math.round((recentPoints.reduce((s, p) => s + p.bodyFatPct, 0) / recentPoints.length) * 10) / 10;
+
+    let diffW: number | null = null;
+    let diffBf: number | null = null;
+    if (priorPoints.length > 0) {
+      const prevAvgW = priorPoints.reduce((s, p) => s + p.weightKg, 0) / priorPoints.length;
+      const prevAvgBf = priorPoints.reduce((s, p) => s + p.bodyFatPct, 0) / priorPoints.length;
+      diffW = Math.round((curAvgW - prevAvgW) * 10) / 10;
+      diffBf = Math.round((curAvgBf - prevAvgBf) * 10) / 10;
+    }
+
+    return {
+      curAvgW,
+      curAvgBf,
+      diffW,
+      diffBf,
+      sampleCount: recentPoints.length,
+    };
+  }, [sorted]);
+
   // Form state
   const [showForm, setShowForm] = useState(false);
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
@@ -386,6 +425,86 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
           </div>
         </div>
       </div>
+
+      {/* CTG Rolling 7-Day Assessment Card */}
+      {weeklyRollingStats && (
+        <div className="bg-gradient-to-r from-blue-900/30 via-indigo-950/20 to-[#0b101b] border border-blue-500/30 rounded-2xl p-4 md:p-5 shadow-xs space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/5 pb-3">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center shrink-0">
+                <Activity className="w-4 h-4" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-white">
+                    Xu Hướng Cân Nặng Trung Bình 7 Ngày (Chuẩn Khoa Học CTG)
+                  </h4>
+                  <span className="text-[10px] font-mono font-semibold px-2 py-0.2 rounded-full bg-blue-500/20 text-blue-300">
+                    {weeklyRollingStats.sampleCount} mốc đo
+                  </span>
+                </div>
+                <p className="text-[11px] text-white/50 mt-0.5">
+                  Loại trừ dao động nước & muối hàng ngày để phản ánh tốc độ chuyển hóa thực tế.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 shrink-0 self-end sm:self-auto font-mono text-xs">
+              <div className="px-3 py-1.5 rounded-xl bg-white/5 border border-white/5">
+                <span className="text-[10px] uppercase font-sans text-white/40 mr-1.5">TB 7 Ngày:</span>
+                <span className="text-white font-extrabold text-sm">{weeklyRollingStats.curAvgW} kg</span>
+                <span className="text-orange-400 ml-1.5 font-bold">({weeklyRollingStats.curAvgBf}%)</span>
+              </div>
+              {weeklyRollingStats.diffW !== null && (
+                <div className={`px-3 py-1.5 rounded-xl border font-bold text-xs flex items-center gap-1 ${
+                  weeklyRollingStats.diffW <= 0
+                    ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300'
+                    : 'bg-amber-500/15 border-amber-500/30 text-amber-300'
+                }`}>
+                  {weeklyRollingStats.diffW <= 0 ? <TrendingDown className="w-3.5 h-3.5" /> : <TrendingUp className="w-3.5 h-3.5" />}
+                  <span>{weeklyRollingStats.diffW > 0 ? `+${weeklyRollingStats.diffW}` : weeklyRollingStats.diffW} kg/tuần</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Assessment Note */}
+          <div className="text-xs text-blue-100/80 leading-relaxed flex items-start gap-2 bg-blue-500/10 p-3 rounded-xl border border-blue-500/20">
+            <span className="text-base shrink-0 mt-0.5">💡</span>
+            <div>
+              {profile.goal === 'cut' ? (
+                weeklyRollingStats.diffW !== null && weeklyRollingStats.diffW <= -0.3 && weeklyRollingStats.diffW >= -0.7 ? (
+                  <span>
+                    <strong>Tốc độ giảm mỡ vàng (-0.3 đến -0.7 kg/tuần):</strong> Thâm hụt calo đang hoàn hảo (~350-500 kcal/ngày). Cơ thể đang đốt mỡ tối đa và bảo toàn nguyên vẹn khối cơ nạc LBM. Hãy giữ vững lộ trình!
+                  </span>
+                ) : weeklyRollingStats.diffW !== null && weeklyRollingStats.diffW < -0.7 ? (
+                  <span>
+                    <strong>Cảnh báo giảm cân quá nhanh ({weeklyRollingStats.diffW} kg/tuần):</strong> Giảm trên 0.8kg/tuần có nguy cơ mất cơ nạc và làm chậm chuyển hóa BMR. Bạn nên bổ sung thêm 100-150 kcal từ tinh bột chậm (yến mạch, khoai lang).
+                  </span>
+                ) : (
+                  <span>
+                    <strong>Cân nặng trung bình tuần này chưa suy giảm:</strong> Nếu vừa bắt đầu tập tạ nặng hoặc đổi bài, cơ bắp có thể giữ nước bù viêm 1-2 tuần. Hãy kiên nhẫn theo dõi thêm 1 tuần hoặc kiểm tra lại lượng dầu mỡ/gia vị nêm nếm.
+                  </span>
+                )
+              ) : (
+                weeklyRollingStats.diffW !== null && weeklyRollingStats.diffW >= 0.2 && weeklyRollingStats.diffW <= 0.4 ? (
+                  <span>
+                    <strong>Tốc độ tăng cơ tối ưu (+0.2 đến +0.4 kg/tuần):</strong> Mức thặng dư calo lý tưởng (~200-300 kcal/ngày). Cân nặng tăng chủ yếu là khối nạc phì đại, hạn chế tối đa tích mỡ thừa.
+                  </span>
+                ) : weeklyRollingStats.diffW !== null && weeklyRollingStats.diffW > 0.4 ? (
+                  <span>
+                    <strong>Cảnh báo tăng cân nhanh (+{weeklyRollingStats.diffW} kg/tuần):</strong> Cơ bắp tự nhiên chỉ có thể tăng tối đa ~1-1.5kg nạc/tháng. Tăng nhanh hơn mức này sẽ tích mỡ thừa, nên giảm nhẹ 100-150 kcal.
+                  </span>
+                ) : (
+                  <span>
+                    <strong>Cân nặng chưa tăng để kích thích tăng cơ:</strong> Cần nạp thặng dư calo rõ ràng hơn. Hãy tăng thêm 150-200 kcal/ngày từ cơm trắng hoặc thêm 1 muỗng whey/chuối trước khi tập.
+                  </span>
+                )
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Top Banner & Quick Target */}
       <div className="bg-gradient-to-r from-orange-500/10 via-amber-500/10 to-transparent dark:from-orange-950/30 dark:via-amber-950/20 rounded-2xl border border-orange-200 dark:border-orange-900/50 p-4 md:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
