@@ -18,9 +18,15 @@ import {
   Coffee,
   Flame,
   Check,
+  Target,
+  Zap,
+  Compass,
+  ArrowRight,
 } from 'lucide-react';
 import {
+  CtgPeriodizedRoadmap,
   CtgProfile,
+  CtgRoadmapPhase,
   FoodItem,
   GOAL_LABEL,
   HealthDayLog,
@@ -60,6 +66,7 @@ interface NutritionTabProps {
   onUpdateNutritionSettings: (patch: Partial<NutritionSettings>) => void;
   healthLogs?: HealthDayLog[];
   onUpsertHealthLog?: (log: HealthDayLog) => void;
+  ctgPeriodizedRoadmap?: CtgPeriodizedRoadmap | null;
 }
 
 const MEAL_SLOTS: MealSlot[] = ['breakfast', 'lunch', 'dinner', 'snack'];
@@ -76,6 +83,7 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
   onUpdateNutritionSettings,
   healthLogs,
   onUpsertHealthLog,
+  ctgPeriodizedRoadmap,
 }) => {
   const [selectedDate, setSelectedDate] = useState(() => todayString());
   const [selectedSlot, setSelectedSlot] = useState<MealSlot>('lunch');
@@ -235,6 +243,45 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
   const targetKcal = calorieTarget(userTdee, profile.goal, nutritionSettings.tdeeOffset);
   const targets = macroTargets(targetKcal, userWeightKg, profile.goal, nutritionSettings);
 
+  // CTG Active Phase from Periodized Roadmap
+  const ctgActivePhase = useMemo(() => {
+    if (!ctgPeriodizedRoadmap || !ctgPeriodizedRoadmap.phases?.length) return null;
+    if (ctgPeriodizedRoadmap.activePhaseId && ctgPeriodizedRoadmap.activePhaseId !== 'none') {
+      const found = ctgPeriodizedRoadmap.phases.find((p) => p.id === ctgPeriodizedRoadmap.activePhaseId);
+      if (found) return found;
+    }
+    const current = ctgPeriodizedRoadmap.phases.find((p) => p.isCurrent);
+    return current || ctgPeriodizedRoadmap.phases[0] || null;
+  }, [ctgPeriodizedRoadmap]);
+
+  const isSyncedWithCtgPhase = useMemo(() => {
+    if (!ctgActivePhase) return true;
+    const diffKcal = Math.abs(targets.kcal - ctgActivePhase.targetKcal);
+    const diffProtein = Math.abs(targets.protein - ctgActivePhase.macros.protein);
+    return diffKcal <= 10 && diffProtein <= 2;
+  }, [ctgActivePhase, targets]);
+
+  const handleSyncWithCtgPhase = () => {
+    if (!ctgActivePhase) return;
+    onUpdateNutritionSettings({
+      overrides: {
+        ...(nutritionSettings.overrides || {}),
+        [profile.goal]: {
+          kcal: ctgActivePhase.targetKcal,
+          protein: ctgActivePhase.macros.protein,
+          carbs: ctgActivePhase.macros.carbs,
+          fat: ctgActivePhase.macros.fat,
+        },
+      },
+    });
+    setOverrideKcal(String(ctgActivePhase.targetKcal));
+    setOverrideProtein(String(ctgActivePhase.macros.protein));
+    setOverrideCarbs(String(ctgActivePhase.macros.carbs));
+    setOverrideFat(String(ctgActivePhase.macros.fat));
+    setComboToast(`Đã đồng bộ chuẩn dinh dưỡng theo Giai đoạn "${ctgActivePhase.name}" (${ctgActivePhase.targetKcal} kcal)!`);
+    setTimeout(() => setComboToast(null), 4000);
+  };
+
   // Macro override form state
   const currentOverride = nutritionSettings.overrides[profile.goal];
   const [overrideKcal, setOverrideKcal] = useState(String(currentOverride?.kcal || ''));
@@ -334,8 +381,58 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
     [meals, selectedDate]
   );
 
+  const remainingKcal = targets.kcal - currentTotals.kcal;
+  const remainingProtein = targets.protein - currentTotals.protein;
+  const remainingCarbs = targets.carbs - currentTotals.carbs;
+  const remainingFat = targets.fat - currentTotals.fat;
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
+      {/* CTG Active Phase Sync Card */}
+      {ctgActivePhase && (
+        <div className="bg-gradient-to-r from-blue-900/40 via-indigo-950/30 to-[#0b101b] border border-blue-500/40 rounded-2xl p-4 shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-white">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-blue-500/20 border border-blue-500/30 text-blue-400 flex items-center justify-center shrink-0">
+              <Compass className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                  Giai Đoạn CTG Hiện Tại
+                </span>
+                <span className="text-xs text-white/50 font-mono">
+                  {ctgActivePhase.startDate} – {ctgActivePhase.endDate}
+                </span>
+              </div>
+              <div className="text-sm font-bold text-white mt-0.5 flex flex-wrap items-center gap-2">
+                <span>{ctgActivePhase.name}:</span>
+                <span className="text-blue-300 font-mono font-extrabold">{ctgActivePhase.targetKcal.toLocaleString('vi-VN')} kcal</span>
+                <span className="text-xs text-white/60 font-mono">
+                  ({ctgActivePhase.macros.protein}g Đạm / {ctgActivePhase.macros.carbs}g Carb / {ctgActivePhase.macros.fat}g Fat)
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+            {!isSyncedWithCtgPhase ? (
+              <button
+                type="button"
+                onClick={handleSyncWithCtgPhase}
+                className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs cursor-pointer shadow-xs transition-colors flex items-center gap-1.5"
+              >
+                <Zap className="w-3.5 h-3.5" />
+                <span>⚡ Đồng Bộ Chuẩn CTG</span>
+              </button>
+            ) : (
+              <span className="px-3 py-1 rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-semibold flex items-center gap-1.5">
+                <span>✓ Đang khớp chuẩn CTG</span>
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Top Banner */}
       <div className="bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-transparent dark:from-emerald-950/30 dark:via-teal-950/20 rounded-2xl border border-emerald-200 dark:border-emerald-900/50 p-4 md:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
@@ -369,6 +466,47 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
             <Sliders className="w-4 h-4 text-emerald-600" />
             <span>Tùy chỉnh Macro</span>
           </button>
+        </div>
+      </div>
+
+      {/* Quick Remaining Macro Pills (Chuẩn CTG Web) */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+        <div className={`p-3 rounded-2xl border transition-all ${
+          remainingKcal >= 0 ? 'bg-white dark:bg-[#131b2e] border-slate-200 dark:border-slate-800' : 'bg-rose-500/10 border-rose-500/30'
+        }`}>
+          <div className="text-[10px] uppercase font-bold text-gray-400">Calo Còn Lại</div>
+          <div className={`text-base sm:text-lg font-black font-mono mt-0.5 ${
+            remainingKcal >= 0 ? 'text-gray-900 dark:text-white' : 'text-rose-500'
+          }`}>
+            {remainingKcal >= 0 ? `${remainingKcal} kcal` : `Vượt +${-remainingKcal}`}
+          </div>
+        </div>
+
+        <div className={`p-3 rounded-2xl border transition-all ${
+          remainingProtein >= 0 ? 'bg-rose-50/50 dark:bg-rose-950/20 border-rose-200 dark:border-rose-900/40 text-rose-700 dark:text-rose-300' : 'bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-900/40 text-emerald-700 dark:text-emerald-300'
+        }`}>
+          <div className="text-[10px] uppercase font-bold opacity-75">Đạm (Protein) Còn Lại</div>
+          <div className="text-base sm:text-lg font-black font-mono mt-0.5">
+            {remainingProtein >= 0 ? `${Math.round(remainingProtein)} g` : `Đạt đích (+${Math.round(-remainingProtein)}g)`}
+          </div>
+        </div>
+
+        <div className={`p-3 rounded-2xl border transition-all ${
+          remainingCarbs >= 0 ? 'bg-amber-50/50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900/40 text-amber-700 dark:text-amber-300' : 'bg-rose-500/10 border-rose-500/30 text-rose-400'
+        }`}>
+          <div className="text-[10px] uppercase font-bold opacity-75">Carb (Tinh Bột) Còn Lại</div>
+          <div className="text-base sm:text-lg font-black font-mono mt-0.5">
+            {remainingCarbs >= 0 ? `${Math.round(remainingCarbs)} g` : `Vượt +${Math.round(-remainingCarbs)}g`}
+          </div>
+        </div>
+
+        <div className={`p-3 rounded-2xl border transition-all ${
+          remainingFat >= 0 ? 'bg-purple-50/50 dark:bg-purple-950/20 border-purple-200 dark:border-purple-900/40 text-purple-700 dark:text-purple-300' : 'bg-rose-500/10 border-rose-500/30 text-rose-400'
+        }`}>
+          <div className="text-[10px] uppercase font-bold opacity-75">Chất Béo Còn Lại</div>
+          <div className="text-base sm:text-lg font-black font-mono mt-0.5">
+            {remainingFat >= 0 ? `${Math.round(remainingFat)} g` : `Vượt +${Math.round(-remainingFat)}g`}
+          </div>
         </div>
       </div>
 
@@ -426,6 +564,9 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
               <div className="flex justify-between text-xs mb-1">
                 <span className="font-semibold text-rose-600 dark:text-rose-400">
                   Protein (Chất đạm): {Math.round(currentTotals.protein)}g / {targets.protein}g
+                  <span className="text-[11px] font-normal text-rose-400/80 ml-2">
+                    {remainingProtein >= 0 ? `(còn ${Math.round(remainingProtein)}g)` : `(+${Math.round(-remainingProtein)}g)`}
+                  </span>
                 </span>
                 <span className="text-[11px] text-gray-400 font-mono">
                   {targets.protein > 0 ? Math.round((currentTotals.protein / targets.protein) * 100) : 0}%
@@ -443,6 +584,9 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
               <div className="flex justify-between text-xs mb-1">
                 <span className="font-semibold text-amber-600 dark:text-amber-400">
                   Carbs (Tinh bột): {Math.round(currentTotals.carbs)}g / {targets.carbs}g
+                  <span className="text-[11px] font-normal text-amber-400/80 ml-2">
+                    {remainingCarbs >= 0 ? `(còn ${Math.round(remainingCarbs)}g)` : `(+${Math.round(-remainingCarbs)}g)`}
+                  </span>
                 </span>
                 <span className="text-[11px] text-gray-400 font-mono">
                   {targets.carbs > 0 ? Math.round((currentTotals.carbs / targets.carbs) * 100) : 0}%
@@ -460,6 +604,9 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
               <div className="flex justify-between text-xs mb-1">
                 <span className="font-semibold text-purple-600 dark:text-purple-400">
                   Fat (Chất béo): {Math.round(currentTotals.fat)}g / {targets.fat}g
+                  <span className="text-[11px] font-normal text-purple-400/80 ml-2">
+                    {remainingFat >= 0 ? `(còn ${Math.round(remainingFat)}g)` : `(+${Math.round(-remainingFat)}g)`}
+                  </span>
                 </span>
                 <span className="text-[11px] text-gray-400 font-mono">
                   {targets.fat > 0 ? Math.round((currentTotals.fat / targets.fat) * 100) : 0}%

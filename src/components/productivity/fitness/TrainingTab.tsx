@@ -24,8 +24,12 @@ import {
   History,
   Minus,
   Calculator,
+  Compass,
+  Target,
 } from 'lucide-react';
 import {
+  CtgPeriodizedRoadmap,
+  CtgRoadmapPhase,
   Exercise,
   HealthDayLog,
   MUSCLE_COLOR,
@@ -75,6 +79,7 @@ interface TrainingTabProps {
   onScheduleSessionToCalendar?: (title: string, date: string, color: string) => void;
   onUpsertHealthLog?: (log: HealthDayLog) => void;
   healthLogs?: HealthDayLog[];
+  ctgPeriodizedRoadmap?: CtgPeriodizedRoadmap | null;
 }
 
 const SPORT_OPTIONS: SportType[] = [
@@ -109,6 +114,7 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
   onScheduleSessionToCalendar,
   onUpsertHealthLog,
   healthLogs,
+  ctgPeriodizedRoadmap,
 }) => {
   const [scheduledBanner, setScheduledBanner] = useState<string | null>(null);
   const [showSportModal, setShowSportModal] = useState(false);
@@ -160,6 +166,17 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
   const [restTotal, setRestTotal] = useState(90);
   const [autoScheduleOnFinish, setAutoScheduleOnFinish] = useState(true);
   const [extraExerciseId, setExtraExerciseId] = useState('');
+
+  // CTG Active Phase
+  const ctgActivePhase = useMemo(() => {
+    if (!ctgPeriodizedRoadmap || !ctgPeriodizedRoadmap.phases?.length) return null;
+    if (ctgPeriodizedRoadmap.activePhaseId && ctgPeriodizedRoadmap.activePhaseId !== 'none') {
+      const found = ctgPeriodizedRoadmap.phases.find((p) => p.id === ctgPeriodizedRoadmap.activePhaseId);
+      if (found) return found;
+    }
+    const current = ctgPeriodizedRoadmap.phases.find((p) => p.isCurrent);
+    return current || ctgPeriodizedRoadmap.phases[0] || null;
+  }, [ctgPeriodizedRoadmap]);
 
   // Combined Exercises & Lookup
   const allExercises = useMemo(() => [...EXERCISES, ...customExercises], [customExercises]);
@@ -720,6 +737,59 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
 
   return (
     <div className="space-y-6">
+      {/* CTG Active Phase Training Guidance Card */}
+      {ctgActivePhase && (
+        <div className="bg-gradient-to-r from-blue-900/40 via-indigo-950/30 to-[#0b101b] border border-blue-500/40 rounded-2xl p-4 md:p-5 shadow-md flex flex-col md:flex-row md:items-center justify-between gap-4 text-white">
+          <div className="flex items-start gap-3.5">
+            <div className="w-10 h-10 rounded-2xl bg-blue-500/20 border border-blue-500/30 text-blue-400 flex items-center justify-center shrink-0 mt-0.5">
+              <Compass className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                  Giai Đoạn CTG Hiện Tại
+                </span>
+                <span className="text-xs text-white/50 font-mono">
+                  {ctgActivePhase.startDate} – {ctgActivePhase.endDate}
+                </span>
+                <span className="text-xs font-bold text-white">
+                  · {ctgActivePhase.name} ({ctgActivePhase.phaseType === 'bulk' ? 'Tăng cơ' : ctgActivePhase.phaseType === 'minicut' ? 'Mini-cut' : 'Giảm mỡ'})
+                </span>
+              </div>
+              <p className="text-xs text-blue-100/80 mt-1 leading-relaxed">
+                {ctgActivePhase.phaseType === 'bulk' ? (
+                  <span>
+                    🏋️ <strong>Chiến lược Tăng cơ (Hypertrophy Wave):</strong> Tận dụng thặng dư calo để tối ưu hóa phì đại cơ bắp. Ưu tiên Progressive Overload (tăng tạ/reps mỗi tuần), giữ RPE 7-9 (1-3 reps dự trữ), ngủ đủ 7-8h mỗi đêm.
+                  </span>
+                ) : (
+                  <span>
+                    🔥 <strong>Chiến lược Giữ cơ trong Thâm hụt (Preserve Lean Mass):</strong> Duy trì cường độ tạ nặng (Heavy Lifting) để gửi tín hiệu bảo toàn cơ nạc, kiểm soát volume hợp lý (8-14 sets/nhóm cơ/tuần), tránh tập đến kiệt quệ hoàn toàn (RPE 8-8.5).
+                  </span>
+                )}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0 self-end md:self-center">
+            {onApplySplitTemplate && (
+              <button
+                type="button"
+                onClick={() => {
+                  const suggested = ctgActivePhase.phaseType === 'bulk' ? 'ppl' : 'upper_lower';
+                  onApplySplitTemplate(suggested);
+                  setScheduledBanner(`Đã áp dụng giáo án tối ưu cho giai đoạn (${suggested.toUpperCase()})!`);
+                  setTimeout(() => setScheduledBanner(null), 4000);
+                }}
+                className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs cursor-pointer shadow-xs transition-colors flex items-center gap-1.5"
+              >
+                <Zap className="w-3.5 h-3.5" />
+                <span>Nạp Giáo Án Tối Ưu ({ctgActivePhase.phaseType === 'bulk' ? 'PPL' : 'Upper/Lower'})</span>
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Top Banner */}
       <div className="bg-gradient-to-r from-blue-500/10 via-indigo-500/10 to-transparent dark:from-blue-950/30 dark:via-indigo-950/20 rounded-2xl border border-blue-200 dark:border-blue-900/50 p-4 md:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>

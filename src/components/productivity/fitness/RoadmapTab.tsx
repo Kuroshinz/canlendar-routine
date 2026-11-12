@@ -887,6 +887,28 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
   const totalFfmiGain =
     firstPhase && lastPhase ? Math.round((lastPhase.targetFfmi - firstPhase.startFfmi) * 10) / 10 : 0;
 
+  const completedPhasesCount = useMemo(() => {
+    return phases.filter((p) => getPhaseStatus(p, activeRoadmap?.activePhaseId) === 'completed').length;
+  }, [phases, activeRoadmap?.activePhaseId]);
+
+  const currentPhaseIndex = useMemo(() => {
+    return activePhase ? phases.findIndex((p) => p.id === activePhase.id) : -1;
+  }, [phases, activePhase]);
+
+  const bulkPhasesCount = useMemo(() => {
+    return phases.filter((p) => p.phaseType === 'bulk').length;
+  }, [phases]);
+
+  const cutPhasesCount = useMemo(() => {
+    return phases.filter((p) => p.phaseType === 'cut' || p.phaseType === 'minicut').length;
+  }, [phases]);
+
+  const macrocyclePercent = useMemo(() => {
+    if (!phases.length) return 0;
+    const effectiveDone = completedPhasesCount + (currentPhaseIndex >= 0 ? 0.5 : 0);
+    return Math.min(100, Math.round((effectiveDone / phases.length) * 100));
+  }, [phases.length, completedPhasesCount, currentPhaseIndex]);
+
   const isBulkPhase = activePhase?.phaseType === 'bulk';
   const startW = activePhase?.startWeightKg ?? currentWeight;
   const targetW = activePhase?.targetWeightKg ?? currentWeight;
@@ -1448,6 +1470,75 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
               </div>
             </div>
 
+            {/* Macrocycle Visual Stepper & Overview Bar (Chuẩn CTG Web) */}
+            <div className="p-4 rounded-2xl bg-white/5 border border-white/5 space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-blue-400 font-mono">
+                    Tiến độ toàn chu kỳ:
+                  </span>
+                  <span className="font-bold text-white">
+                    {completedPhasesCount} / {phases.length} giai đoạn hoàn thành ({macrocyclePercent}%)
+                  </span>
+                </div>
+                <div className="text-[11px] font-mono text-white/50 flex items-center gap-2">
+                  <span className="text-blue-300 font-bold">{bulkPhasesCount} đợt Tăng cơ</span>
+                  <span>·</span>
+                  <span className="text-amber-300 font-bold">{cutPhasesCount} đợt Mini-cut / Giảm mỡ</span>
+                </div>
+              </div>
+
+              {/* Progress Bar Line */}
+              <div className="w-full h-2 bg-black/40 rounded-full overflow-hidden border border-white/5 p-0.5">
+                <div
+                  className="h-full bg-linear-to-r from-emerald-500 via-blue-500 to-indigo-500 rounded-full transition-all duration-500"
+                  style={{ width: `${macrocyclePercent}%` }}
+                />
+              </div>
+
+              {/* Interactive Phase Stepper Pills (Scrollable) */}
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 pt-1 scrollbar-none">
+                {phases.map((p, idx) => {
+                  const status = getPhaseStatus(p, activeRoadmap?.activePhaseId);
+                  const isCur = status === 'current';
+                  const isDone = status === 'completed';
+                  const shortName = p.name.includes('Tăng cơ')
+                    ? 'Tăng cơ'
+                    : p.name.includes('Mini-cut')
+                    ? 'Mini-cut'
+                    : p.name.includes('Giảm mỡ')
+                    ? 'Giảm mỡ'
+                    : p.name;
+
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => {
+                        const el = document.getElementById(`phase-card-${p.id}`);
+                        if (el) {
+                          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }
+                      }}
+                      title={`#${idx + 1}: ${p.name} (${p.startDate} – ${p.endDate}) · ${p.startWeightKg}kg → ${p.targetWeightKg}kg · ${p.targetKcal} kcal`}
+                      className={`px-2.5 py-1 rounded-xl text-[11px] font-mono font-semibold shrink-0 transition-all cursor-pointer border flex items-center gap-1 ${
+                        isCur
+                          ? 'bg-blue-600 text-white border-blue-400 shadow-md shadow-blue-500/30 ring-2 ring-blue-400 font-bold scale-105'
+                          : isDone
+                          ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/25'
+                          : 'bg-black/30 text-white/50 border-white/5 hover:border-white/20 hover:text-white'
+                      }`}
+                    >
+                      <span>#{idx + 1}</span>
+                      <span className="hidden sm:inline font-sans text-[10px]">{shortName}</span>
+                      {isDone && <span className="text-emerald-400">✓</span>}
+                      {isCur && <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             {/* CTG PHASES LIST (BÓC TÁCH CHUẨN CTG WEB) */}
             <div className="space-y-4">
               {filteredPhases.map((phase) => {
@@ -1460,6 +1551,7 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
                 return (
                   <div
                     key={phase.id}
+                    id={`phase-card-${phase.id}`}
                     className={`rounded-3xl border transition-all p-5 space-y-4 ${
                       isCurrent
                         ? 'bg-linear-to-b from-[#111c38] to-[#0c1326] border-blue-500/80 shadow-xl shadow-blue-500/10 ring-1 ring-blue-500/40'

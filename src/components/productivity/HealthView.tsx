@@ -554,6 +554,7 @@ export const HealthView: React.FC<HealthViewProps> = ({
           onScheduleSessionToCalendar={onScheduleSessionToCalendar}
           onUpsertHealthLog={onUpsertHealthLog}
           healthLogs={healthLogs}
+          ctgPeriodizedRoadmap={ctgPeriodizedRoadmap}
         />
       )}
 
@@ -570,6 +571,7 @@ export const HealthView: React.FC<HealthViewProps> = ({
           onUpdateNutritionSettings={onUpdateNutritionSettings}
           healthLogs={healthLogs}
           onUpsertHealthLog={onUpsertHealthLog}
+          ctgPeriodizedRoadmap={ctgPeriodizedRoadmap}
         />
       )}
 
