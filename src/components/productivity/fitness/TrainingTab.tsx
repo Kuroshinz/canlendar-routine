@@ -56,6 +56,7 @@ import {
   todayString,
   weeklyVolume,
 } from '../../../utils/fitnessMetrics';
+import { notifySuccess } from '../../../utils/notify';
 import { BarChart, ProgressBar } from '../../charts/SimpleCharts';
 
 interface TrainingTabProps {
@@ -460,6 +461,7 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
     setRestSecondsLeft(null);
     setScheduledBanner(`Xuất sắc! Đã hoàn thành buổi tập "${activeSession.planned.title}" (+${burnedKcal} kcal tiêu hao)!`);
     setTimeout(() => setScheduledBanner(null), 4000);
+    notifySuccess('Xuất sắc! Hoàn thành buổi tập!', `Đã hoàn thành "${activeSession.planned.title}" (+${burnedKcal} kcal tiêu hao)!`);
   };
 
   const activeWorkoutStats = useMemo(() => {
@@ -611,6 +613,7 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
     setShowLogPastWorkoutModal(false);
     setScheduledBanner(`Đã ghi nhận buổi tập "${pastTitle.trim()}" cho ngày ${pastDate} (+${burnedKcal} kcal)!`);
     setTimeout(() => setScheduledBanner(null), 4000);
+    notifySuccess('Đã lưu buổi tập!', `Đã ghi nhận "${pastTitle.trim()}" cho ngày ${pastDate} (+${burnedKcal} kcal)!`);
   };
 
   const handleSchedule = (session: PlannedSession) => {
@@ -620,6 +623,7 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
     }
     setScheduledBanner(`Đã lên lịch "${session.title}" vào Google Calendar hôm nay (${today})!`);
     setTimeout(() => setScheduledBanner(null), 4000);
+    notifySuccess('Đã lên lịch Google Calendar!', `Đã lên lịch "${session.title}" vào ngày ${today}.`);
   };
 
   const handleScheduleFullWeek = () => {
@@ -696,6 +700,7 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
 
     setScheduledBanner(`Đã ghi nhận hoàn thành buổi tập "${session.title}" (+${burnedKcal} kcal tiêu hao)!`);
     setTimeout(() => setScheduledBanner(null), 4000);
+    notifySuccess('Hoàn thành buổi tập!', `Đã ghi nhận "${session.title}" (+${burnedKcal} kcal tiêu hao)!`);
   };
 
   const handleAddSport = (e: React.FormEvent) => {
@@ -727,6 +732,7 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
     setSportNote('');
     setScheduledBanner(`Đã thêm buổi "${SPORT_LABEL[sportType]}" (${dur} phút, +${burnedKcal} kcal)!`);
     setTimeout(() => setScheduledBanner(null), 4000);
+    notifySuccess('Đã lưu tập luyện thể thao!', `Buổi tập "${SPORT_LABEL[sportType]}" (${dur} phút, +${burnedKcal} kcal) đã được lưu.`);
   };
 
   const filteredExercises = allExercises.filter(

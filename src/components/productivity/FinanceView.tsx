@@ -42,6 +42,7 @@ import {
   summarizeFinance,
 } from '../../utils/productivityUtils';
 import { formatDateString } from '../../utils/calendarUtils';
+import { notifySuccess } from '../../utils/notify';
 
 interface FinanceViewProps {
   transactions: Transaction[];
@@ -133,6 +134,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
     });
     setQuickBanner(`Đã ghi nhận chi tiêu "${p.title}" (-${formatMoney(p.amount, budget.currency)})!`);
     setTimeout(() => setQuickBanner(null), 3500);
+    notifySuccess('Đã ghi nhận chi tiêu!', `${p.title}: -${formatMoney(p.amount, budget.currency)}`);
   };
 
   const handleApplyQuickIncome = (p: typeof QUICK_INCOME_PRESETS[0]) => {
@@ -146,6 +148,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
     });
     setQuickBanner(`Đã ghi nhận thu nhập "${p.title}" (+${formatMoney(p.amount, budget.currency)})!`);
     setTimeout(() => setQuickBanner(null), 3500);
+    notifySuccess('Đã ghi nhận thu nhập!', `${p.title}: +${formatMoney(p.amount, budget.currency)}`);
   };
 
   // --- Quick add form state
@@ -241,6 +244,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
         : `Real balance updated to ${formatMoney(target, budget.currency)}!`
     );
     setTimeout(() => setQuickBanner(null), 3500);
+    notifySuccess('Đã cập nhật số dư thực tế!', `Số dư mới: ${formatMoney(target, budget.currency)}`);
   };
 
   const handleStartEditTransaction = (tx: Transaction) => {
@@ -373,6 +377,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
           : `Updated transaction "${formTitle.trim()}"!`
       );
       setTimeout(() => setQuickBanner(null), 3000);
+      notifySuccess('Đã cập nhật giao dịch!', `${formTitle.trim()}: ${formatMoney(amount, budget.currency)}`);
     } else {
       onAddTransaction({
         title: formTitle.trim(),
@@ -382,6 +387,10 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
         date: formDate || today,
         note: formNote.trim() || undefined,
       });
+      notifySuccess(
+        formType === 'income' ? 'Đã ghi nhận khoản thu!' : 'Đã ghi nhận khoản chi!',
+        `${formTitle.trim()}: ${formType === 'income' ? '+' : '-'}${formatMoney(amount, budget.currency)}`
+      );
     }
 
     setEditingTransaction(null);
@@ -396,6 +405,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
     const next = Number(limitDraft.replace(/[^\d.]/g, ''));
     if (Number.isFinite(next) && next >= 0) {
       onUpdateBudget({ monthlyLimit: next });
+      notifySuccess('Đã cập nhật hạn mức!', `Hạn mức tháng mới: ${formatMoney(next, budget.currency)}`);
     }
     setShowBudgetEditor(false);
   };
@@ -421,6 +431,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+    notifySuccess('Đã xuất báo cáo CSV!', `Tệp financial-report-${monthPrefix}.csv đã được tải về.`);
   };
 
   const budgetBannerClass =

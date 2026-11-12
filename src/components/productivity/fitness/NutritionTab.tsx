@@ -53,6 +53,7 @@ import {
 import { Donut, ProgressBar, StackedBar } from '../../charts/SimpleCharts';
 import { GeminiMacroModal } from './GeminiMacroModal';
 import { GeminiMacroItem } from '../../../services/geminiSync';
+import { notifySuccess } from '../../../utils/notify';
 
 interface NutritionTabProps {
   meals: MealLog[];
@@ -131,6 +132,7 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
     setMacroTitle('');
     setComboToast(`Đã ghi nhận ${title} (${directKcal} kcal · ${p}g P, ${c}g C, ${f}g F)!`);
     setTimeout(() => setComboToast(null), 3000);
+    notifySuccess('Đã lưu macro bữa ăn!', `${title}: +${directKcal} kcal (${p}g Đạm / ${c}g Carb / ${f}g Fat)!`);
   };
 
   // Manual food form state
@@ -184,6 +186,7 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
 
     setComboToast(`Đã đồng bộ ${geminiItems.length} món từ Gemini AI vào nhật ký ${selectedDate}!`);
     setTimeout(() => setComboToast(null), 3500);
+    notifySuccess('Đã đồng bộ món từ AI!', `Đã thêm ${geminiItems.length} món vào nhật ký ngày ${selectedDate}.`);
   };
 
   // Filtered Catalog
@@ -225,6 +228,7 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
 
     setComboToast(`Đã thêm "${item.name}" vào ${MEAL_LABEL[slot]}!`);
     setTimeout(() => setComboToast(null), 3000);
+    notifySuccess('Đã thêm món ăn!', `${item.name} (${portionText}): +${kcal} kcal!`);
   };
 
   const handleApplyCombo = (combo: MealComboPreset) => {
@@ -236,6 +240,7 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
     });
     setComboToast(`Đã nạp toàn bộ combo "${combo.name}" vào ${MEAL_LABEL[combo.slot]} hôm nay!`);
     setTimeout(() => setComboToast(null), 3500);
+    notifySuccess('Đã nạp combo món ăn!', `Combo "${combo.name}" đã được ghi nhận vào ${MEAL_LABEL[combo.slot]}!`);
   };
 
   // Targets
@@ -297,6 +302,7 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
     setOverrideFat(String(ctgActivePhase.macros.fat));
     setComboToast(`Đã đồng bộ chuẩn dinh dưỡng theo Giai đoạn "${ctgActivePhase.name}" (${ctgActivePhase.targetKcal} kcal)!`);
     setTimeout(() => setComboToast(null), 4000);
+    notifySuccess('Đã đồng bộ chuẩn CTG!', `Mục tiêu cập nhật theo Giai đoạn "${ctgActivePhase.name}" (${ctgActivePhase.targetKcal} kcal)!`);
   };
 
   // Macro override form state
@@ -356,6 +362,10 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
       items: parsedPreview.map((p) => p.item),
     });
 
+    notifySuccess(
+      'Đã ghi nhận bữa ăn!',
+      `Bữa ${MEAL_LABEL[selectedSlot]}: +${Math.round(previewKcal)} kcal (${Math.round(previewProtein)}g Đạm)!`
+    );
     setInputText('');
   };
 
@@ -378,6 +388,10 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
       description: `${manualName.trim()} (${amountNum}${manualUnit})`,
       items: [newItem],
     });
+    notifySuccess(
+      'Đã thêm món ăn!',
+      `${manualName.trim()}: +${Number(manualKcal)} kcal vào bữa ${MEAL_LABEL[selectedSlot]}!`
+    );
     setManualName('');
   };
 

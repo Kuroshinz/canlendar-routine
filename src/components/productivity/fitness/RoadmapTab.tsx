@@ -63,6 +63,7 @@ import {
   generateCtgPeriodizedRoadmap,
   calculatePhaseNutrition,
 } from '../../../utils/fitnessMetrics';
+import { notifySuccess } from '../../../utils/notify';
 
 interface RoadmapTabProps {
   profile: CtgProfile;
@@ -600,6 +601,10 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
     const p = phases.find((item) => item.id === phaseId);
     if (p) {
       handleApplySinglePhase(p);
+      notifySuccess(
+        'Đã chọn giai đoạn theo dõi!',
+        `Giai đoạn "${p.name}" (${p.startDate} – ${p.endDate}) đã được kích hoạt.`
+      );
     }
   };
 
@@ -627,6 +632,10 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
     if (firstP) {
       handleApplySinglePhase(firstP);
     }
+    notifySuccess(
+      'Tạo lộ trình chu kỳ thành công!',
+      `Đã thiết lập ${generated.phases.length} giai đoạn tối ưu hóa riêng cho thể trạng của bạn!`
+    );
   };
 
   const handleCreateBlankRoadmap = (e?: React.FormEvent) => {
@@ -648,6 +657,7 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
     setShowAddPhaseModal(true);
     setAppliedBanner(`Đã tạo lộ trình mới "${newRoadmap.title}". Hãy thêm giai đoạn đầu tiên!`);
     setTimeout(() => setAppliedBanner(null), 6000);
+    notifySuccess('Đã tạo lộ trình mới!', `Lộ trình "${newRoadmap.title}" đã sẵn sàng.`);
   };
 
   const handleCopyRoadmapSummary = async () => {
@@ -667,6 +677,7 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
       await navigator.clipboard.writeText(text);
       setAppliedBanner('Đã sao chép toàn bộ tóm tắt lộ trình vào bộ nhớ tạm (Clipboard)!');
       setTimeout(() => setAppliedBanner(null), 4000);
+      notifySuccess('Đã sao chép tóm tắt!', 'Toàn bộ nội dung lộ trình đã được lưu vào clipboard.');
     } catch {
       setAppliedBanner('Đã chuẩn bị tóm tắt lộ trình.');
       setTimeout(() => setAppliedBanner(null), 3000);
@@ -682,6 +693,7 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
     setShowDeleteConfirmModal(false);
     setAppliedBanner('Đã xóa bỏ hoàn toàn lộ trình hiện tại.');
     setTimeout(() => setAppliedBanner(null), 4000);
+    notifySuccess('Đã xóa lộ trình', 'Lộ trình hiện tại đã được loại bỏ.');
   };
 
   const handleSwitchRoadmap = (rm: CtgPeriodizedRoadmap) => {
@@ -773,6 +785,7 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
     setShowAddPhaseModal(false);
     setAppliedBanner(`Đã thêm giai đoạn "${createdPhase.name}" vào lộ trình!`);
     setTimeout(() => setAppliedBanner(null), 6000);
+    notifySuccess('Đã thêm giai đoạn mới!', `Giai đoạn "${createdPhase.name}" đã được thêm vào lộ trình.`);
   };
 
   const handleUpdatePhaseSubmit = (e: React.FormEvent) => {
@@ -807,6 +820,7 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
     setEditingPhase(null);
     setAppliedBanner(`Đã cập nhật thông tin giai đoạn "${updated.name}"!`);
     setTimeout(() => setAppliedBanner(null), 6000);
+    notifySuccess('Đã cập nhật giai đoạn!', `Giai đoạn "${updated.name}" đã được cập nhật thành công.`);
   };
 
   const handleSyncPhaseWithCurrentWeight = (phase: CtgRoadmapPhase) => {
@@ -869,6 +883,7 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
     onSaveCtgRoadmap?.(updatedRoadmap);
     setAppliedBanner(`Đã đồng bộ mốc xuất phát giai đoạn về cân nặng thực tế ${sW}kg (${sBf}% mỡ)!`);
     setTimeout(() => setAppliedBanner(null), 6000);
+    notifySuccess('Đã đồng bộ cân nặng xuất phát!', `Giai đoạn cập nhật xuất phát từ ${sW}kg (${sBf}% mỡ).`);
   };
 
   const handleDeletePhase = (phaseId: string) => {
@@ -893,6 +908,7 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
     onSaveCtgRoadmap?.(updatedRoadmap);
     setAppliedBanner('Đã xóa giai đoạn khỏi lộ trình.');
     setTimeout(() => setAppliedBanner(null), 4000);
+    notifySuccess('Đã xóa giai đoạn', 'Giai đoạn đã được loại bỏ khỏi lộ trình.');
   };
 
   const handleResetToSeedRoadmap = () => {
@@ -901,6 +917,7 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
       onSaveCtgRoadmap?.(SEED_CTG_PERIODIZED_ROADMAP);
       setAppliedBanner('Đã khôi phục lại đại lộ trình chu kỳ 17 giai đoạn chuẩn!');
       setTimeout(() => setAppliedBanner(null), 5000);
+      notifySuccess('Đã khôi phục mẫu chuẩn!', 'Lộ trình 17 giai đoạn chuẩn CTG đã sẵn sàng.');
     }
   };
 

@@ -51,6 +51,7 @@ import {
   withUnit,
 } from '../../../utils/fitnessMetrics';
 import { ChartSeries, MultiSeriesLineChart } from '../../charts/SimpleCharts';
+import { notifySuccess } from '../../../utils/notify';
 
 interface InBodyTabProps {
   points: BodyPoint[];
@@ -210,6 +211,7 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
     setPhotoPreview(null);
     setPhotoNote('');
     setPhotoError(null);
+    notifySuccess('Đã tải ảnh check body!', `Ảnh góc ${POSE_LABELS[photoPose].label} đã được lưu thành công.`);
   };
 
   const filteredPoints = useMemo(() => {
@@ -420,6 +422,7 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
 
     setAdjustedBanner(`Đã áp dụng hiệu chỉnh CTG: Giai đoạn "${activePhase.name}" cập nhật thành ${newKcal} kcal (${newCarbs}g Carb)!`);
     setTimeout(() => setAdjustedBanner(null), 6000);
+    notifySuccess('Đã hiệu chỉnh kế hoạch theo tuần!', `Giai đoạn "${activePhase.name}" cập nhật thành ${newKcal} kcal (${newCarbs}g Carb)!`);
   };
 
   // Form state
@@ -468,6 +471,7 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
     });
     setShowForm(false);
     setNote('');
+    notifySuccess('Đã lưu chỉ số cơ thể!', `Cân nặng ${weightKg}kg · ${bodyFatPct}% mỡ đã được ghi nhận.`);
   };
 
   return (

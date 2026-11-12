@@ -15,6 +15,7 @@ import {
 import { INITIAL_EVENTS } from './data/initialEvents';
 import { formatDateString, parseDateString } from './utils/calendarUtils';
 import { playNotificationSound } from './utils/sound';
+import { notifySuccess } from './utils/notify';
 import { useCalendarDnD } from './hooks/useCalendarDnD';
 import { Header } from './components/Header';
 import { Sidebar } from './components/Sidebar';
@@ -56,6 +57,7 @@ import { CalendarActionBar } from './components/CalendarActionBar';
 import { GeminiMacroModal } from './components/productivity/fitness/GeminiMacroModal';
 import { GeminiMacroItem } from './services/geminiSync';
 import { LifeCopilotModal } from './components/productivity/LifeCopilotModal';
+import { ToastContainer } from './components/ToastContainer';
 
 export default function App() {
   // 1. Language state
@@ -317,7 +319,12 @@ export default function App() {
         }
       })
       .catch(() => {});
-  }, [user, productivity.updateTask]);
+
+    notifySuccess(
+      lang === 'vi' ? 'Đã lưu sự kiện thành công!' : 'Event saved successfully!',
+      `"${savedEvent.title}" (${savedEvent.startDate}${savedEvent.allDay ? ' · Cả ngày' : ` lúc ${savedEvent.startTime}`})`
+    );
+  }, [user, productivity.updateTask, lang]);
 
   const handleDeleteEvent = useCallback((eventId: string) => {
     // Task-derived calendar events are owned by the productivity store, not by
@@ -325,9 +332,11 @@ export default function App() {
     if (eventId.startsWith('task-')) {
       productivity.deleteTask(eventId.slice('task-'.length));
       setSelectedEventForDetail(null);
+      notifySuccess(lang === 'vi' ? 'Đã xóa công việc!' : 'Task deleted!');
       return;
     }
 
+    const target = events.find((e) => e.id === eventId);
     setEvents((prev) => prev.filter((e) => e.id !== eventId));
     if (selectedEventForDetail?.id === eventId) {
       setSelectedEventForDetail(null);
@@ -335,7 +344,11 @@ export default function App() {
     if (user) {
       deleteEventFromFirestore(user.uid, eventId).catch(console.warn);
     }
-  }, [selectedEventForDetail, user, productivity.deleteTask]);
+    notifySuccess(
+      lang === 'vi' ? 'Đã xóa sự kiện!' : 'Event deleted!',
+      target?.title || undefined
+    );
+  }, [selectedEventForDetail, user, productivity.deleteTask, events, lang]);
 
   const handleToggleCompleteTask = (eventId: string) => {
     if (eventId.startsWith('task-')) {
@@ -762,6 +775,9 @@ export default function App() {
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-slate-50 dark:bg-[#0b101b] text-slate-800 dark:text-slate-100 font-sans antialiased">
+      {/* Global Interactive Notification Toast Container */}
+      <ToastContainer />
+
       {/* Reminder Banner Toast */}
       {activeAlert && (
         <div className="fixed top-4 right-4 bg-blue-600 text-white px-4 py-2.5 rounded-2xl shadow-xl z-50 flex items-center gap-3 animate-in slide-in-from-top">
