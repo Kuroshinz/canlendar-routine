@@ -268,6 +268,23 @@ export const HealthView: React.FC<HealthViewProps> = ({
     );
   }, [effectiveLog, healthProfile]);
 
+  const ctgActivePhase = useMemo(() => {
+    if (!ctgPeriodizedRoadmap?.phases?.length) return null;
+    const currentId = ctgPeriodizedRoadmap.activePhaseId;
+    if (currentId && currentId !== 'none') {
+      const p = ctgPeriodizedRoadmap.phases.find((item) => item.id === currentId);
+      if (p) return p;
+    }
+    return ctgPeriodizedRoadmap.phases.find((p) => p.isCurrent) || ctgPeriodizedRoadmap.phases[0] || null;
+  }, [ctgPeriodizedRoadmap]);
+
+  const activePhaseDaysRemaining = useMemo(() => {
+    if (!ctgActivePhase) return 0;
+    const end = new Date(ctgActivePhase.endDate).getTime();
+    const now = new Date().getTime();
+    return Math.max(0, Math.ceil((end - now) / 86_400_000));
+  }, [ctgActivePhase]);
+
   // Macro Ring geometry
   const pCal = (effectiveLog.protein || 0) * 4;
   const cCal = (effectiveLog.carbs || 0) * 4;
@@ -591,6 +608,108 @@ export const HealthView: React.FC<HealthViewProps> = ({
 
       {activeSubTab === 'overview' && (
         <>
+          {/* CTG Active Transformation Wave Banner */}
+          {ctgActivePhase ? (
+            <div className="bg-linear-to-r from-blue-950/40 via-indigo-950/30 to-[#0b101b] border border-blue-500/40 rounded-3xl p-5 mb-6 shadow-xl relative overflow-hidden space-y-4">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-white/10 pb-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-blue-500/20 border border-blue-500/30 text-blue-400 flex items-center justify-center shrink-0">
+                    <Compass className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                        Lộ Trình CTG Đang Chạy
+                      </span>
+                      <span className="text-xs text-white/50 font-mono">
+                        {ctgActivePhase.startDate} – {ctgActivePhase.endDate}
+                      </span>
+                      <span className="text-[11px] text-amber-400 font-semibold font-mono">
+                        (Còn ~{activePhaseDaysRemaining} ngày)
+                      </span>
+                    </div>
+                    <h3 className="text-lg font-black text-white mt-0.5">
+                      {ctgActivePhase.name}
+                      <span className="text-xs font-normal text-white/50 ml-2">
+                        • Mục tiêu: {ctgActivePhase.startWeightKg}kg ➔ {ctgActivePhase.targetWeightKg}kg ({ctgActivePhase.targetBodyFatPct}% mỡ)
+                      </span>
+                    </h3>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2 shrink-0 self-end md:self-center">
+                  <button
+                    type="button"
+                    onClick={() => setActiveSubTab('roadmap')}
+                    className="px-3 py-1.5 rounded-xl border border-white/15 bg-white/5 hover:bg-white/10 text-white text-xs font-semibold cursor-pointer transition-colors flex items-center gap-1.5"
+                  >
+                    <span>Lộ Trình</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveSubTab('nutrition')}
+                    className="px-3 py-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 text-xs font-semibold cursor-pointer transition-colors flex items-center gap-1.5"
+                  >
+                    <span>Dinh Dưỡng</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveSubTab('training')}
+                    className="px-3 py-1.5 rounded-xl border border-orange-500/30 bg-orange-500/10 hover:bg-orange-500/20 text-orange-300 text-xs font-semibold cursor-pointer transition-colors flex items-center gap-1.5"
+                  >
+                    <span>Giáo Án</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Quick 3 Pillar stats */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                <div className="p-3 rounded-2xl bg-white/5 border border-white/5 space-y-1">
+                  <span className="text-[10px] text-white/40 uppercase font-bold block">Cân nặng & Mục tiêu</span>
+                  <div className="text-base font-bold font-mono text-white">
+                    {selectedLog.weightKg || ctgActivePhase.startWeightKg} <span className="text-xs text-white/40 font-normal">/ {ctgActivePhase.targetWeightKg} kg</span>
+                  </div>
+                </div>
+
+                <div className="p-3 rounded-2xl bg-white/5 border border-white/5 space-y-1">
+                  <span className="text-[10px] text-white/40 uppercase font-bold block">Mục tiêu dinh dưỡng</span>
+                  <div className="text-base font-bold font-mono text-blue-300">
+                    {ctgActivePhase.targetKcal.toLocaleString('vi-VN')} kcal <span className="text-xs text-white/50 font-normal">({ctgActivePhase.macros.protein}g P / {ctgActivePhase.macros.carbs}g C / {ctgActivePhase.macros.fat}g F)</span>
+                  </div>
+                </div>
+
+                <div className="p-3 rounded-2xl bg-white/5 border border-white/5 space-y-1">
+                  <span className="text-[10px] text-white/40 uppercase font-bold block">Khối nạc LBM & FFMI</span>
+                  <div className="text-base font-bold font-mono text-emerald-400">
+                    {ctgActivePhase.targetLbmKg} kg <span className="text-xs text-white/50 font-normal">(FFMI {ctgActivePhase.targetFfmi})</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="bg-linear-to-r from-blue-900/20 via-indigo-950/20 to-transparent border border-blue-500/30 rounded-3xl p-4 sm:p-5 mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-blue-500/20 text-blue-400 flex items-center justify-center shrink-0">
+                  <Compass className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-white text-sm">Chưa kích hoạt đại lộ trình chu kỳ CTG</h4>
+                  <p className="text-xs text-white/60 mt-0.5">
+                    Tạo lộ trình phân kỳ nhiều giai đoạn (Bulk, Mini-cut, Cut) tối ưu hóa theo chiều cao và cân nặng cá nhân của bạn.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveSubTab('roadmap')}
+                className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all shadow-md shrink-0 cursor-pointer flex items-center gap-1.5"
+              >
+                <Zap className="w-3.5 h-3.5" />
+                <span>Khởi Tạo Lộ Trình Ngay</span>
+              </button>
+            </div>
+          )}
+
           {/* Daily Health Score Banner */}
       <div className="bg-white dark:bg-[#131b2e] p-4 md:p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs mb-6 flex flex-col md:flex-row md:items-center justify-between gap-5">
         <div className="flex items-center gap-4">
