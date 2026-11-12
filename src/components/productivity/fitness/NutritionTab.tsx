@@ -239,9 +239,26 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
   };
 
   // Targets
+  const [isRefeedMode, setIsRefeedMode] = useState(false);
   const userTdee = tdee(profile, userWeightKg);
   const targetKcal = calorieTarget(userTdee, profile.goal, nutritionSettings.tdeeOffset);
-  const targets = macroTargets(targetKcal, userWeightKg, profile.goal, nutritionSettings);
+  const baseTargets = macroTargets(targetKcal, userWeightKg, profile.goal, nutritionSettings);
+
+  const targets = useMemo(() => {
+    if (!isRefeedMode) return baseTargets;
+    // Chế độ Ngày Refeed nạp Carb phục hồi:
+    // Tăng carb lên mức maintenance (+75g carb, ~300 kcal), giữ Protein cao bảo vệ cơ, giữ Fat vừa phải
+    const refeedKcal = baseTargets.kcal + 300;
+    const refeedProtein = baseTargets.protein;
+    const refeedCarbs = baseTargets.carbs + 75;
+    const refeedFat = Math.max(30, baseTargets.fat);
+    return {
+      kcal: refeedKcal,
+      protein: refeedProtein,
+      carbs: refeedCarbs,
+      fat: refeedFat,
+    };
+  }, [isRefeedMode, baseTargets]);
 
   // CTG Active Phase from Periodized Roadmap
   const ctgActivePhase = useMemo(() => {
@@ -414,7 +431,22 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
             </div>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+          <div className="flex flex-wrap items-center gap-2 shrink-0 self-end sm:self-center">
+            {/* Nút bật/tắt Ngày Refeed nạp Carb */}
+            <button
+              type="button"
+              onClick={() => setIsRefeedMode((prev) => !prev)}
+              className={`px-3 py-1.5 rounded-xl font-bold text-xs cursor-pointer shadow-xs transition-all flex items-center gap-1.5 ${
+                isRefeedMode
+                  ? 'bg-amber-500 text-black shadow-amber-500/30 ring-2 ring-amber-300 font-extrabold'
+                  : 'bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30'
+              }`}
+              title="Kích hoạt ngày Refeed nạp carb phục hồi glycogen cơ bắp và leptin"
+            >
+              <Flame className="w-3.5 h-3.5" />
+              <span>{isRefeedMode ? '⚡ Đang Bật Refeed (+300 kcal)' : 'Ngày Refeed'}</span>
+            </button>
+
             {!isSyncedWithCtgPhase ? (
               <button
                 type="button"
@@ -429,6 +461,22 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
                 <span>✓ Đang khớp chuẩn CTG</span>
               </span>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Refeed Mode Info Alert */}
+      {isRefeedMode && (
+        <div className="p-3.5 rounded-2xl bg-amber-500/15 border border-amber-500/30 flex items-start gap-2.5 text-xs text-amber-200 animate-fadeIn">
+          <Flame className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+          <div>
+            <div className="font-bold text-white flex items-center gap-2">
+              <span>Hôm nay là Ngày Refeed (Nạp Carb Phục Hồi Glycogen)</span>
+              <span className="px-2 py-0.2 rounded-full text-[10px] bg-amber-500/30 text-amber-300 font-mono font-bold">+75g Carb (~300 kcal)</span>
+            </div>
+            <p className="text-[11px] text-amber-200/80 mt-1 leading-relaxed">
+              Chiến thuật chuẩn CTG: Nạp tăng carbohydrate tinh khiết (cơm trắng, khoai lang, yến mạch, bánh mì) trước và sau buổi tập nặng. Mục tiêu là nạp đầy kho dự trữ Glycogen cơ bắp, kích hoạt lại hormone Leptin và duy trì tốc độ trao đổi chất mà không tích mỡ thừa!
+            </p>
           </div>
         </div>
       )}

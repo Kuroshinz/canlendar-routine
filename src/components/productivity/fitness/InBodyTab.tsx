@@ -25,7 +25,15 @@ import {
   Zap,
   Flame,
 } from 'lucide-react';
-import { BodyCheckPhoto, BodyPoint, CtgProfile, GOAL_LABEL, PhotoPose } from '../../../types/productivity';
+import {
+  BodyCheckPhoto,
+  BodyPoint,
+  CtgPeriodizedRoadmap,
+  CtgProfile,
+  GOAL_LABEL,
+  NutritionSettings,
+  PhotoPose,
+} from '../../../types/productivity';
 import {
   bmi,
   bmiLabel,
@@ -54,6 +62,10 @@ interface InBodyTabProps {
   onDeletePoint: (id: string) => void;
   onAddBodyPhoto?: (photo: Omit<BodyCheckPhoto, 'id' | 'createdAt'>) => BodyCheckPhoto;
   onDeleteBodyPhoto?: (id: string) => void;
+  ctgPeriodizedRoadmap?: CtgPeriodizedRoadmap | null;
+  onUpdateCtgPeriodizedRoadmap?: (roadmap: CtgPeriodizedRoadmap | null) => void;
+  nutritionSettings?: NutritionSettings;
+  onUpdateNutritionSettings?: (patch: Partial<NutritionSettings>) => void;
 }
 
 const POSE_LABELS: Record<PhotoPose, { label: string; badgeClass: string }> = {
@@ -112,6 +124,10 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
   onDeletePoint,
   onAddBodyPhoto,
   onDeleteBodyPhoto,
+  ctgPeriodizedRoadmap,
+  onUpdateCtgPeriodizedRoadmap,
+  nutritionSettings,
+  onUpdateNutritionSettings,
 }) => {
   const sorted = useMemo(() => sortPoints(points), [points]);
   const first = useMemo(() => (sorted.length > 0 ? sorted[0] : null), [sorted]);
@@ -298,6 +314,113 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
       sampleCount: recentPoints.length,
     };
   }, [sorted]);
+
+  const [adjustedBanner, setAdjustedBanner] = useState<string | null>(null);
+
+  const activePhase = useMemo(() => {
+    if (!ctgPeriodizedRoadmap?.phases?.length) return null;
+    const currentId = ctgPeriodizedRoadmap.activePhaseId;
+    if (currentId && currentId !== 'none') {
+      const p = ctgPeriodizedRoadmap.phases.find((item) => item.id === currentId);
+      if (p) return p;
+    }
+    return ctgPeriodizedRoadmap.phases.find((p) => p.isCurrent) || ctgPeriodizedRoadmap.phases[0] || null;
+  }, [ctgPeriodizedRoadmap]);
+
+  const recommendedAdjustment = useMemo(() => {
+    if (!weeklyRollingStats || weeklyRollingStats.diffW === null || !activePhase) return null;
+    const diff = weeklyRollingStats.diffW;
+    const isCut = profile.goal === 'cut';
+    const isBulk = profile.goal === 'bulk';
+
+    if (isCut) {
+      if (diff < -0.7) {
+        return {
+          type: 'increase_carb',
+          kcalDelta: 150,
+          carbsDelta: 37,
+          label: 'Bù +150 kcal Carb (Bảo tồn cơ nạc)',
+          reason: 'Cân nặng giảm nhanh hơn -0.7kg/tuần có nguy cơ mất cơ nạc. Tăng nhẹ carb giúp giữ cơ và bảo toàn BMR.',
+        };
+      }
+      if (diff >= -0.1) {
+        return {
+          type: 'decrease_carb',
+          kcalDelta: -120,
+          carbsDelta: -30,
+          label: 'Giảm -120 kcal Carb (Phá chững cân)',
+          reason: 'Cân nặng chững hoặc chưa giảm. Giảm nhẹ 120 kcal tinh bột ở bữa tối để tái tạo thâm hụt calo chuẩn.',
+        };
+      }
+    } else if (isBulk) {
+      if (diff > 0.45) {
+        return {
+          type: 'decrease_carb',
+          kcalDelta: -150,
+          carbsDelta: -37,
+          label: 'Giảm -150 kcal Carb (Tránh mỡ thừa)',
+          reason: 'Tăng cân nhanh hơn +0.45kg/tuần dễ tích mỡ bụng. Giảm nhẹ thặng dư để ưu tiên tăng cơ nạc sạch.',
+        };
+      }
+      if (diff < 0.1) {
+        return {
+          type: 'increase_carb',
+          kcalDelta: 180,
+          carbsDelta: 45,
+          label: 'Tăng +180 kcal Carb (Kích tăng cơ)',
+          reason: 'Cân nặng chưa nhích để tạo môi trường đồng hóa (anabolic). Cần thêm thặng dư calo rõ ràng hơn.',
+        };
+      }
+    }
+    return null;
+  }, [weeklyRollingStats, activePhase, profile.goal]);
+
+  const handleApplyAutoAdjustment = () => {
+    if (!recommendedAdjustment || !activePhase || !ctgPeriodizedRoadmap || !onUpdateCtgPeriodizedRoadmap) return;
+
+    const newKcal = Math.max(1200, activePhase.targetKcal + recommendedAdjustment.kcalDelta);
+    const newCarbs = Math.max(50, activePhase.macros.carbs + recommendedAdjustment.carbsDelta);
+
+    const updatedPhases = ctgPeriodizedRoadmap.phases.map((p) => {
+      if (p.id === activePhase.id) {
+        return {
+          ...p,
+          targetKcal: newKcal,
+          macros: {
+            ...p.macros,
+            carbs: newCarbs,
+          },
+          note: `${p.note ? p.note + ' · ' : ''}Hiệu chỉnh CTG: ${recommendedAdjustment.kcalDelta > 0 ? '+' : ''}${recommendedAdjustment.kcalDelta} kcal carb theo xu hướng 7 ngày.`,
+        };
+      }
+      return p;
+    });
+
+    const updatedRoadmap = {
+      ...ctgPeriodizedRoadmap,
+      phases: updatedPhases,
+      updatedAt: Date.now(),
+    };
+
+    onUpdateCtgPeriodizedRoadmap(updatedRoadmap);
+
+    if (onUpdateNutritionSettings) {
+      onUpdateNutritionSettings({
+        overrides: {
+          ...(nutritionSettings?.overrides || {}),
+          [profile.goal]: {
+            kcal: newKcal,
+            protein: activePhase.macros.protein,
+            carbs: newCarbs,
+            fat: activePhase.macros.fat,
+          },
+        },
+      });
+    }
+
+    setAdjustedBanner(`Đã áp dụng hiệu chỉnh CTG: Giai đoạn "${activePhase.name}" cập nhật thành ${newKcal} kcal (${newCarbs}g Carb)!`);
+    setTimeout(() => setAdjustedBanner(null), 6000);
+  };
 
   // Form state
   const [showForm, setShowForm] = useState(false);
@@ -503,6 +626,42 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
               )}
             </div>
           </div>
+
+          {/* Banner thông báo hiệu chỉnh thành công */}
+          {adjustedBanner && (
+            <div className="p-3 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-200 text-xs font-semibold flex items-center gap-2 animate-fadeIn">
+              <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+              <span>{adjustedBanner}</span>
+            </div>
+          )}
+
+          {/* Đề xuất hiệu chỉnh tuần tự động chuẩn CTG Coach */}
+          {recommendedAdjustment && !adjustedBanner && (
+            <div className="p-3.5 rounded-xl bg-linear-to-r from-amber-500/20 via-orange-500/15 to-transparent border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs animate-fadeIn">
+              <div className="flex items-start gap-2.5">
+                <div className="w-7 h-7 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0 mt-0.5">
+                  <Zap className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="font-bold text-white flex items-center gap-2">
+                    <span>Đề xuất hiệu chỉnh tuần chuẩn CTG:</span>
+                    <span className="text-amber-300 font-mono font-extrabold">{recommendedAdjustment.label}</span>
+                  </div>
+                  <div className="text-[11px] text-white/70 mt-0.5 leading-relaxed">
+                    {recommendedAdjustment.reason}
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleApplyAutoAdjustment}
+                className="px-3.5 py-2 rounded-xl bg-linear-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white font-bold text-xs shrink-0 cursor-pointer shadow-md transition-all flex items-center gap-1.5"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>⚡ Tự Động Áp Dụng Hiệu Chỉnh</span>
+              </button>
+            </div>
+          )}
         </div>
       )}
 

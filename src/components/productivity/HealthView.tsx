@@ -529,6 +529,10 @@ export const HealthView: React.FC<HealthViewProps> = ({
           onDeletePoint={onDeleteBodyPoint}
           onAddBodyPhoto={onAddBodyPhoto}
           onDeleteBodyPhoto={onDeleteBodyPhoto}
+          ctgPeriodizedRoadmap={ctgPeriodizedRoadmap}
+          onUpdateCtgPeriodizedRoadmap={onUpdateCtgPeriodizedRoadmap}
+          nutritionSettings={nutritionSettings}
+          onUpdateNutritionSettings={onUpdateNutritionSettings}
         />
       )}
 

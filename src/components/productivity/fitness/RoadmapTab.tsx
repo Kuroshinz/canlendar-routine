@@ -37,6 +37,7 @@ import {
   FolderOpen,
   ChevronDown,
   ChevronUp,
+  Copy,
 } from 'lucide-react';
 import {
   BodyPoint,
@@ -649,6 +650,29 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
     setTimeout(() => setAppliedBanner(null), 6000);
   };
 
+  const handleCopyRoadmapSummary = async () => {
+    if (!activeRoadmap) return;
+    const lines = [
+      `🏋️ LỘ TRÌNH THỂ HÌNH CHU KỲ CHUẨN CTG: ${activeRoadmap.title}`,
+      `• Mục tiêu: ${profile.goal === 'cut' ? 'Giảm mỡ' : profile.goal === 'bulk' ? 'Tăng cơ' : 'Duy trì'} · Tổng số giai đoạn: ${phases.length}`,
+      `• Thể trạng ban đầu: Chiều cao ${profile.heightCm || 172}cm · Cân nặng ${currentWeight}kg · Mỡ ${currentBf}% (LBM: ${currentLbm}kg, FFMI: ${currentFfmi})`,
+      '',
+      '📅 CHI TIẾT CÁC GIAI ĐOẠN:',
+      ...phases.map((p, idx) => {
+        return `#${idx + 1}. ${p.name} (${p.startDate} – ${p.endDate}): ${p.startWeightKg}kg → ${p.targetWeightKg}kg (% mỡ: ${p.startBodyFatPct}% → ${p.targetBodyFatPct}%) | Calo: ${p.targetKcal.toLocaleString('vi-VN')} kcal (Đạm: ${p.macros.protein}g / Carb: ${p.macros.carbs}g / Fat: ${p.macros.fat}g)${p.note ? ` | Lời khuyên: ${p.note}` : ''}`;
+      }),
+    ];
+    const text = lines.join('\n');
+    try {
+      await navigator.clipboard.writeText(text);
+      setAppliedBanner('Đã sao chép toàn bộ tóm tắt lộ trình vào bộ nhớ tạm (Clipboard)!');
+      setTimeout(() => setAppliedBanner(null), 4000);
+    } catch {
+      setAppliedBanner('Đã chuẩn bị tóm tắt lộ trình.');
+      setTimeout(() => setAppliedBanner(null), 3000);
+    }
+  };
+
   const handleConfirmDeleteCurrentRoadmap = () => {
     if (onDeleteCurrentCtgRoadmap) {
       onDeleteCurrentCtgRoadmap();
@@ -1245,6 +1269,16 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                   <span>Xóa Lộ Trình</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleCopyRoadmapSummary}
+                  className="px-3 py-2 rounded-xl border border-white/15 bg-white/5 hover:bg-white/10 text-white text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1.5"
+                  title="Sao chép toàn bộ lộ trình ra văn bản tóm tắt để lưu trữ hoặc gửi huấn luyện viên"
+                >
+                  <Copy className="w-3.5 h-3.5 text-blue-400" />
+                  <span>Sao Chép Tóm Tắt</span>
                 </button>
 
                 <button
