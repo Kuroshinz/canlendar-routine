@@ -1781,27 +1781,24 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
                     <Edit3 className="w-3.5 h-3.5" />
                     <span>Sửa giai đoạn</span>
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      handleSetCurrentPhase(selectedPhase.id);
-                      setSelectedPhase(null);
-                    }}
-                    className="px-4 py-2.5 rounded-xl border border-white/20 hover:bg-white/10 text-white text-xs font-bold transition-colors cursor-pointer"
-                  >
-                    Đặt làm hiện tại
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      handleApplySinglePhase(selectedPhase);
-                      setSelectedPhase(null);
-                    }}
-                    className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 shadow-xs"
-                  >
-                    <Sparkles className="w-4 h-4" />
-                    <span>Áp Dụng Giai Đoạn Này</span>
-                  </button>
+                  {activeRoadmap?.activePhaseId === selectedPhase.id ? (
+                    <span className="px-4 py-2.5 rounded-xl bg-blue-500/20 border border-blue-500/40 text-blue-300 text-xs font-bold flex items-center gap-1.5">
+                      <CheckCircle2 className="w-4 h-4 text-blue-400" />
+                      <span>✓ Giai đoạn đang thực hiện</span>
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleSetCurrentPhase(selectedPhase.id);
+                        setSelectedPhase(null);
+                      }}
+                      className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 shadow-xs"
+                    >
+                      <CheckCircle2 className="w-4 h-4" />
+                      <span>Đặt làm giai đoạn hiện tại</span>
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -2123,7 +2120,7 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-white/20 hover:bg-white/10 text-white text-xs font-semibold transition-all cursor-pointer"
             >
               <CheckCircle2 className="w-3.5 h-3.5 text-blue-400" />
-              <span>Chỉ áp dụng hồ sơ</span>
+              <span>Lưu vào hồ sơ sức khỏe</span>
             </button>
             <button
               type="button"
@@ -2131,7 +2128,7 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
               className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-orange-600 hover:bg-orange-500 text-white text-xs font-bold transition-all shadow-md cursor-pointer hover:shadow-orange-500/30"
             >
               <Zap className="w-4 h-4" />
-              <span>⚡ Kích Hoạt Lộ Trình & Giáo Án</span>
+              <span>⚡ Tạo Lộ Trình & Giáo Án Từ Phân Tích</span>
             </button>
           </div>
         </div>

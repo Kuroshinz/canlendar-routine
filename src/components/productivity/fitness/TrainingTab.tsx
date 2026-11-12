@@ -1046,10 +1046,11 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
                 <button
                   type="button"
                   onClick={() => handleQuickLog(session)}
-                  className="flex items-center justify-center gap-1 py-2 px-2.5 rounded-xl border border-slate-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 text-xs font-semibold cursor-pointer transition-colors"
-                  title="Ghi nhận nhanh (mẫu)"
+                  className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-semibold cursor-pointer transition-colors"
+                  title="Ghi nhận hoàn thành buổi tập này cho ngày hôm nay"
                 >
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                  <span>Xong hôm nay</span>
                 </button>
               </div>
             </div>
@@ -2706,8 +2707,27 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
                   className="w-full text-xs px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
                   required
                 />
-                {/* Quick suggestions */}
-                <div className="flex flex-wrap gap-1 mt-1.5">
+                {/* Quick suggestions from Planned Sessions or standard splits */}
+                {plannedSessions.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-1 mt-1.5">
+                    <span className="text-[10px] text-gray-400 font-medium mr-1">Giáo án hiện tại:</span>
+                    {plannedSessions.map((s) => (
+                      <button
+                        key={s.id}
+                        type="button"
+                        onClick={() => {
+                          setPastTitle(s.title);
+                          setPastDuration('60');
+                          setPastBurnedKcal('280');
+                        }}
+                        className="px-2 py-0.5 text-[10px] font-semibold rounded-md bg-orange-500/15 border border-orange-500/30 text-orange-600 dark:text-orange-400 hover:bg-orange-500/25 cursor-pointer transition-colors"
+                      >
+                        📋 {s.title}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <div className="flex flex-wrap gap-1 mt-1">
                   {['Đẩy Ngực & Tay Sau', 'Kéo Lưng & Tay Trước', 'Chân & Bụng', 'Vai & Bắp Tay', 'Full Body Toàn Thân'].map((sug) => (
                     <button
                       key={sug}
