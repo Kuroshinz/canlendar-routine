@@ -208,11 +208,6 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
   const [userGoal, setUserGoal] = useState<'auto' | Goal>('auto');
   const [appliedBanner, setAppliedBanner] = useState<string | null>(null);
 
-  const currentWeight = latestPoint?.weightKg ?? Number(weightKg) ?? 67.8;
-  const currentBf = latestPoint?.bodyFatPct ?? Number(bodyfatPct) ?? 17.1;
-  const currentLbm = latestPoint ? leanMassKg(latestPoint.weightKg, latestPoint.bodyFatPct) : leanMassKg(currentWeight, currentBf);
-  const currentFfmi = latestPoint ? ffmi(latestPoint.weightKg, latestPoint.bodyFatPct, Number(heightCm) || 172) : ffmi(currentWeight, currentBf, Number(heightCm) || 172);
-
   const [isLiveTrackingCollapsed, setIsLiveTrackingCollapsed] = useState(false);
 
   const activePhase = useMemo(() => {
@@ -231,6 +226,44 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
     });
     return byDate || phases[0] || null;
   }, [activeRoadmap, phases]);
+
+  // Cân nặng hiện tại: ưu tiên số đo thực tế nếu mới hơn mốc bắt đầu của lộ trình/giai đoạn,
+  // nếu chưa có số đo mới thì lấy đúng mốc khởi điểm lộ trình do người dùng tạo (VD: 64.5kg)
+  const currentWeight = useMemo(() => {
+    if (activeRoadmap?.initialWeightKg) {
+      if (latestPoint && activePhase?.startDate) {
+        const ptDate = new Date(latestPoint.date).getTime();
+        const phDate = parseVnDate(activePhase.startDate).getTime();
+        if (ptDate > phDate) {
+          return latestPoint.weightKg;
+        }
+      }
+      return activePhase?.startWeightKg ?? activeRoadmap.initialWeightKg;
+    }
+    return latestPoint?.weightKg ?? Number(weightKg) ?? 67.8;
+  }, [activeRoadmap, activePhase, latestPoint, weightKg]);
+
+  const currentBf = useMemo(() => {
+    if (activeRoadmap?.initialBodyFatPct) {
+      if (latestPoint && activePhase?.startDate) {
+        const ptDate = new Date(latestPoint.date).getTime();
+        const phDate = parseVnDate(activePhase.startDate).getTime();
+        if (ptDate > phDate) {
+          return latestPoint.bodyFatPct;
+        }
+      }
+      return activePhase?.startBodyFatPct ?? activeRoadmap.initialBodyFatPct;
+    }
+    return latestPoint?.bodyFatPct ?? Number(bodyfatPct) ?? 17.1;
+  }, [activeRoadmap, activePhase, latestPoint, bodyfatPct]);
+
+  const currentLbm = useMemo(() => {
+    return latestPoint ? leanMassKg(latestPoint.weightKg, latestPoint.bodyFatPct) : leanMassKg(currentWeight, currentBf);
+  }, [latestPoint, currentWeight, currentBf]);
+
+  const currentFfmi = useMemo(() => {
+    return latestPoint ? ffmi(latestPoint.weightKg, latestPoint.bodyFatPct, Number(heightCm) || 172) : ffmi(currentWeight, currentBf, Number(heightCm) || 172);
+  }, [latestPoint, currentWeight, currentBf, heightCm]);
 
   // Tự động khôi phục phase hợp lệ nếu activePhaseId đang là 'none' hoặc bị trống
   useEffect(() => {
@@ -1359,30 +1392,6 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
               {/* Collapsed Preview or Full 3-Column Stats */}
               {!isLiveTrackingCollapsed && (
                 <>
-                  {/* Warning & 1-Click Sync if Starting Weight Mismatch */}
-                  {Math.abs(currentWeight - activePhase.startWeightKg) >= 0.5 && (
-                    <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/25 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-amber-200">
-                      <div className="flex items-start gap-2.5">
-                        <Info className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-                        <div>
-                          <div className="font-bold text-white">
-                            Số đo thực tế ({currentWeight}kg) khác mốc bắt đầu kế hoạch ({activePhase.startWeightKg}kg):
-                          </div>
-                          <div className="text-white/70 text-[11px] mt-0.5 leading-relaxed">
-                            Giai đoạn này đang tính xuất phát từ {activePhase.startWeightKg}kg. Hãy bấm đồng bộ để mốc xuất phát và tiến độ % khớp chính xác với thể trạng {currentWeight}kg của bạn.
-                          </div>
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => handleSyncPhaseWithCurrentWeight(activePhase)}
-                        className="px-3.5 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs shrink-0 cursor-pointer shadow-xs transition-colors"
-                      >
-                        ⚡ Đồng bộ về {currentWeight}kg
-                      </button>
-                    </div>
-                  )}
-
                   {/* 3 Cột chỉ số trực quan */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
                     {/* Cột 1: Cân nặng & Tiến độ */}

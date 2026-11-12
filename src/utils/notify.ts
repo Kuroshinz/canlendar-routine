@@ -53,3 +53,4 @@ export const notifyWarning = (title: string, message?: string, durationMs?: numb
 export const notifyError = (title: string, message?: string, durationMs?: number): void => {
   notify('error', title, message, { durationMs, playSound: true });
 };
+
