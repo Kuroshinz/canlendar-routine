@@ -69,7 +69,7 @@ import { InBodyTab } from './fitness/InBodyTab';
 import { TrainingTab } from './fitness/TrainingTab';
 import { NutritionTab } from './fitness/NutritionTab';
 import { ProfileTab } from './fitness/ProfileTab';
-import { RoadmapTab } from './fitness/RoadmapTab';
+import { RoadmapTab, parseVnDate } from './fitness/RoadmapTab';
 
 export interface HealthViewProps {
   healthLogs: HealthDayLog[];
@@ -279,10 +279,15 @@ export const HealthView: React.FC<HealthViewProps> = ({
   }, [ctgPeriodizedRoadmap]);
 
   const activePhaseDaysRemaining = useMemo(() => {
-    if (!ctgActivePhase) return 0;
-    const end = new Date(ctgActivePhase.endDate).getTime();
-    const now = new Date().getTime();
-    return Math.max(0, Math.ceil((end - now) / 86_400_000));
+    if (!ctgActivePhase?.endDate) return 0;
+    const end = parseVnDate(ctgActivePhase.endDate);
+    const endMs = end.getTime();
+    if (!Number.isFinite(endMs)) return 0;
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    end.setHours(0, 0, 0, 0);
+    const diffDays = Math.round((end.getTime() - now.getTime()) / 86_400_000);
+    return Math.max(0, Number.isFinite(diffDays) ? diffDays : 0);
   }, [ctgActivePhase]);
 
   // Macro Ring geometry

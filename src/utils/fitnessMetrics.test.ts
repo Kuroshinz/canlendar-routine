@@ -180,6 +180,11 @@ assert(netLbmGrowth === 15.8, `Expected +15.8kg LBM growth, got ${netLbmGrowth}`
 // Date parse helper check
 const parsedD = parseVnDate('24/10/2026');
 assert(parsedD.getDate() === 24 && parsedD.getMonth() === 9 && parsedD.getFullYear() === 2026, 'parseVnDate should parse DD/MM/YYYY');
+const parsedD2 = parseVnDate('25/12/2026');
+assert(parsedD2.getDate() === 25 && parsedD2.getMonth() === 11 && parsedD2.getFullYear() === 2026, 'parseVnDate should parse 25/12/2026');
+assert(!isNaN(parsedD2.getTime()), 'parseVnDate timestamp must not be NaN');
+const parsedEmpty = parseVnDate('');
+assert(isNaN(parsedEmpty.getTime()), 'parseVnDate on empty should return invalid date');
 
 const phaseStatus = getPhaseStatus(p2, 'ctg-p2');
 assert(phaseStatus === 'current', 'Phase 2 should report current status');

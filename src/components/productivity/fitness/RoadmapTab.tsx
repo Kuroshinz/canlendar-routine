@@ -134,14 +134,23 @@ const BODYFAT_BANDS = {
 };
 
 export function parseVnDate(str: string): Date {
-  const parts = str.trim().split('/');
+  if (!str || typeof str !== 'string') return new Date(NaN);
+  const trimmed = str.trim();
+  const parts = trimmed.split(/[/.-]/);
   if (parts.length === 3) {
-    const d = parseInt(parts[0], 10);
-    const m = parseInt(parts[1], 10) - 1;
-    const y = parseInt(parts[2], 10);
-    return new Date(y, m, d);
+    const p0 = parseInt(parts[0], 10);
+    const p1 = parseInt(parts[1], 10);
+    const p2 = parseInt(parts[2], 10);
+    if (isNaN(p0) || isNaN(p1) || isNaN(p2)) return new Date(NaN);
+    if (parts[0].length === 4) {
+      // YYYY-MM-DD or YYYY/MM/DD
+      return new Date(p0, p1 - 1, p2);
+    }
+    // DD/MM/YYYY
+    const year = p2 < 100 ? 2000 + p2 : p2;
+    return new Date(year, p1 - 1, p0);
   }
-  return new Date(str);
+  return new Date(trimmed);
 }
 
 export function getPhaseStatus(phase: CtgRoadmapPhase, activePhaseId?: string): 'completed' | 'current' | 'upcoming' {
@@ -149,9 +158,15 @@ export function getPhaseStatus(phase: CtgRoadmapPhase, activePhaseId?: string): 
   if (!activePhaseId && phase.isCurrent) return 'current';
   const now = new Date();
   const end = parseVnDate(phase.endDate);
-  if (now > end) return 'completed';
+  if (Number.isFinite(end.getTime())) {
+    end.setHours(23, 59, 59, 999);
+    if (now > end) return 'completed';
+  }
   const start = parseVnDate(phase.startDate);
-  if (now < start) return 'upcoming';
+  if (Number.isFinite(start.getTime())) {
+    start.setHours(0, 0, 0, 0);
+    if (now < start) return 'upcoming';
+  }
   return 'current';
 }
 
@@ -1015,10 +1030,15 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
   }, [activePhase]);
 
   const daysRemaining = useMemo(() => {
-    if (!activePhase) return 0;
+    if (!activePhase?.endDate) return 0;
     const e = parseVnDate(activePhase.endDate);
+    const eMs = e.getTime();
+    if (!Number.isFinite(eMs)) return 0;
     const now = new Date();
-    return Math.max(0, Math.round((e.getTime() - now.getTime()) / 864e5));
+    now.setHours(0, 0, 0, 0);
+    e.setHours(0, 0, 0, 0);
+    const diff = Math.round((e.getTime() - now.getTime()) / 864e5);
+    return Math.max(0, Number.isFinite(diff) ? diff : 0);
   }, [activePhase]);
 
   const filteredPhases = useMemo(() => {
