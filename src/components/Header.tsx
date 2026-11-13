@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { CalendarViewType, SyncState } from '../types/calendar';
 import {
   Menu,
@@ -19,7 +19,61 @@ import {
   RefreshCw,
   FolderSync,
   FileText,
+  Compass,
+  Check,
+  Trash2,
+  Clock,
+  ArrowRight,
+  AlertTriangle,
+  X,
+  Info,
 } from 'lucide-react';
+import {
+  getStoredNotifications,
+  markAllNotificationsRead,
+  deleteNotification,
+  clearAllNotifications,
+  SystemNotification,
+} from '../utils/notify';
+
+export interface HeaderNutritionSummary {
+  consumedKcal: number;
+  targetKcal: number;
+  consumedProtein: number;
+  targetProtein: number;
+}
+
+export interface HeaderRoadmapSummary {
+  roadmapTitle: string;
+  phaseName: string;
+  remainingDays: number;
+  startWeightKg: number;
+  targetWeightKg: number;
+  startDate: string;
+  endDate: string;
+}
+
+export interface HeaderTaskAlerts {
+  overdue: number;
+  dueToday: number;
+}
+
+export interface HeaderWeightTrendAlert {
+  type: 'warning' | 'info';
+  title: string;
+  message: string;
+}
+
+function formatRelativeTime(timestamp: number, lang: 'vi' | 'en'): string {
+  const diffSec = Math.max(0, Math.floor((Date.now() - timestamp) / 1000));
+  if (diffSec < 60) return lang === 'vi' ? 'Vừa xong' : 'Just now';
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return lang === 'vi' ? `${diffMin} phút trước` : `${diffMin}m ago`;
+  const diffHour = Math.floor(diffMin / 60);
+  if (diffHour < 24) return lang === 'vi' ? `${diffHour} giờ trước` : `${diffHour}h ago`;
+  const diffDays = Math.floor(diffHour / 24);
+  return lang === 'vi' ? `${diffDays} ngày trước` : `${diffDays}d ago`;
+}
 
 interface HeaderProps {
   currentDate: Date;
@@ -46,6 +100,10 @@ interface HeaderProps {
   isSyncing?: boolean;
   syncState?: SyncState;
   pendingTasksCount?: number;
+  nutritionSummary?: HeaderNutritionSummary | null;
+  activeRoadmapSummary?: HeaderRoadmapSummary | null;
+  taskAlerts?: HeaderTaskAlerts | null;
+  weightTrendAlert?: HeaderWeightTrendAlert | null;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -72,10 +130,35 @@ export const Header: React.FC<HeaderProps> = ({
   isLoggedInGoogle = false,
   isSyncing = false,
   syncState = 'offline',
-  pendingTasksCount = 3,
+  pendingTasksCount = 0,
+  nutritionSummary,
+  activeRoadmapSummary,
+  taskAlerts,
+  weightTrendAlert,
 }) => {
   const [showNotificationPopup, setShowNotificationPopup] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [storedNotifs, setStoredNotifs] = useState<SystemNotification[]>(() => getStoredNotifications());
+
+  useEffect(() => {
+    const handler = () => {
+      setStoredNotifs(getStoredNotifications());
+    };
+    window.addEventListener('app:notification-updated', handler);
+    return () => window.removeEventListener('app:notification-updated', handler);
+  }, []);
+
+  const unreadStoredCount = useMemo(() => storedNotifs.filter((n) => !n.read).length, [storedNotifs]);
+  const smartAlertsCount = useMemo(() => {
+    let count = 0;
+    if (nutritionSummary && nutritionSummary.consumedKcal < nutritionSummary.targetKcal) count++;
+    if (activeRoadmapSummary) count++;
+    if (weightTrendAlert) count++;
+    if (taskAlerts && taskAlerts.overdue > 0) count++;
+    return count;
+  }, [nutritionSummary, activeRoadmapSummary, weightTrendAlert, taskAlerts]);
+
+  const totalNotificationBadge = unreadStoredCount + smartAlertsCount;
 
   // Derive friendly greeting based on current time
   const hour = new Date().getHours();
@@ -174,13 +257,13 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="relative">
           <button
             onClick={() => setShowNotificationPopup(!showNotificationPopup)}
-            title={lang === 'vi' ? 'Thông báo & Nhắc nhở' : 'Notifications'}
+            title={lang === 'vi' ? 'Thông báo hệ thống' : 'Notifications'}
             className="p-2 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer relative"
           >
             <Bell className="w-4 h-4" />
-            {pendingTasksCount > 0 && (
-              <span className="absolute top-0 right-0 min-w-4 h-4 px-1 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center leading-none">
-                {pendingTasksCount}
+            {totalNotificationBadge > 0 && (
+              <span className="absolute top-0 right-0 min-w-4 h-4 px-1 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center leading-none animate-pulse">
+                {totalNotificationBadge}
               </span>
             )}
           </button>
@@ -191,44 +274,237 @@ export const Header: React.FC<HeaderProps> = ({
                 className="fixed inset-0 z-40"
                 onClick={() => setShowNotificationPopup(false)}
               />
-              <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-xl p-4 z-50">
-                <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-700">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                    {lang === 'vi' ? 'Thông báo hệ thống' : 'Notifications'}
-                  </h3>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400">
-                    {pendingTasksCount} mới
-                  </span>
+              <div className="absolute right-0 mt-2 w-84 sm:w-96 bg-white dark:bg-[#0c1424] border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl p-4 z-50 max-h-[82vh] flex flex-col backdrop-blur-xl animate-fadeIn">
+                {/* Header */}
+                <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800/80 shrink-0">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-200">
+                      {lang === 'vi' ? 'Thông báo hệ thống' : 'Notifications'}
+                    </h3>
+                    {totalNotificationBadge > 0 && (
+                      <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                        {totalNotificationBadge} mới
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        markAllNotificationsRead();
+                        setStoredNotifs(getStoredNotifications());
+                      }}
+                      title={lang === 'vi' ? 'Đánh dấu đã đọc tất cả' : 'Mark all as read'}
+                      className="px-2 py-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition-colors text-xs flex items-center gap-1 cursor-pointer font-medium"
+                    >
+                      <Check className="w-3.5 h-3.5" />
+                      <span className="text-[10px]">{lang === 'vi' ? 'Đã đọc' : 'Read'}</span>
+                    </button>
+                    {storedNotifs.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          clearAllNotifications();
+                          setStoredNotifs([]);
+                        }}
+                        title={lang === 'vi' ? 'Xóa toàn bộ lịch sử' : 'Clear all'}
+                        className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-rose-500 transition-colors text-xs flex items-center gap-1 cursor-pointer"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
                 </div>
 
-                <div className="mt-3 space-y-2.5">
-                  <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800 text-xs flex items-start gap-2.5">
-                    <AlertCircle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
-                    <div>
-                      <p className="font-semibold text-slate-800 dark:text-slate-200">
-                        {lang === 'vi' ? 'Mục tiêu dinh dưỡng' : 'Nutrition Target'}
-                      </p>
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                        {lang === 'vi'
-                          ? 'Bạn còn thiếu 540 kcal & 35g protein cho ngày hôm nay.'
-                          : 'You need 540 kcal & 35g protein remaining today.'}
+                {/* Scrollable Items Container */}
+                <div className="mt-3 space-y-2.5 overflow-y-auto pr-1 flex-1 text-xs">
+                  {/* Real Nutrition Alert */}
+                  {nutritionSummary && (
+                    <div
+                      onClick={() => {
+                        onViewChange('health');
+                        setShowNotificationPopup(false);
+                      }}
+                      className="p-3 rounded-2xl bg-amber-500/10 dark:bg-amber-950/25 border border-amber-500/25 hover:border-amber-500/50 transition-all cursor-pointer group space-y-1"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 font-bold text-amber-600 dark:text-amber-400">
+                          <AlertCircle className="w-4 h-4 shrink-0" />
+                          <span>{lang === 'vi' ? 'Mục tiêu dinh dưỡng hôm nay' : 'Daily Nutrition Target'}</span>
+                        </div>
+                        <ArrowRight className="w-3.5 h-3.5 text-amber-500 opacity-60 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
+                      </div>
+                      <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
+                        {nutritionSummary.consumedKcal < nutritionSummary.targetKcal
+                          ? (lang === 'vi'
+                              ? `Bạn còn thiếu ${(nutritionSummary.targetKcal - nutritionSummary.consumedKcal).toLocaleString('vi-VN')} kcal & ${Math.max(0, nutritionSummary.targetProtein - nutritionSummary.consumedProtein)}g đạm cho ngày hôm nay (Đã nạp ${nutritionSummary.consumedKcal.toLocaleString('vi-VN')} / ${nutritionSummary.targetKcal.toLocaleString('vi-VN')} kcal).`
+                              : `Remaining ${(nutritionSummary.targetKcal - nutritionSummary.consumedKcal)} kcal & ${Math.max(0, nutritionSummary.targetProtein - nutritionSummary.consumedProtein)}g protein today.`)
+                          : (lang === 'vi'
+                              ? `Đã đạt mục tiêu dinh dưỡng hôm nay (${nutritionSummary.consumedKcal.toLocaleString('vi-VN')} / ${nutritionSummary.targetKcal.toLocaleString('vi-VN')} kcal & ${nutritionSummary.consumedProtein}g đạm)!`
+                              : `Daily nutrition goal achieved!`)}
                       </p>
                     </div>
+                  )}
+
+                  {/* Active CTG Wave Roadmap Alert */}
+                  {activeRoadmapSummary && (
+                    <div
+                      onClick={() => {
+                        onViewChange('health');
+                        setShowNotificationPopup(false);
+                      }}
+                      className="p-3 rounded-2xl bg-blue-500/10 dark:bg-blue-950/25 border border-blue-500/25 hover:border-blue-500/50 transition-all cursor-pointer group space-y-1"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 font-bold text-blue-600 dark:text-blue-400">
+                          <Compass className="w-4 h-4 shrink-0" />
+                          <span>Lộ trình CTG: {activeRoadmapSummary.phaseName}</span>
+                        </div>
+                        <ArrowRight className="w-3.5 h-3.5 text-blue-500 opacity-60 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
+                      </div>
+                      <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
+                        {lang === 'vi'
+                          ? `${activeRoadmapSummary.startDate} – ${activeRoadmapSummary.endDate} (Còn ~${activeRoadmapSummary.remainingDays} ngày). Mục tiêu: ${activeRoadmapSummary.startWeightKg}kg ➔ ${activeRoadmapSummary.targetWeightKg}kg.`
+                          : `${activeRoadmapSummary.startDate} – ${activeRoadmapSummary.endDate} (~${activeRoadmapSummary.remainingDays} days left). Target: ${activeRoadmapSummary.startWeightKg}kg -> ${activeRoadmapSummary.targetWeightKg}kg.`}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Weight Trend Alert */}
+                  {weightTrendAlert && (
+                    <div
+                      onClick={() => {
+                        onViewChange('health');
+                        setShowNotificationPopup(false);
+                      }}
+                      className="p-3 rounded-2xl bg-rose-500/10 dark:bg-rose-950/25 border border-rose-500/25 hover:border-rose-500/50 transition-all cursor-pointer group space-y-1"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 font-bold text-rose-600 dark:text-rose-400">
+                          <AlertTriangle className="w-4 h-4 shrink-0" />
+                          <span>{weightTrendAlert.title}</span>
+                        </div>
+                        <ArrowRight className="w-3.5 h-3.5 text-rose-500 opacity-60 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
+                      </div>
+                      <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
+                        {weightTrendAlert.message}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Task Alerts */}
+                  {taskAlerts && taskAlerts.overdue > 0 && (
+                    <div
+                      onClick={() => {
+                        onViewChange('tasks');
+                        setShowNotificationPopup(false);
+                      }}
+                      className="p-3 rounded-2xl bg-rose-500/10 dark:bg-rose-950/25 border border-rose-500/25 hover:border-rose-500/50 transition-all cursor-pointer group space-y-1"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 font-bold text-rose-600 dark:text-rose-400">
+                          <Clock className="w-4 h-4 shrink-0" />
+                          <span>{lang === 'vi' ? 'Công việc quá hạn' : 'Overdue Tasks'}</span>
+                        </div>
+                        <ArrowRight className="w-3.5 h-3.5 text-rose-500 opacity-60 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
+                      </div>
+                      <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
+                        {lang === 'vi'
+                          ? `Bạn có ${taskAlerts.overdue} công việc quá hạn cần hoàn thành.`
+                          : `You have ${taskAlerts.overdue} overdue tasks.`}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Real Cloud & Google Sync Status */}
+                  <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-xs space-y-1">
+                    <div className="flex items-center gap-2 font-semibold text-slate-700 dark:text-slate-300">
+                      <Cloud className="w-4 h-4 text-blue-500 shrink-0" />
+                      <span>
+                        {isLoggedInGoogle
+                          ? (lang === 'vi' ? 'Đồng bộ Google Calendar' : 'Google Calendar')
+                          : (lang === 'vi' ? 'Lưu trữ cục bộ an toàn' : 'Local Storage')}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                      {isLoggedInGoogle
+                        ? (lang === 'vi'
+                            ? `Tài khoản: ${userEmail}. Trạng thái: ${syncState === 'synced' ? 'Đã đồng bộ' : syncState === 'syncing' ? 'Đang cập nhật...' : syncState === 'error' ? 'Lỗi kết nối' : 'Ngoại tuyến'}.`
+                            : `Account: ${userEmail}. Sync: ${syncState}.`)
+                        : (lang === 'vi'
+                            ? 'Dữ liệu được lưu trữ an toàn trên trình duyệt của bạn (Offline Mode).'
+                            : 'All data saved securely on your browser.')}
+                    </p>
                   </div>
 
-                  <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800 text-xs flex items-start gap-2.5">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
-                    <div>
-                      <p className="font-semibold text-slate-800 dark:text-slate-200">
-                        {lang === 'vi' ? 'Đồng bộ Google Health' : 'Google Health Synced'}
-                      </p>
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                        {lang === 'vi'
-                          ? 'Đã cập nhật chỉ số bước chân & giấc ngủ vào hệ thống.'
-                          : 'Loaded steps & sleep from Google Fit.'}
-                      </p>
+                  {/* Stored Recent Activity / Notifications */}
+                  {storedNotifs.length > 0 && (
+                    <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80 space-y-2">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block px-1">
+                        {lang === 'vi' ? 'Hoạt động & Thông báo gần đây' : 'Recent Activity'}
+                      </span>
+                      {storedNotifs.slice(0, 10).map((n) => {
+                        const isSuccess = n.type === 'success';
+                        const isWarning = n.type === 'warning';
+                        const isError = n.type === 'error';
+
+                        return (
+                          <div
+                            key={n.id}
+                            onClick={() => {
+                              if (n.targetView) {
+                                onViewChange(n.targetView as CalendarViewType);
+                                setShowNotificationPopup(false);
+                              }
+                            }}
+                            className={`p-2.5 rounded-xl border text-xs flex items-start justify-between gap-2.5 transition-colors ${
+                              n.targetView ? 'cursor-pointer hover:bg-slate-100/80 dark:hover:bg-slate-800/80' : ''
+                            } ${
+                              n.read
+                                ? 'bg-slate-50/50 dark:bg-slate-900/40 border-slate-100 dark:border-slate-800/60 opacity-80'
+                                : 'bg-slate-50 dark:bg-slate-900/80 border-slate-200 dark:border-slate-700/80'
+                            }`}
+                          >
+                            <div className="flex items-start gap-2.5 min-w-0">
+                              <div className="shrink-0 mt-0.5">
+                                {isSuccess && <CheckCircle2 className="w-4 h-4 text-emerald-500" />}
+                                {isWarning && <AlertTriangle className="w-4 h-4 text-amber-500" />}
+                                {isError && <AlertCircle className="w-4 h-4 text-rose-500" />}
+                                {!isSuccess && !isWarning && !isError && <Info className="w-4 h-4 text-blue-500" />}
+                              </div>
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <p className="font-semibold text-slate-800 dark:text-slate-200 truncate">
+                                    {n.title}
+                                  </p>
+                                  <span className="text-[9px] text-slate-400 shrink-0">
+                                    {formatRelativeTime(n.createdAt, lang)}
+                                  </span>
+                                </div>
+                                {n.message && (
+                                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed line-clamp-2">
+                                    {n.message}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                deleteNotification(n.id);
+                                setStoredNotifs(getStoredNotifications());
+                              }}
+                              className="text-slate-400 hover:text-rose-500 p-1 rounded-md transition-colors shrink-0"
+                              title="Xóa thông báo này"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
+                        );
+                      })}
                     </div>
-                  </div>
+                  )}
                 </div>
               </div>
             </>

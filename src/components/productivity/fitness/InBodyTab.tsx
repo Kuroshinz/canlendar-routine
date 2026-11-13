@@ -51,7 +51,7 @@ import {
   withUnit,
 } from '../../../utils/fitnessMetrics';
 import { ChartSeries, MultiSeriesLineChart } from '../../charts/SimpleCharts';
-import { notifySuccess } from '../../../utils/notify';
+import { notifySuccess, notifyWarning, notifyError, notifyInfo } from '../../../utils/notify';
 
 interface InBodyTabProps {
   points: BodyPoint[];
@@ -318,6 +318,7 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
   }, [sorted]);
 
   const [adjustedBanner, setAdjustedBanner] = useState<string | null>(null);
+  const [dismissedRecommendation, setDismissedRecommendation] = useState(false);
 
   const activePhase = useMemo(() => {
     if (!ctgPeriodizedRoadmap?.phases?.length) return null;
@@ -420,9 +421,13 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
       });
     }
 
-    setAdjustedBanner(`Đã áp dụng hiệu chỉnh CTG: Giai đoạn "${activePhase.name}" cập nhật thành ${newKcal} kcal (${newCarbs}g Carb)!`);
+    setAdjustedBanner(`Đã cập nhật mục tiêu: Giai đoạn "${activePhase.name}" cập nhật thành ${newKcal} kcal (${newCarbs}g Carb)!`);
     setTimeout(() => setAdjustedBanner(null), 6000);
-    notifySuccess('Đã hiệu chỉnh kế hoạch theo tuần!', `Giai đoạn "${activePhase.name}" cập nhật thành ${newKcal} kcal (${newCarbs}g Carb)!`);
+    notifySuccess(
+      'Đã cập nhật mục tiêu dinh dưỡng!',
+      `Giai đoạn "${activePhase.name}" cập nhật thành ${newKcal} kcal (${newCarbs}g Carb)!`,
+      { category: 'nutrition', targetView: 'health' }
+    );
   };
 
   // Form state
@@ -459,11 +464,24 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
 
   const handleAdd = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!weightKg || !bodyFatPct) return;
+    const w = Number(weightKg);
+    const bf = Number(bodyFatPct);
+    if (!weightKg || !bodyFatPct || isNaN(w) || isNaN(bf)) {
+      notifyError('Lỗi dữ liệu!', 'Vui lòng nhập đầy đủ cân nặng và % mỡ hợp lệ.');
+      return;
+    }
+    if (w < 30 || w > 250) {
+      notifyWarning('Cảnh báo cân nặng!', 'Cân nặng cần nằm trong khoảng 30kg đến 250kg.');
+      return;
+    }
+    if (bf < 3 || bf > 60) {
+      notifyWarning('Cảnh báo % mỡ!', '% mỡ cơ thể cần nằm trong khoảng 3% đến 60%.');
+      return;
+    }
     onAddPoint({
       date,
-      weightKg: Number(weightKg),
-      bodyFatPct: Number(bodyFatPct),
+      weightKg: w,
+      bodyFatPct: bf,
       chestCm: chestCm ? Number(chestCm) : undefined,
       armCm: armCm ? Number(armCm) : undefined,
       thighCm: thighCm ? Number(thighCm) : undefined,
@@ -471,7 +489,10 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
     });
     setShowForm(false);
     setNote('');
-    notifySuccess('Đã lưu chỉ số cơ thể!', `Cân nặng ${weightKg}kg · ${bodyFatPct}% mỡ đã được ghi nhận.`);
+    notifySuccess('Đã lưu chỉ số cơ thể!', `Cân nặng ${w}kg · ${bf}% mỡ đã được ghi nhận.`, {
+      category: 'fitness',
+      targetView: 'health',
+    });
   };
 
   return (
@@ -639,31 +660,55 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
             </div>
           )}
 
-          {/* Đề xuất hiệu chỉnh tuần tự động chuẩn CTG Coach */}
-          {recommendedAdjustment && !adjustedBanner && (
-            <div className="p-3.5 rounded-xl bg-linear-to-r from-amber-500/20 via-orange-500/15 to-transparent border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs animate-fadeIn">
-              <div className="flex items-start gap-2.5">
-                <div className="w-7 h-7 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0 mt-0.5">
+          {/* Khuyến nghị & Cảnh báo thể trạng từ Huấn Luyện Viên CTG */}
+          {recommendedAdjustment && !adjustedBanner && !dismissedRecommendation && (
+            <div className="p-4 rounded-2xl bg-linear-to-r from-amber-500/15 via-orange-500/10 to-transparent border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs animate-fadeIn">
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0 mt-0.5">
                   <Zap className="w-4 h-4" />
                 </div>
                 <div>
                   <div className="font-bold text-white flex items-center gap-2">
-                    <span>Đề xuất hiệu chỉnh tuần chuẩn CTG:</span>
+                    <span>Khuyến nghị thể trạng từ Huấn Luyện Viên CTG:</span>
                     <span className="text-amber-300 font-mono font-extrabold">{recommendedAdjustment.label}</span>
                   </div>
-                  <div className="text-[11px] text-white/70 mt-0.5 leading-relaxed">
+                  <div className="text-[11px] text-white/70 mt-1 leading-relaxed">
                     {recommendedAdjustment.reason}
                   </div>
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={handleApplyAutoAdjustment}
-                className="px-3.5 py-2 rounded-xl bg-linear-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white font-bold text-xs shrink-0 cursor-pointer shadow-md transition-all flex items-center gap-1.5"
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>⚡ Tự Động Áp Dụng Hiệu Chỉnh</span>
-              </button>
+              <div className="flex flex-wrap items-center gap-2 shrink-0 self-end sm:self-center">
+                <button
+                  type="button"
+                  onClick={() => {
+                    notifyWarning('Khuyến nghị thể trạng CTG', recommendedAdjustment.reason, {
+                      category: 'fitness',
+                      targetView: 'health',
+                    });
+                    setDismissedRecommendation(true);
+                  }}
+                  className="px-3 py-1.5 rounded-xl border border-white/15 hover:bg-white/10 text-white/80 hover:text-white font-medium text-xs cursor-pointer transition-colors"
+                  title="Gửi nội dung này vào Thông báo hệ thống để xem lại sau"
+                >
+                  Gửi vào thông báo
+                </button>
+                <button
+                  type="button"
+                  onClick={handleApplyAutoAdjustment}
+                  className="px-3.5 py-1.5 rounded-xl bg-linear-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white font-bold text-xs cursor-pointer shadow-md transition-all flex items-center gap-1.5"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Áp dụng khuyến nghị</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDismissedRecommendation(true)}
+                  className="p-1.5 rounded-xl hover:bg-white/10 text-white/50 hover:text-white transition-colors cursor-pointer"
+                  title="Bỏ qua đề xuất này"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -1540,7 +1585,13 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
                         </button>
                         <button
                           type="button"
-                          onClick={() => onDeletePoint(p.id)}
+                          onClick={() => {
+                            onDeletePoint(p.id);
+                            notifySuccess('Đã xóa mốc đo!', `Đã xóa mốc đo ngày ${p.date}.`, {
+                              category: 'fitness',
+                              targetView: 'health',
+                            });
+                          }}
                           className="p-1.5 rounded-lg text-gray-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 cursor-pointer transition-colors"
                           title="Xóa mốc đo"
                         >

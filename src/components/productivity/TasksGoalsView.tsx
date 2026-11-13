@@ -42,6 +42,7 @@ import {
   sortTasks,
 } from '../../utils/productivityUtils';
 import { formatDateString } from '../../utils/calendarUtils';
+import { notifySuccess, notifyInfo, notifyWarning, notifyError } from '../../utils/notify';
 
 interface TasksGoalsViewProps {
   tasks: TaskItem[];
@@ -132,14 +133,66 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
             })()
           : undefined;
 
+    const trimmed = quickTitle.trim();
     onAddTask({
-      title: quickTitle.trim(),
+      title: trimmed,
       priority: quickPriority,
       categoryId: categories[0]?.id || 'tasks',
       dueDate,
       status: 'todo',
     });
     setQuickTitle('');
+    notifySuccess(lang === 'vi' ? 'Đã thêm công việc!' : 'Task added!', trimmed, {
+      category: 'task',
+      targetView: 'tasks',
+    });
+  };
+
+  const handleToggleTaskStatus = (t: TaskItem) => {
+    const nextStatus = t.status === 'completed' ? 'todo' : 'completed';
+    onSetTaskStatus(t.id, nextStatus);
+    if (nextStatus === 'completed') {
+      notifySuccess(lang === 'vi' ? 'Tuyệt vời! Đã hoàn thành công việc!' : 'Task completed!', t.title, {
+        category: 'task',
+        targetView: 'tasks',
+      });
+    } else {
+      notifyInfo(lang === 'vi' ? 'Đã mở lại công việc' : 'Task reopened', t.title, {
+        category: 'task',
+        targetView: 'tasks',
+      });
+    }
+  };
+
+  const handleSetTaskStatusDirect = (t: TaskItem, nextStatus: TaskStatus) => {
+    onSetTaskStatus(t.id, nextStatus);
+    if (nextStatus === 'completed') {
+      notifySuccess(lang === 'vi' ? 'Hoàn thành công việc!' : 'Task completed!', t.title, {
+        category: 'task',
+        targetView: 'tasks',
+      });
+    } else {
+      notifyInfo(lang === 'vi' ? 'Cập nhật trạng thái công việc' : 'Status updated', t.title, {
+        category: 'task',
+        targetView: 'tasks',
+      });
+    }
+  };
+
+  const handleDeleteTaskWithNotify = (t: TaskItem) => {
+    onDeleteTask(t.id);
+    notifySuccess(lang === 'vi' ? 'Đã xóa công việc' : 'Task deleted', t.title, {
+      category: 'task',
+      targetView: 'tasks',
+    });
+  };
+
+  const handleDeleteGoalWithNotify = (g: GoalItem) => {
+    onDeleteGoal(g.id);
+    notifySuccess(lang === 'vi' ? 'Đã xóa mục tiêu' : 'Goal deleted', g.title, {
+      category: 'task',
+      targetView: 'tasks',
+    });
   };
 
   const weekDays = useMemo(() => {
@@ -232,8 +285,16 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
 
     if (editingTask) {
       onUpdateTask(editingTask.id, payload);
+      notifySuccess(lang === 'vi' ? 'Đã cập nhật công việc!' : 'Task updated!', payload.title, {
+        category: 'task',
+        targetView: 'tasks',
+      });
     } else {
       onAddTask({ ...payload, status: 'todo' });
+      notifySuccess(lang === 'vi' ? 'Đã tạo công việc mới!' : 'Task created!', payload.title, {
+        category: 'task',
+        targetView: 'tasks',
+      });
     }
 
     resetTaskForm();
@@ -244,8 +305,9 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
     e.preventDefault();
     if (!goalTitle.trim()) return;
     const cat = categories.find((c) => c.id === goalCategory);
+    const title = goalTitle.trim();
     onAddGoal({
-      title: goalTitle.trim(),
+      title,
       categoryId: goalCategory,
       color: cat?.color || '#3F51B5',
       targetDate: goalTargetDate || undefined,
@@ -253,13 +315,18 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
     setGoalTitle('');
     setGoalTargetDate('');
     setShowGoalForm(false);
+    notifySuccess(lang === 'vi' ? 'Đã tạo mục tiêu mới!' : 'Goal created!', title, {
+      category: 'task',
+      targetView: 'tasks',
+    });
   };
 
   const handleSubmitHabit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!habitTitle.trim() || !onAddHabit) return;
+    const title = habitTitle.trim();
     onAddHabit({
-      title: habitTitle.trim(),
+      title,
       category: 'personal',
       timeOfDay: habitTimeOfDay,
       color: habitColor,
@@ -267,6 +334,10 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
     });
     setHabitTitle('');
     setShowHabitForm(false);
+    notifySuccess(lang === 'vi' ? 'Đã tạo thói quen mới!' : 'Habit created!', title, {
+      category: 'task',
+      targetView: 'tasks',
+    });
   };
 
   const toggleExpanded = (id: string) => {
@@ -595,7 +666,7 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
                         <div className="flex items-center gap-2 min-w-0">
                           <button
                             type="button"
-                            onClick={() => onSetTaskStatus(t.id, t.status === 'completed' ? 'todo' : 'completed')}
+                            onClick={() => handleToggleTaskStatus(t)}
                             className="cursor-pointer shrink-0"
                           >
                             {t.status === 'completed' ? (
@@ -619,7 +690,7 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
                             </button>
                           )}
                           <button
-                            onClick={() => onDeleteTask(t.id)}
+                            onClick={() => handleDeleteTaskWithNotify(t)}
                             className="p-1 text-gray-400 hover:text-rose-600 cursor-pointer"
                           >
                             <Trash2 className="w-3 h-3" />
@@ -661,7 +732,7 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
                         <div className="flex items-center gap-2 min-w-0">
                           <button
                             type="button"
-                            onClick={() => onSetTaskStatus(t.id, t.status === 'completed' ? 'todo' : 'completed')}
+                            onClick={() => handleToggleTaskStatus(t)}
                             className="cursor-pointer shrink-0"
                           >
                             {t.status === 'completed' ? (
@@ -685,7 +756,7 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
                             </button>
                           )}
                           <button
-                            onClick={() => onDeleteTask(t.id)}
+                            onClick={() => handleDeleteTaskWithNotify(t)}
                             className="p-1 text-gray-400 hover:text-rose-600 cursor-pointer"
                           >
                             <Trash2 className="w-3 h-3" />
@@ -727,7 +798,7 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
                         <div className="flex items-center gap-2 min-w-0">
                           <button
                             type="button"
-                            onClick={() => onSetTaskStatus(t.id, t.status === 'completed' ? 'todo' : 'completed')}
+                            onClick={() => handleToggleTaskStatus(t)}
                             className="cursor-pointer shrink-0"
                           >
                             {t.status === 'completed' ? (
@@ -742,7 +813,7 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
                         </div>
                         <div className="flex items-center gap-1 shrink-0">
                           <button
-                            onClick={() => onDeleteTask(t.id)}
+                            onClick={() => handleDeleteTaskWithNotify(t)}
                             className="p-1 text-gray-400 hover:text-rose-600 cursor-pointer"
                           >
                             <Trash2 className="w-3 h-3" />
@@ -784,7 +855,7 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
                         <div className="flex items-center gap-2 min-w-0">
                           <button
                             type="button"
-                            onClick={() => onSetTaskStatus(t.id, t.status === 'completed' ? 'todo' : 'completed')}
+                            onClick={() => handleToggleTaskStatus(t)}
                             className="cursor-pointer shrink-0"
                           >
                             {t.status === 'completed' ? (
@@ -799,7 +870,7 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
                         </div>
                         <div className="flex items-center gap-1 shrink-0">
                           <button
-                            onClick={() => onDeleteTask(t.id)}
+                            onClick={() => handleDeleteTaskWithNotify(t)}
                             className="p-1 text-gray-400 hover:text-rose-600 cursor-pointer"
                           >
                             <Trash2 className="w-3 h-3" />
@@ -845,12 +916,7 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
                   >
                     <div className="p-3.5 flex items-start gap-3">
                       <button
-                        onClick={() =>
-                          onSetTaskStatus(
-                            task.id,
-                            task.status === 'completed' ? 'todo' : 'completed'
-                          )
-                        }
+                        onClick={() => handleToggleTaskStatus(task)}
                         className="mt-0.5 shrink-0 cursor-pointer"
                         title={lang === 'vi' ? 'Đánh dấu hoàn thành' : 'Toggle complete'}
                       >
@@ -892,7 +958,7 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
                               <Pencil className="w-3.5 h-3.5" />
                             </button>
                             <button
-                              onClick={() => onDeleteTask(task.id)}
+                              onClick={() => handleDeleteTaskWithNotify(task)}
                               className="p-1 text-gray-400 hover:text-rose-600 rounded cursor-pointer"
                               title={lang === 'vi' ? 'Xóa' : 'Delete'}
                             >
@@ -1046,7 +1112,7 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
                         return (
                           <button
                             key={st}
-                            onClick={() => onSetTaskStatus(task.id, st)}
+                            onClick={() => handleSetTaskStatusDirect(task, st)}
                             className={`text-[10px] px-2 py-0.5 rounded-full font-semibold transition-all cursor-pointer border ${
                               active
                                 ? 'text-white border-transparent'
@@ -1107,7 +1173,7 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
                       )}
                     </div>
                     <button
-                      onClick={() => onDeleteGoal(goal.id)}
+                      onClick={() => handleDeleteGoalWithNotify(goal)}
                       className="p-1 text-gray-300 hover:text-rose-500 rounded shrink-0 cursor-pointer"
                       title={lang === 'vi' ? 'Xóa mục tiêu' : 'Delete goal'}
                     >

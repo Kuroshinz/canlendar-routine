@@ -41,7 +41,8 @@ import { FinanceView } from './components/productivity/FinanceView';
 import { HealthView } from './components/productivity/HealthView';
 import { useProductivityStore, todayString } from './hooks/useProductivityStore';
 import { buildTaskEvents } from './utils/productivityUtils';
-import { buildWorkoutEvents, startOfWeek } from './utils/fitnessMetrics';
+import { buildWorkoutEvents, startOfWeek, tdee, calorieTarget, macroTargets } from './utils/fitnessMetrics';
+import { parseVnDate } from './components/productivity/fitness/RoadmapTab';
 import { User } from 'firebase/auth';
 import { initAuth, logout, getAccessToken, AppUser } from './services/auth';
 import { fetchGoogleCalendarEvents, createGoogleCalendarEvent } from './services/googleCalendarSync';
@@ -773,6 +774,119 @@ export default function App() {
     }
   };
 
+  const nutritionSummary = useMemo(() => {
+    const todayStr = formatDateString(new Date());
+    const todayLog = productivity.healthLogs.find((l) => l.date === todayStr);
+    const consumedKcal = todayLog?.caloriesIn || 0;
+    const consumedProtein = todayLog?.protein || 0;
+
+    const roadmap = productivity.ctgPeriodizedRoadmap;
+    const currentId = roadmap?.activePhaseId;
+    let phase = roadmap?.phases.find((p) => p.id === currentId);
+    if (!phase || currentId === 'none') {
+      phase = roadmap?.phases.find((p) => p.isCurrent) || roadmap?.phases[0];
+    }
+
+    const effectiveWeight = todayLog?.weightKg || productivity.ctgProfile?.targetWeightKg || 65;
+    const estimatedTdee = tdee(productivity.ctgProfile, effectiveWeight);
+    const targetKcal = phase?.targetKcal || calorieTarget(estimatedTdee, productivity.ctgProfile.goal);
+    const targets = macroTargets(targetKcal, effectiveWeight, productivity.ctgProfile.goal, productivity.nutritionSettings);
+    const targetProtein = phase?.macros.protein || targets.protein;
+
+    return {
+      consumedKcal,
+      targetKcal,
+      consumedProtein,
+      targetProtein,
+    };
+  }, [
+    productivity.healthLogs,
+    productivity.ctgPeriodizedRoadmap,
+    productivity.ctgProfile,
+    productivity.nutritionSettings,
+  ]);
+
+  const activeRoadmapSummary = useMemo(() => {
+    const roadmap = productivity.ctgPeriodizedRoadmap;
+    if (!roadmap?.phases?.length) return null;
+    const currentId = roadmap.activePhaseId;
+    let phase = roadmap.phases.find((p) => p.id === currentId);
+    if (!phase || currentId === 'none') {
+      phase = roadmap.phases.find((p) => p.isCurrent) || roadmap.phases[0];
+    }
+    if (!phase) return null;
+
+    let remainingDays = 0;
+    if (phase.endDate) {
+      const e = parseVnDate(phase.endDate);
+      const eMs = e.getTime();
+      if (Number.isFinite(eMs)) {
+        const now = new Date();
+        now.setHours(0, 0, 0, 0);
+        e.setHours(0, 0, 0, 0);
+        const diff = Math.round((e.getTime() - now.getTime()) / 864e5);
+        remainingDays = Math.max(0, Number.isFinite(diff) ? diff : 0);
+      }
+    }
+
+    return {
+      roadmapTitle: roadmap.title || 'Lộ trình CTG',
+      phaseName: phase.name,
+      remainingDays,
+      startWeightKg: phase.startWeightKg,
+      targetWeightKg: phase.targetWeightKg,
+      startDate: phase.startDate,
+      endDate: phase.endDate,
+    };
+  }, [productivity.ctgPeriodizedRoadmap]);
+
+  const taskAlerts = useMemo(() => {
+    const todayStr = formatDateString(new Date());
+    const overdue = productivity.tasks.filter(
+      (t) => t.status !== 'completed' && t.dueDate && t.dueDate < todayStr
+    ).length;
+    const dueToday = productivity.tasks.filter(
+      (t) => t.status !== 'completed' && t.dueDate === todayStr
+    ).length;
+    return { overdue, dueToday };
+  }, [productivity.tasks]);
+
+  const weightTrendAlert = useMemo(() => {
+    if (!productivity.bodyPoints || productivity.bodyPoints.length < 2) return null;
+    const sorted = [...productivity.bodyPoints].sort(
+      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+    );
+    const latest = sorted[sorted.length - 1];
+    const prev = sorted[sorted.length - 2];
+    const days = Math.max(1, Math.round((new Date(latest.date).getTime() - new Date(prev.date).getTime()) / 864e5));
+    if (days > 14) return null;
+    const weeklyRate = ((latest.weightKg - prev.weightKg) / days) * 7;
+    const isCut = productivity.ctgProfile.goal === 'cut';
+    const isBulk = productivity.ctgProfile.goal === 'bulk';
+
+    if (isCut && weeklyRate < -0.75) {
+      return {
+        type: 'warning' as const,
+        title: lang === 'vi' ? 'Cảnh báo giảm cân nhanh' : 'Rapid weight loss alert',
+        message:
+          lang === 'vi'
+            ? `Tốc độ sụt cân (${weeklyRate.toFixed(2)}kg/tuần) nhanh hơn mức an toàn (-0.7kg/tuần). Khuyến nghị bổ sung thêm tinh bột để bảo toàn cơ nạc!`
+            : `Weight drop (${weeklyRate.toFixed(2)}kg/week) is faster than recommended (-0.7kg/week).`,
+      };
+    }
+    if (isBulk && weeklyRate > 0.45) {
+      return {
+        type: 'warning' as const,
+        title: lang === 'vi' ? 'Cảnh báo tăng mỡ nhanh' : 'Rapid weight gain alert',
+        message:
+          lang === 'vi'
+            ? `Cân nặng tăng (+${weeklyRate.toFixed(2)}kg/tuần) vượt ngưỡng tăng cơ tự nhiên (+0.4kg/tuần). Khuyến nghị giảm nhẹ 150 kcal thặng dư.`
+            : `Weight gain (+${weeklyRate.toFixed(2)}kg/week) exceeds natural hypertrophy threshold (+0.4kg/week).`,
+      };
+    }
+    return null;
+  }, [productivity.bodyPoints, productivity.ctgProfile.goal, lang]);
+
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-slate-50 dark:bg-[#0b101b] text-slate-800 dark:text-slate-100 font-sans antialiased">
       {/* Global Interactive Notification Toast Container */}
@@ -853,6 +967,10 @@ export default function App() {
           isSyncing={isSyncing}
           syncState={syncState}
           pendingTasksCount={productivity.tasks.filter((t) => t.status !== 'completed').length}
+          nutritionSummary={nutritionSummary}
+          activeRoadmapSummary={activeRoadmapSummary}
+          taskAlerts={taskAlerts}
+          weightTrendAlert={weightTrendAlert}
         />
 
         {/* Viewport Content */}
