@@ -56,7 +56,7 @@ import {
   todayString,
   weeklyVolume,
 } from '../../../utils/fitnessMetrics';
-import { notifySuccess } from '../../../utils/notify';
+import { notifySuccess, notifyInfo } from '../../../utils/notify';
 import { BarChart, ProgressBar } from '../../charts/SimpleCharts';
 
 interface TrainingTabProps {
@@ -178,6 +178,34 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
     const current = ctgPeriodizedRoadmap.phases.find((p) => p.isCurrent);
     return current || ctgPeriodizedRoadmap.phases[0] || null;
   }, [ctgPeriodizedRoadmap]);
+
+  // User preference to show/hide CTG Phase Guidance Banner (respecting users with existing routines)
+  const [showCtgGuidance, setShowCtgGuidance] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('vortexcal_show_ctg_training_guidance');
+      if (saved !== null) {
+        return saved === 'true';
+      }
+      return true;
+    } catch {
+      return true;
+    }
+  });
+
+  const handleToggleCtgGuidance = (visible: boolean) => {
+    setShowCtgGuidance(visible);
+    try {
+      localStorage.setItem('vortexcal_show_ctg_training_guidance', String(visible));
+    } catch {}
+    if (!visible) {
+      notifyInfo(
+        lang === 'vi' ? 'Đã ẩn gợi ý giai đoạn' : 'CTG Guidance hidden',
+        lang === 'vi'
+          ? 'Gợi ý đã được thu gọn để không làm phiền lịch tập của bạn. Bấm "Gợi ý CTG" để mở lại.'
+          : 'Guidance hidden to keep your routine clear. Click "CTG Guidance" to view anytime.'
+      );
+    }
+  };
 
   // Combined Exercises & Lookup
   const allExercises = useMemo(() => [...EXERCISES, ...customExercises], [customExercises]);
@@ -743,10 +771,10 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* CTG Active Phase Training Guidance Card */}
-      {ctgActivePhase && (
-        <div className="bg-gradient-to-r from-blue-900/40 via-indigo-950/30 to-[#0b101b] border border-blue-500/40 rounded-2xl p-4 md:p-5 shadow-md flex flex-col md:flex-row md:items-center justify-between gap-4 text-white">
-          <div className="flex items-start gap-3.5">
+      {/* CTG Active Phase Training Guidance Card (Có thể ẩn / hiện theo nhu cầu) */}
+      {ctgActivePhase && showCtgGuidance && (
+        <div className="bg-gradient-to-r from-blue-900/40 via-indigo-950/30 to-[#0b101b] border border-blue-500/40 rounded-2xl p-4 md:p-5 shadow-md flex flex-col md:flex-row md:items-center justify-between gap-4 text-white relative">
+          <div className="flex items-start gap-3.5 pr-8 md:pr-0">
             <div className="w-10 h-10 rounded-2xl bg-blue-500/20 border border-blue-500/30 text-blue-400 flex items-center justify-center shrink-0 mt-0.5">
               <Compass className="w-5 h-5" />
             </div>
@@ -761,6 +789,11 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
                 <span className="text-xs font-bold text-white">
                   · {ctgActivePhase.name} ({ctgActivePhase.phaseType === 'bulk' ? 'Tăng cơ' : ctgActivePhase.phaseType === 'minicut' ? 'Mini-cut' : 'Giảm mỡ'})
                 </span>
+                {plannedSessions.length > 0 && (
+                  <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                    ✓ {lang === 'vi' ? `Bạn đang có lịch riêng (${plannedSessions.length} buổi)` : `Custom routine (${plannedSessions.length})`}
+                  </span>
+                )}
               </div>
               <p className="text-xs text-blue-100/80 mt-1 leading-relaxed">
                 {ctgActivePhase.phaseType === 'bulk' ? (
@@ -782,16 +815,35 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
                 type="button"
                 onClick={() => {
                   const suggested = ctgActivePhase.phaseType === 'bulk' ? 'ppl' : 'upper_lower';
+                  if (plannedSessions.length > 0) {
+                    const confirmMsg = lang === 'vi'
+                      ? `Bạn hiện đã có ${plannedSessions.length} buổi tập trong lịch cá nhân. Nạp giáo án mẫu (${suggested.toUpperCase()}) sẽ thay thế lịch tập hiện tại. Bạn có chắc chắn muốn nạp lại không?`
+                      : `You already have ${plannedSessions.length} planned sessions. Applying preset (${suggested.toUpperCase()}) will replace your schedule. Proceed?`;
+                    if (!window.confirm(confirmMsg)) return;
+                  }
                   onApplySplitTemplate(suggested);
-                  setScheduledBanner(`Đã áp dụng giáo án tối ưu cho giai đoạn (${suggested.toUpperCase()})!`);
-                  setTimeout(() => setScheduledBanner(null), 4000);
+                  notifySuccess(
+                    lang === 'vi' ? 'Đã áp dụng giáo án tối ưu!' : 'Preset applied!',
+                    lang === 'vi' ? `Đã nạp giáo án (${suggested.toUpperCase()}) cho giai đoạn ${ctgActivePhase.name}!` : `Applied ${suggested.toUpperCase()} template.`
+                  );
                 }}
                 className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs cursor-pointer shadow-xs transition-colors flex items-center gap-1.5"
+                title={plannedSessions.length > 0 ? (lang === 'vi' ? 'Lưu ý: Sẽ hỏi xác nhận trước khi thay thế lịch tập hiện tại' : 'Will confirm before replacing schedule') : undefined}
               >
                 <Zap className="w-3.5 h-3.5" />
                 <span>Nạp Giáo Án Tối Ưu ({ctgActivePhase.phaseType === 'bulk' ? 'PPL' : 'Upper/Lower'})</span>
               </button>
             )}
+
+            <button
+              type="button"
+              onClick={() => handleToggleCtgGuidance(false)}
+              className="p-1.5 rounded-lg text-white/50 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+              title={lang === 'vi' ? 'Ẩn gợi ý này (không làm phiền lịch tập)' : 'Hide guidance'}
+              aria-label={lang === 'vi' ? 'Ẩn gợi ý' : 'Hide'}
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
         </div>
       )}
@@ -816,6 +868,21 @@ export const TrainingTab: React.FC<TrainingTabProps> = ({
         </div>
 
         <div className="flex flex-wrap items-center gap-2 shrink-0">
+          {ctgActivePhase && (
+            <button
+              type="button"
+              onClick={() => handleToggleCtgGuidance(!showCtgGuidance)}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-semibold cursor-pointer transition-colors shadow-2xs ${
+                showCtgGuidance
+                  ? 'border-blue-400/40 bg-blue-50/70 dark:bg-blue-950/40 text-blue-600 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/50'
+                  : 'border-slate-300 dark:border-slate-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+              }`}
+              title={showCtgGuidance ? (lang === 'vi' ? 'Thu gọn / Ẩn gợi ý chiến lược CTG' : 'Hide CTG guidance') : (lang === 'vi' ? 'Mở lại gợi ý chiến lược tập luyện theo giai đoạn CTG' : 'Show CTG guidance')}
+            >
+              <Compass className="w-4 h-4 text-blue-500" />
+              <span>{showCtgGuidance ? (lang === 'vi' ? 'Ẩn gợi ý CTG' : 'Hide CTG') : (lang === 'vi' ? `Gợi ý CTG (${ctgActivePhase.name})` : 'CTG Guidance')}</span>
+            </button>
+          )}
           <button
             type="button"
             onClick={() => setShowCalculatorModal(true)}
