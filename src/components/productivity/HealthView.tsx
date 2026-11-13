@@ -612,10 +612,10 @@ export const HealthView: React.FC<HealthViewProps> = ({
       )}
 
       {activeSubTab === 'overview' && (
-        <>
+        <div className="w-full shrink-0 flex flex-col">
           {/* CTG Active Transformation Wave Banner */}
           {ctgActivePhase ? (
-            <div className="bg-linear-to-r from-blue-950/40 via-indigo-950/30 to-[#0b101b] border border-blue-500/40 rounded-3xl p-5 mb-6 shadow-xl relative overflow-hidden space-y-4">
+            <div className="bg-gradient-to-r from-blue-950/40 via-indigo-950/30 to-[#0b101b] border border-blue-500/40 rounded-3xl p-5 mb-6 shadow-xl relative overflow-hidden space-y-4 shrink-0 min-h-fit">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-white/10 pb-3">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-2xl bg-blue-500/20 border border-blue-500/30 text-blue-400 flex items-center justify-center shrink-0">
@@ -692,7 +692,7 @@ export const HealthView: React.FC<HealthViewProps> = ({
               </div>
             </div>
           ) : (
-            <div className="bg-linear-to-r from-blue-900/20 via-indigo-950/20 to-transparent border border-blue-500/30 rounded-3xl p-4 sm:p-5 mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="bg-gradient-to-r from-blue-900/20 via-indigo-950/20 to-transparent border border-blue-500/30 rounded-3xl p-4 sm:p-5 mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shrink-0 min-h-fit">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-2xl bg-blue-500/20 text-blue-400 flex items-center justify-center shrink-0">
                   <Compass className="w-5 h-5" />
@@ -1320,7 +1320,7 @@ export const HealthView: React.FC<HealthViewProps> = ({
           </div>
         </div>
       </div>
-      </>
+      </div>
       )}
       {/* Gemini Macro Modal */}
       <GeminiMacroModal
