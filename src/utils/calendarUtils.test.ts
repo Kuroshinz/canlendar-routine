@@ -117,12 +117,12 @@ test('computeEventLayout correctly splits overlapping simultaneous events into c
 
   const pos1 = layout.get('ev1')!;
   const pos2 = layout.get('ev2')!;
-  // Both occupy 50% width since they overlap
-  assert.equal(pos1.widthPercent, 50);
-  assert.equal(pos2.widthPercent, 50);
-  // First is left 0%, second is left 50%
+  // Cascading overlap guarantees readable card width (>= 80%) with staggered offset
+  assert.ok(pos1.widthPercent >= 80, 'Card 1 should maintain wide readable width');
+  assert.ok(pos2.widthPercent >= 80, 'Card 2 should maintain wide readable width');
   assert.equal(pos1.leftPercent, 0);
-  assert.equal(pos2.leftPercent, 50);
+  assert.ok(pos2.leftPercent > 0, 'Card 2 should be staggered to the right');
+  assert.ok(pos2.zIndex! > pos1.zIndex!, 'Card 2 should have higher z-index to layer smoothly');
 });
 
 test('parseNaturalLanguageInput parses Vietnamese and English quick add text', () => {

@@ -176,6 +176,7 @@ export interface LayoutPosition {
   heightPercent: number;
   leftPercent: number;
   widthPercent: number;
+  zIndex?: number;
 }
 
 export function timeToMinutes(timeStr: string): number {
@@ -227,7 +228,7 @@ export function computeEventLayout(
     clusters.push(currentCluster);
   }
 
-  // Layout each cluster
+  // Layout each cluster using Google Calendar cascading overlap pattern
   for (const cluster of clusters) {
     // Assign columns within cluster
     const columns: CalendarEvent[][] = [];
@@ -249,20 +250,33 @@ export function computeEventLayout(
     }
 
     const numCols = columns.length;
+    // Calculate cascading staggered offsets so cards never get squished below 65% width
+    const maxOffset = numCols > 1 ? Math.min(35, 10 * (numCols - 1)) : 0;
+    const offsetStep = numCols > 1 ? maxOffset / (numCols - 1) : 0;
+
     columns.forEach((col, colIdx) => {
       col.forEach((ev) => {
         const start = timeToMinutes(ev.startTime);
         const end = Math.max(timeToMinutes(ev.endTime), start + 30);
         const topPercent = (start / (24 * 60)) * 100;
         const heightPercent = ((end - start) / (24 * 60)) * 100;
-        const widthPercent = (1 / numCols) * 100;
-        const leftPercent = (colIdx / numCols) * 100;
+
+        let leftPercent = 0;
+        let widthPercent = 100;
+        let zIndex = 10;
+
+        if (numCols > 1) {
+          leftPercent = Number((colIdx * offsetStep).toFixed(1));
+          widthPercent = Number(Math.max(65, 100 - leftPercent).toFixed(1));
+          zIndex = 10 + colIdx;
+        }
 
         layoutMap.set(ev.id, {
           topPercent,
           heightPercent,
           leftPercent,
           widthPercent,
+          zIndex,
         });
       });
     });

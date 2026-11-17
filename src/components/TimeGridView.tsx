@@ -243,7 +243,8 @@ export const TimeGridView: React.FC<TimeGridViewProps> = ({
                           onSelectEvent(ev, e.currentTarget);
                         }}
                         style={{ backgroundColor: ev.color }}
-                        className="px-2 py-0.5 rounded text-[11px] font-medium text-white truncate shadow-xs cursor-pointer hover:brightness-95 flex items-center gap-1"
+                        className="px-2 py-0.5 rounded text-[11px] font-medium text-white truncate shadow-xs cursor-pointer hover:brightness-95 flex items-center gap-1 transition-all hover:shadow-md"
+                        title={`${ev.title} (${lang === 'vi' ? 'Cả ngày' : 'All day'})`}
                       >
                         {ev.meetUrl && <Video className="w-2.5 h-2.5 shrink-0" />}
                         <span className="truncate">{ev.title}</span>
@@ -434,8 +435,9 @@ export const TimeGridView: React.FC<TimeGridViewProps> = ({
                             width: `${layout.widthPercent}%`,
                             backgroundColor: ev.color,
                             opacity: isCurrentlyActive ? 0.35 : 1,
+                            zIndex: isCurrentlyActive ? 50 : (layout.zIndex || 10),
                           }}
-                          className={`absolute z-10 rounded-md p-1.5 text-white shadow-sm hover:shadow-md cursor-grab active:cursor-grabbing overflow-hidden transition-all hover:brightness-105 border border-white/20 flex flex-col justify-between group/card ${
+                          className={`absolute rounded-md p-1.5 text-white shadow-sm cursor-grab active:cursor-grabbing overflow-hidden transition-all duration-150 hover:brightness-105 border border-white/20 flex flex-col justify-between group/card hover:z-40 hover:!left-[2%] hover:!w-[96%] hover:shadow-xl hover:ring-2 hover:ring-white/40 ${
                             isCurrentlyActive ? 'ring-2 ring-blue-400' : ''
                           }`}
                         >
@@ -459,16 +461,16 @@ export const TimeGridView: React.FC<TimeGridViewProps> = ({
                             </div>
                           )}
 
-                          {/* Resize Handle at Bottom Edge */}
+                          {/* Resize Handle at Bottom Edge (unobtrusive, only visible on card hover) */}
                           <div
                             onPointerDown={(e) => {
                               e.stopPropagation();
                               onStartResize?.(ev, e.clientY);
                             }}
-                            className="absolute inset-x-0 bottom-0 h-2 cursor-ns-resize hover:bg-white/40 transition-colors flex items-center justify-center group/resize"
+                            className="absolute inset-x-0 bottom-0 h-2 cursor-ns-resize hover:bg-white/30 transition-all flex items-center justify-center opacity-0 group-hover/card:opacity-100 rounded-b-md"
                             title={lang === 'vi' ? 'Kéo để co giãn thời lượng' : 'Drag to resize duration'}
                           >
-                            <div className="w-5 h-0.5 bg-white/70 rounded-full group-hover/resize:bg-white shadow-xs" />
+                            <div className="w-6 h-0.5 bg-white/70 rounded-full shadow-xs" />
                           </div>
                         </div>
                       );
