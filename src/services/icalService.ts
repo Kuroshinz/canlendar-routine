@@ -153,6 +153,16 @@ export function parseICalToEvents(icalContent: string): Partial<CalendarEvent>[]
         if (!currentEvent.startTime) currentEvent.startTime = '09:00';
         if (!currentEvent.endTime) currentEvent.endTime = '10:00';
 
+        // Deterministic ID if UID wasn't provided
+        if (!currentEvent.id || currentEvent.id.startsWith('ical-')) {
+          const str = (currentEvent.title || '') + (currentEvent.startDate || '') + (currentEvent.startTime || '') + (currentEvent.endTime || '');
+          let h = 0;
+          for (let k = 0; k < str.length; k++) {
+            h = ((h << 5) - h + str.charCodeAt(k)) | 0;
+          }
+          currentEvent.id = `ical-${Math.abs(h).toString(36)}`;
+        }
+
         events.push(currentEvent);
       }
       inEvent = false;
@@ -169,7 +179,9 @@ export function parseICalToEvents(icalContent: string): Partial<CalendarEvent>[]
     const value = trimmed.substring(colonIndex + 1);
     const key = rawKey.split(';')[0].toUpperCase();
 
-    if (key === 'SUMMARY') {
+    if (key === 'UID') {
+      currentEvent.id = value.trim();
+    } else if (key === 'SUMMARY') {
       currentEvent.title = unescapeICal(value);
     } else if (key === 'DESCRIPTION') {
       currentEvent.description = unescapeICal(value);

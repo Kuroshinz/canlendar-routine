@@ -13,7 +13,7 @@ import {
   DEFAULT_CALENDARS,
 } from './types/calendar';
 import { INITIAL_EVENTS } from './data/initialEvents';
-import { formatDateString, parseDateString } from './utils/calendarUtils';
+import { formatDateString, parseDateString, deduplicateEvents } from './utils/calendarUtils';
 import { playNotificationSound } from './utils/sound';
 import { notifySuccess } from './utils/notify';
 import { useCalendarDnD } from './hooks/useCalendarDnD';
@@ -167,10 +167,51 @@ export default function App() {
       ),
     [productivity.workoutSessions, productivity.plannedSessions]
   );
-  const allEvents = useMemo(
-    () => [...events, ...taskEvents, ...workoutEvents],
-    [events, taskEvents, workoutEvents]
-  );
+  // Check if user has real custom or imported events
+  const hasRealUserEvents = useMemo(() => {
+    return events.some((e) => !e.id.startsWith('ev-'));
+  }, [events]);
+
+  const allEvents = useMemo(() => {
+    let baseList = events;
+    if (hasRealUserEvents) {
+      // Filter out initial demo events when real user events exist
+      baseList = baseList.filter((e) => !e.id.startsWith('ev-'));
+    }
+
+    // Only include real tasks, not seed dummy tasks
+    const realTaskEvents = taskEvents.filter(
+      (t) => !t.id.startsWith('task-task-') && !t.id.startsWith('task-1') && !t.id.startsWith('task-2') && !t.id.startsWith('task-3')
+    );
+
+    // Only include user-logged workout sessions, not hardcoded seed workouts
+    const realWorkoutEvents = workoutEvents.filter(
+      (w) => !w.id.startsWith('wo-ev-w-') && !w.id.startsWith('wo-plan-')
+    );
+
+    return deduplicateEvents([...baseList, ...realTaskEvents, ...realWorkoutEvents]);
+  }, [events, taskEvents, workoutEvents, hasRealUserEvents]);
+
+  const handleCleanCalendar = useCallback(() => {
+    setEvents((prev) => {
+      let filtered = prev;
+      const hasOther = prev.some((e) => !e.id.startsWith('ev-'));
+      if (hasOther) {
+        filtered = filtered.filter((e) => !e.id.startsWith('ev-'));
+      }
+      const deduped = deduplicateEvents(filtered);
+      try {
+        localStorage.setItem('gcal_events', JSON.stringify(deduped));
+      } catch {}
+      return deduped;
+    });
+
+    notifySuccess(
+      lang === 'vi'
+        ? 'Đã lọc sạch lịch: loại bỏ dữ liệu ảo và gộp các sự kiện trùng lặp!'
+        : 'Cleaned calendar: removed mock data and duplicate events!'
+    );
+  }, [lang]);
 
   // 5. Sidebar toggle (closed by default on mobile)
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => {

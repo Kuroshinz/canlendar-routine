@@ -6,6 +6,7 @@ import {
   getFourDayDates,
   doesEventOccurOnDate,
   computeEventLayout,
+  deduplicateEvents,
 } from '../utils/calendarUtils';
 import {
   timeStringToMinutes,
@@ -85,8 +86,10 @@ export const TimeGridView: React.FC<TimeGridViewProps> = ({
     }
   }, []);
 
-  // Filter active events
-  const activeEvents = events.filter((e) => visibleCategoryIds.has(e.calendarId));
+  // Filter active events and deduplicate
+  const activeEvents = React.useMemo(() => {
+    return deduplicateEvents(events.filter((e) => visibleCategoryIds.has(e.calendarId)));
+  }, [events, visibleCategoryIds]);
 
   // Current time position (for red horizontal bar)
   const now = new Date();

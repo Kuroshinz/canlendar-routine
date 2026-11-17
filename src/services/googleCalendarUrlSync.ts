@@ -51,7 +51,15 @@ export async function fetchCalendarFromICalUrl(url: string): Promise<CalendarEve
   }
 
   return parsed.map((p, idx) => ({
-    id: p.id || `gcal-url-${Date.now()}-${idx}`,
+    id: (() => {
+    if (p.id) return p.id;
+    const str = (p.title || '') + (p.startDate || '') + (p.startTime || '') + (p.endTime || '');
+    let h = 0;
+    for (let k = 0; k < str.length; k++) {
+      h = ((h << 5) - h + str.charCodeAt(k)) | 0;
+    }
+    return `gcal-url-${Math.abs(h).toString(36)}`;
+  })(),
     title: p.title || '(Không có tiêu đề)',
     description: p.description,
     location: p.location,

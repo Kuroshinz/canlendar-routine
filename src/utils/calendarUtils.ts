@@ -185,12 +185,63 @@ export function timeToMinutes(timeStr: string): number {
   return (h || 0) * 60 + (m || 0);
 }
 
+
+/**
+ * Normalizes event title for comparisons
+ */
+export function normalizeEventTitle(title: string): string {
+  return (title || '').trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+/**
+ * Deduplicates events:
+ * 1. Merges exact duplicates (same date, startTime, endTime, and title).
+ * 2. If a timed event exists for a title on a date (e.g. "Học chính khóa 06:55 - 11:15"),
+ *    removes the duplicate all-day placeholder with the same title on that date.
+ */
+export function deduplicateEvents(events: CalendarEvent[]): CalendarEvent[] {
+  if (!events || events.length === 0) return [];
+
+  const timedByDateAndTitle = new Set<string>();
+
+  // Pass 1: detect timed events to eliminate duplicate all-day course placeholders
+  for (const ev of events) {
+    if (!ev.allDay && ev.startTime && ev.endTime) {
+      const normTitle = normalizeEventTitle(ev.title);
+      timedByDateAndTitle.add(`${ev.startDate}_${normTitle}`);
+    }
+  }
+
+  const result: CalendarEvent[] = [];
+  const seenKeys = new Set<string>();
+
+  for (const ev of events) {
+    const normTitle = normalizeEventTitle(ev.title);
+
+    // If an all-day event duplicates a timed event on the same day, drop the all-day placeholder
+    if (ev.allDay && timedByDateAndTitle.has(`${ev.startDate}_${normTitle}`)) {
+      continue;
+    }
+
+    // Exact key: date + time range + title + allDay
+    const key = `${ev.startDate}_${ev.startTime || '00:00'}_${ev.endTime || '00:00'}_${normTitle}_${Boolean(ev.allDay)}`;
+    if (seenKeys.has(key)) {
+      continue;
+    }
+    seenKeys.add(key);
+    result.push(ev);
+  }
+
+  return result;
+}
+
 export function computeEventLayout(
   events: CalendarEvent[],
   targetDateStr: string
 ): Map<string, LayoutPosition> {
   const layoutMap = new Map<string, LayoutPosition>();
-  const dayEvents = events.filter((e) => !e.allDay && doesEventOccurOnDate(e, targetDateStr));
+  const deduped = deduplicateEvents(events);
+  const dayEvents = deduped.filter((e) => !e.allDay && doesEventOccurOnDate(e, targetDateStr));
 
   // Sort by start time then by duration
   const sorted = [...dayEvents].sort((a, b) => {

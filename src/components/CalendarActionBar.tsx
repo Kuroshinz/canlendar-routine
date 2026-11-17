@@ -8,6 +8,7 @@ import {
   Undo,
   Redo,
   Calendar as CalIcon,
+  Sparkles,
 } from 'lucide-react';
 import { CalendarCategory, CalendarViewType, EventType } from '../types/calendar';
 
@@ -27,6 +28,7 @@ interface CalendarActionBarProps {
   onUndo?: () => void;
   onRedo?: () => void;
   onOpenCreateModal: (type?: EventType) => void;
+  onCleanData?: () => void;
 }
 
 export const CalendarActionBar: React.FC<CalendarActionBarProps> = ({
@@ -45,6 +47,7 @@ export const CalendarActionBar: React.FC<CalendarActionBarProps> = ({
   onUndo,
   onRedo,
   onOpenCreateModal,
+  onCleanData,
 }) => {
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [showNewCategory, setShowNewCategory] = useState(false);
@@ -248,6 +251,18 @@ export const CalendarActionBar: React.FC<CalendarActionBarProps> = ({
             </>
           )}
         </div>
+
+        {/* Nút lọc sạch dữ liệu ảo & trùng lặp */}
+        {onCleanData && (
+          <button
+            onClick={onCleanData}
+            title={lang === 'vi' ? 'Lọc sạch dữ liệu ảo & gộp sự kiện trùng lặp' : 'Clean fake data & duplicate events'}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 text-amber-700 dark:text-amber-400 hover:bg-amber-500/20 rounded-xl text-xs font-semibold border border-amber-500/30 transition-all cursor-pointer"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+            <span className="hidden sm:inline">{lang === 'vi' ? 'Lọc sạch lịch' : 'Clean Calendar'}</span>
+          </button>
+        )}
 
         {/* + Thêm sự kiện */}
         <button

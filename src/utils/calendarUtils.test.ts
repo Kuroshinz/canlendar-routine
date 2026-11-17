@@ -8,6 +8,7 @@ import {
   getFourDayDates,
   doesEventOccurOnDate,
   computeEventLayout,
+  deduplicateEvents,
   parseNaturalLanguageInput,
   exportToIcs,
   parseIcsContent,
@@ -166,4 +167,83 @@ test('exportToIcs and parseIcsContent roundtrip basic event data', () => {
   assert.equal(parsed[0].title, 'Tech Conference 2026');
   assert.equal(parsed[0].startDate, '2026-11-10');
   assert.equal(parsed[0].startTime, '09:00');
+});
+
+test('deduplicateEvents correctly merges identical duplicates and duplicate all-day placeholders', () => {
+  const events: CalendarEvent[] = [
+    {
+      id: 'd1',
+      title: 'Học chính khóa',
+      startDate: '2026-10-29',
+      startTime: '00:00',
+      endDate: '2026-10-29',
+      endTime: '23:59',
+      allDay: true,
+      calendarId: 'study',
+      color: '#039BE5',
+      type: 'event',
+      createdAt: 1,
+    },
+    {
+      id: 'd2',
+      title: 'Học chính khóa',
+      startDate: '2026-10-29',
+      startTime: '06:55',
+      endDate: '2026-10-29',
+      endTime: '11:15',
+      allDay: false,
+      calendarId: 'study',
+      color: '#039BE5',
+      type: 'event',
+      createdAt: 2,
+    },
+    {
+      id: 'd3',
+      title: 'Học chính khóa',
+      startDate: '2026-10-29',
+      startTime: '06:55',
+      endDate: '2026-10-29',
+      endTime: '11:15',
+      allDay: false,
+      calendarId: 'study',
+      color: '#039BE5',
+      type: 'event',
+      createdAt: 3,
+    },
+    {
+      id: 'g1',
+      title: 'Gym',
+      startDate: '2026-10-29',
+      startTime: '16:00',
+      endDate: '2026-10-29',
+      endTime: '17:45',
+      allDay: false,
+      calendarId: 'health',
+      color: '#039BE5',
+      type: 'event',
+      createdAt: 4,
+    },
+    {
+      id: 'g2',
+      title: 'Gym',
+      startDate: '2026-10-29',
+      startTime: '16:00',
+      endDate: '2026-10-29',
+      endTime: '17:45',
+      allDay: false,
+      calendarId: 'health',
+      color: '#E67C73',
+      type: 'event',
+      createdAt: 5,
+    },
+  ];
+
+  const deduped = deduplicateEvents(events);
+  // All-day "Học chính khóa" should be dropped because timed "Học chính khóa" exists on that day
+  // Duplicate timed "Học chính khóa" should be merged into 1
+  // Duplicate "Gym" at 16:00-17:45 should be merged into 1
+  assert.equal(deduped.length, 2);
+  const titles = deduped.map((e) => e.title);
+  assert.ok(titles.includes('Học chính khóa'));
+  assert.ok(titles.includes('Gym'));
 });
