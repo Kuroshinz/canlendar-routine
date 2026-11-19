@@ -181,8 +181,12 @@ export const Header: React.FC<HeaderProps> = ({
           <Menu className="w-5 h-5" />
         </button>
 
-        <div className="hidden sm:flex items-center gap-2.5 mr-1">
-          <img src="/logo.png" alt="VortexCal" className="w-9 h-9 rounded-xl object-cover shadow-xs border border-slate-200 dark:border-slate-700/60" />
+        <div className="hidden sm:flex items-center mr-1">
+          <img
+            src="/logo-icon.png"
+            alt="VortexCal"
+            className="w-8 h-8 object-contain filter drop-shadow-[0_1px_6px_rgba(59,130,246,0.35)]"
+          />
         </div>
 
         <div className="flex flex-col">

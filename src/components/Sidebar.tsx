@@ -180,8 +180,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
               onClick={() => onViewChange && onViewChange('dashboard')}
               className="flex items-center gap-3 cursor-pointer group"
             >
-              <div className="w-11 h-11 rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700/80 shadow-md shadow-blue-500/10 group-hover:scale-105 transition-transform bg-white shrink-0">
-                <img src="/logo.png" alt="VortexCal Logo" className="w-full h-full object-cover" />
+              <div className="relative w-11 h-11 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                <img
+                  src="/logo-icon.png"
+                  alt="VortexCal Emblem"
+                  className="w-full h-full object-contain filter drop-shadow-[0_2px_10px_rgba(59,130,246,0.4)]"
+                />
               </div>
               <div className="flex flex-col">
                 <span className="font-extrabold text-xl leading-tight tracking-tight text-slate-900 dark:text-white">
