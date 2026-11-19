@@ -39,9 +39,24 @@ export async function fetchGoogleCalendarEvents(accessToken: string): Promise<Ca
     );
 
     if (!res.ok) {
-      const err = await res.text();
-      console.error('Google Calendar fetch error:', err);
-      throw new Error(`Google Calendar API Error: ${res.status}`);
+      let detailMsg = `Google Calendar API Error: ${res.status}`;
+      try {
+        const errJson = await res.json();
+        if (errJson?.error?.message) {
+          detailMsg = errJson.error.message;
+        }
+      } catch {
+        const raw = await res.text();
+        if (raw) detailMsg = raw;
+      }
+      console.error('Google Calendar fetch error:', detailMsg);
+
+      if (res.status === 403 && detailMsg.toLowerCase().includes('has not been used')) {
+        throw new Error(
+          'Dự án Google Cloud của bạn chưa BẬT Google Calendar API. Hãy vào Google Cloud Console > APIs & Services > Library > tìm "Google Calendar API" và bấm ENABLE (BẬT).'
+        );
+      }
+      throw new Error(detailMsg);
     }
 
     const data = await res.json();
