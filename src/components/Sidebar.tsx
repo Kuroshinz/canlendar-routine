@@ -171,7 +171,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         aria-hidden="true"
       />
 
-      <aside className="fixed lg:static top-0 bottom-0 left-0 w-72 bg-white dark:bg-[#111726] border-r border-slate-200/90 dark:border-slate-800/90 z-40 flex flex-col justify-between p-4 sm:p-5 shrink-0 select-none shadow-xl lg:shadow-none transition-all overflow-y-auto">
+      <aside className="fixed lg:static top-0 bottom-0 left-0 w-72 bg-white/95 dark:bg-[#090306]/95 backdrop-blur-2xl border-r border-slate-200 dark:border-white/[0.08] z-40 flex flex-col justify-between p-4 sm:p-5 shrink-0 select-none shadow-2xl lg:shadow-none transition-all overflow-y-auto">
         {/* Top: Brand Header & Primary Navigation */}
         <div className="space-y-6">
           {/* Brand header */}
@@ -188,9 +188,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 />
               </div>
               <div className="flex flex-col">
-                <span className="font-extrabold text-xl leading-tight tracking-tight text-slate-900 dark:text-white">
-                  Vortex<span className="text-blue-600 dark:text-blue-400">Cal</span>
-                </span>
+                <span className="font-extrabold text-xl leading-tight tracking-tight text-slate-900 dark:text-white">Vortex<span className="text-rose-500">Cal</span></span>
                 <span className="text-[10px] font-semibold text-slate-400 tracking-wider uppercase">
                   {lang === 'vi' ? 'Lịch trình • Sức khỏe • Luyện tập' : 'Routine • Health • Fitness'}
                 </span>
@@ -225,16 +223,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   }}
                   className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer group ${
                     isActive
-                      ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 shadow-xs'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800/50'
+                      ? 'bg-white/10 dark:bg-white/[0.12] text-white border border-white/20 shadow-[0_4px_16px_rgba(255,255,255,0.06)] backdrop-blur-md'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/[0.05] border border-transparent'
                   }`}
                 >
                   <div className="flex items-center gap-3">
                     <Icon
                       className={`w-4 h-4 transition-transform group-hover:scale-110 ${
-                        isActive
-                          ? 'text-blue-600 dark:text-blue-400'
-                          : 'text-slate-400 dark:text-slate-500 group-hover:text-slate-700 dark:group-hover:text-slate-300'
+                        isActive ? 'text-rose-400 dark:text-rose-400' : 'text-slate-400 dark:text-slate-500 group-hover:text-slate-700 dark:group-hover:text-slate-300'
                       }`}
                     />
                     <span className="truncate">{lang === 'vi' ? item.labelVi : item.labelEn}</span>
@@ -291,33 +287,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           )}
         </div>
 
-        {/* Middle: Floating Gemini AI Promo Card (ShipNexus Try AI card style) */}
-        <div className="my-5">
-          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-50/90 via-indigo-50/70 to-blue-50/90 dark:from-blue-950/40 dark:via-indigo-950/30 dark:to-blue-950/40 border border-blue-200/80 dark:border-blue-900/60 p-4 shadow-xs">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center text-white shadow-xs">
-                <Sparkles className="w-4 h-4" />
-              </div>
-              <span className="text-xs font-bold text-slate-800 dark:text-slate-100">
-                Vortex Gemini AI
-              </span>
-            </div>
-
-            <p className="text-[11px] leading-relaxed text-slate-600 dark:text-slate-300 mb-3 font-medium">
-              {lang === 'vi'
-                ? 'Nhập Prompt Macro bữa ăn & tự theo dõi chỉ số sức khỏe cá nhân.'
-                : 'Structured meal macro prompt & personal health tracking.'}
-            </p>
-
-            <button
-              onClick={() => onOpenGeminiMacro && onOpenGeminiMacro()}
-              className="w-full py-2 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-sm shadow-blue-500/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer hover:shadow-md"
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>{lang === 'vi' ? 'Mở Prompt Macro' : 'Macro Prompt Studio'}</span>
-            </button>
-          </div>
-        </div>
+        
 
         {/* Bottom: Settings & Logout */}
         <div className="space-y-1.5 pt-3 border-t border-slate-200/80 dark:border-slate-800/80">

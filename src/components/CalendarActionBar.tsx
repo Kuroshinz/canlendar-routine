@@ -86,11 +86,11 @@ export const CalendarActionBar: React.FC<CalendarActionBarProps> = ({
   };
 
   return (
-    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 px-4 sm:px-6 py-3.5 bg-white dark:bg-[#131b2e] border-b border-slate-200 dark:border-slate-800 rounded-t-2xl shadow-xs">
+    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 px-4 sm:px-6 py-3.5 bg-white/95 dark:bg-[#090306]/95 backdrop-blur-2xl border-b border-slate-200 dark:border-white/[0.08] rounded-t-2xl shadow-sm">
       {/* Left: Date navigation */}
       <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
         <h2 className="text-lg sm:text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
-          <CalIcon className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+          <CalIcon className="w-5 h-5 text-rose-500 dark:text-rose-400" />
           <span>{currentMonthName} {currentYear}</span>
         </h2>
 
@@ -145,15 +145,15 @@ export const CalendarActionBar: React.FC<CalendarActionBarProps> = ({
       {/* Right: View Pills + Category Filter + Add Event */}
       <div className="flex items-center gap-2 flex-wrap justify-between sm:justify-end">
         {/* View Switcher segment */}
-        <div className="flex items-center bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl border border-slate-200 dark:border-slate-700/60">
+        <div className="flex items-center bg-slate-100 dark:bg-white/[0.05] p-1 rounded-full border border-slate-200 dark:border-white/[0.12] backdrop-blur-md">
           {calViewOptions.map((opt) => (
             <button
               key={opt.id}
               onClick={() => onViewChange(opt.id)}
               className={`px-3 py-1 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
                 view === opt.id
-                  ? 'bg-white dark:bg-blue-600 text-blue-600 dark:text-white shadow-xs'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                  ? 'glass-pill-primary text-slate-950 font-bold shadow-sm'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
               {lang === 'vi' ? opt.labelVi : opt.labelEn}

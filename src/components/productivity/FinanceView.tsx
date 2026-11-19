@@ -484,7 +484,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
   ];
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-y-auto bg-gray-50/50 dark:bg-slate-900 p-4 md:p-6 lg:p-8 select-none">
+    <div className="flex-1 flex flex-col h-full overflow-y-auto bg-gray-50/50 dark:bg-transparent dark:vortex-canvas p-4 md:p-6 lg:p-8 select-none">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
@@ -502,7 +502,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-xl overflow-hidden">
+          <div className="flex items-center glass-pill p-0 overflow-hidden">
             <button
               onClick={() => setMonthPrefix((p) => shiftMonth(p, -1))}
               className="px-2 py-2 hover:bg-gray-100 dark:hover:bg-[#242931] text-gray-600 dark:text-gray-300 cursor-pointer"
@@ -524,7 +524,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
 
           <button
             onClick={handleOpenBalanceModal}
-            className="flex items-center gap-1.5 px-3 py-2 bg-blue-50 dark:bg-blue-950/50 hover:bg-blue-100 dark:hover:bg-blue-900/40 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 rounded-xl text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+            className="glass-pill text-xs cursor-pointer"
             title={lang === 'vi' ? 'Đặt số dư thực tế trong ví/tài khoản' : 'Set real bank balance'}
           >
             <Wallet className="w-4 h-4" />
@@ -537,7 +537,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
                 handleResetToZero();
               }
             }}
-            className="flex items-center gap-1.5 px-2.5 py-2 bg-slate-100 hover:bg-rose-50 hover:text-rose-600 dark:bg-slate-800 dark:hover:bg-rose-950/40 text-gray-600 dark:text-gray-300 border border-slate-200/80 dark:border-slate-700/80 rounded-xl text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+            className="glass-pill text-xs cursor-pointer hover:text-rose-400"
             title={lang === 'vi' ? 'Đặt lại số dư về 0 ₫ và dọn sạch giao dịch ảo' : 'Reset to 0'}
           >
             <RefreshCw className="w-3.5 h-3.5" />
@@ -547,7 +547,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
           {transactions.length > 0 && onClearAllTransactions && (
             <button
               onClick={() => setClearDemoConfirm(true)}
-              className="flex items-center gap-1.5 px-2.5 py-2 bg-slate-100 hover:bg-rose-50 hover:text-rose-600 dark:bg-slate-800 dark:hover:bg-rose-950/40 text-gray-500 dark:text-gray-400 rounded-xl text-xs font-medium transition-colors cursor-pointer"
+              className="glass-pill text-xs cursor-pointer hover:text-rose-400"
               title={lang === 'vi' ? 'Xóa toàn bộ dữ liệu mẫu ban đầu để bắt đầu sổ sách thực tế của bạn' : 'Clear demo data'}
             >
               <Trash2 className="w-3.5 h-3.5" />
@@ -565,7 +565,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
               setFormCategory('food');
               setShowForm((v) => !v);
             }}
-            className="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+            className="glass-pill-primary text-xs cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             <span>{lang === 'vi' ? 'Thêm giao dịch' : 'Add transaction'}</span>
@@ -612,7 +612,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
             <div
               key={card.label}
               onClick={card.action}
-              className={`bg-white dark:bg-[#131b2e] p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex items-center justify-between gap-3 ${
+              className={`glass-panel p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex items-center justify-between gap-3 ${
                 card.action
                   ? 'cursor-pointer hover:border-blue-400 dark:hover:border-blue-500 transition-all group/card'
                   : ''
@@ -851,7 +851,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
       </div>
 
       {/* Quick 1-Tap Frequent Logging Strip */}
-      <div className="bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200 dark:border-slate-800 p-3.5 mb-6 shadow-xs">
+      <div className="glass-panel rounded-2xl border border-slate-200 dark:border-slate-800 p-3.5 mb-6 shadow-xs">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2.5">
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-1.5 text-xs font-bold text-gray-700 dark:text-gray-300">
@@ -929,7 +929,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
       {showForm && (
         <form
           onSubmit={handleSubmit}
-          className="bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs p-4 mb-6 animate-in fade-in duration-150"
+          className="glass-panel rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs p-4 mb-6 animate-in fade-in duration-150"
         >
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
@@ -1065,7 +1065,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
         {/* Left: history */}
         <div className="xl:col-span-7 space-y-4">
           {/* Top Filter and Search Bar */}
-          <div className="flex flex-col gap-2.5 bg-white dark:bg-[#131b2e] p-3 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
+          <div className="flex flex-col gap-2.5 glass-panel p-3 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
             {/* Row 1: Type Tabs & Sort */}
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="inline-flex p-0.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-xs font-semibold">
@@ -1191,14 +1191,14 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
           </div>
 
           {visibleTransactions.length === 0 ? (
-            <div className="bg-white dark:bg-[#131b2e] rounded-2xl border border-dashed border-gray-300 dark:border-gray-700 p-10 text-center">
+            <div className="glass-panel rounded-2xl border border-dashed border-gray-300 dark:border-gray-700 p-10 text-center">
               <Wallet className="w-8 h-8 text-gray-300 dark:text-gray-600 mx-auto mb-2" />
               <p className="text-xs text-gray-400">
                 {lang === 'vi' ? 'Chưa có giao dịch nào trong tháng này.' : 'No transactions in this month.'}
               </p>
             </div>
           ) : (
-            <div className="bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs divide-y divide-gray-100 dark:divide-gray-800 overflow-hidden">
+            <div className="glass-panel rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs divide-y divide-gray-100 dark:divide-gray-800 overflow-hidden">
               {visibleTransactions.map((tx) => {
                 const meta = categoryMeta(tx.category);
                 const isIncome = tx.type === 'income';
@@ -1254,7 +1254,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
 
         {/* Right: charts */}
         <div className="xl:col-span-5 space-y-4">
-          <div className="bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs p-4">
+          <div className="glass-panel p-4">
             <h3 className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 mb-3">
               {lang === 'vi' ? 'Tỷ lệ chi tiêu theo danh mục' : 'Spending by category'}
             </h3>
@@ -1295,7 +1295,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
             )}
           </div>
 
-          <div className="bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs p-4">
+          <div className="glass-panel p-4">
             <h3 className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 mb-3">
               {lang === 'vi' ? 'Dòng tiền theo ngày' : 'Daily cash flow'}
             </h3>
@@ -1325,7 +1325,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
       {/* Set Real Balance Modal */}
       {showBalanceModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
-          <div className="bg-white dark:bg-[#131b2e] w-full max-w-md rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-5 animate-in zoom-in-95 duration-150">
+          <div className="glass-panel w-full max-w-md rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-5 animate-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <Wallet className="w-5 h-5 text-blue-600 dark:text-blue-400" />
@@ -1550,7 +1550,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
       {/* Confirm Clear Demo Data Modal */}
       {clearDemoConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
-          <div className="bg-white dark:bg-[#131b2e] w-full max-w-sm rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-5 animate-in zoom-in-95 duration-150">
+          <div className="glass-panel w-full max-w-sm rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-5 animate-in zoom-in-95 duration-150">
             <div className="flex items-center gap-2 text-rose-600 dark:text-rose-400 mb-2">
               <AlertTriangle className="w-5 h-5" />
               <h3 className="text-sm font-bold">

@@ -958,7 +958,7 @@ export default function App() {
   }, [productivity.bodyPoints, productivity.ctgProfile.goal, lang]);
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-slate-50 dark:bg-[#0b101b] text-slate-800 dark:text-slate-100 font-sans antialiased">
+    <div className="flex h-screen w-screen overflow-hidden bg-slate-50 dark:bg-[#070204] dark:vortex-canvas text-slate-800 dark:text-slate-100 font-sans antialiased">
       {/* Global Interactive Notification Toast Container */}
       <ToastContainer />
 

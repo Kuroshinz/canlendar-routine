@@ -42,3 +42,140 @@
 .dark ::-webkit-scrollbar-thumb:hover {
   background: rgba(75, 85, 99, 0.8);
 }
+
+/* =========================================================================
+   VORTEXCAL LUXURY ZENOX CRIMSON & FLOATING WHITE GLASS DESIGN SYSTEM
+   ========================================================================= */
+
+.vortex-canvas {
+  background-color: #070204;
+  background-image: 
+    radial-gradient(circle at 80% 12%, rgba(225, 29, 72, 0.16) 0%, transparent 48%),
+    radial-gradient(circle at 12% 85%, rgba(190, 18, 60, 0.10) 0%, transparent 42%),
+    radial-gradient(circle at 50% 50%, rgba(244, 63, 94, 0.03) 0%, transparent 60%);
+  background-attachment: fixed;
+}
+
+/* Glass Card / Panel */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.035);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.45);
+  border-radius: 1.5rem;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.glass-panel:hover {
+  border-color: rgba(255, 255, 255, 0.16);
+  box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.55), 0 0 20px rgba(225, 29, 72, 0.08);
+}
+
+/* Floating White Glass Pill Button - 'cac nut noi trang glass khong dam' */
+.glass-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.20);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25), 0 0 10px rgba(255, 255, 255, 0.04);
+  color: #ffffff;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  border-radius: 9999px;
+  padding: 0.5rem 1rem;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: pointer;
+  user-select: none;
+}
+
+.glass-pill:hover {
+  background: rgba(255, 255, 255, 0.16);
+  border-color: rgba(255, 255, 255, 0.35);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3), 0 0 14px rgba(255, 255, 255, 0.1);
+  transform: translateY(-1px);
+}
+
+.glass-pill:active {
+  background: rgba(255, 255, 255, 0.22);
+  transform: scale(0.98);
+}
+
+/* Primary Hero White Pill (ZENOX 'Pre-Order Now' style) */
+.glass-pill-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background: #ffffff;
+  color: #090406 !important;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  border-radius: 9999px;
+  padding: 0.55rem 1.25rem;
+  box-shadow: 0 4px 20px rgba(255, 255, 255, 0.35), 0 0 30px rgba(225, 29, 72, 0.2);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: pointer;
+  user-select: none;
+  border: 1px solid rgba(255, 255, 255, 0.95);
+}
+
+.glass-pill-primary:hover {
+  background: #f8fafc;
+  box-shadow: 0 6px 26px rgba(255, 255, 255, 0.5), 0 0 40px rgba(225, 29, 72, 0.3);
+  transform: translateY(-1px) scale(1.02);
+}
+
+.glass-pill-primary:active {
+  transform: scale(0.98);
+}
+
+/* Crimson Accent Glass Pill */
+.glass-pill-crimson {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background: rgba(225, 29, 72, 0.16);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(244, 63, 94, 0.35);
+  box-shadow: 0 4px 16px rgba(225, 29, 72, 0.15);
+  color: #fecdd3;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  border-radius: 9999px;
+  padding: 0.5rem 1rem;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: pointer;
+  user-select: none;
+}
+
+.glass-pill-crimson:hover {
+  background: rgba(225, 29, 72, 0.28);
+  border-color: rgba(244, 63, 94, 0.6);
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+/* Glass input */
+.glass-input {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  border-radius: 9999px;
+  transition: all 0.2s ease;
+}
+
+.glass-input:focus {
+  outline: none;
+  border-color: rgba(244, 63, 94, 0.6);
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 0 0 3px rgba(225, 29, 72, 0.2);
+}

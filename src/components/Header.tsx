@@ -170,7 +170,7 @@ export const Header: React.FC<HeaderProps> = ({
   const displayName = userName || (userEmail ? userEmail.split('@')[0] : 'Admin');
 
   return (
-    <header className="h-18 px-4 sm:px-6 lg:px-8 border-b border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-[#111726]/90 backdrop-blur-md flex items-center justify-between gap-3 sm:gap-6 shrink-0 select-none z-30 transition-colors">
+    <header className="h-18 px-4 sm:px-6 lg:px-8 border-b border-slate-200/80 dark:border-white/[0.08] bg-white/90 dark:bg-[#080204]/85 backdrop-blur-2xl flex items-center justify-between gap-3 sm:gap-6 shrink-0 select-none z-30 transition-colors">
       {/* Left: Hamburger & Greeting (ShipNexus style: Hello, Admin) */}
       <div className="flex items-center gap-3">
         <button
@@ -193,7 +193,7 @@ export const Header: React.FC<HeaderProps> = ({
           <h1 className="text-base sm:text-xl font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
             <span>
               {lang === 'vi' ? `${timeGreetingVi}, ` : `${timeGreetingEn}, `}
-              <span className="text-blue-600 dark:text-blue-400 capitalize">{displayName}</span>
+              <span className="text-rose-500 dark:text-rose-400 capitalize">{displayName}</span>
             </span>
           </h1>
           <span className="text-[11px] font-medium text-slate-400 hidden sm:inline">
@@ -219,7 +219,7 @@ export const Header: React.FC<HeaderProps> = ({
                 ? 'Tìm kiếm sự kiện, công việc, dinh dưỡng, chi tiêu...'
                 : 'Search events, tasks, macros, transactions...'
             }
-            className="w-full pl-10 pr-12 py-2 bg-slate-100 dark:bg-slate-800/80 text-sm text-slate-800 dark:text-slate-100 rounded-full border border-slate-200 dark:border-slate-700/60 focus:outline-hidden focus:ring-2 focus:ring-blue-500 placeholder-slate-400 transition-all shadow-2xs"
+            className="w-full pl-10 pr-12 py-2 bg-slate-100 dark:bg-white/[0.05] text-sm text-slate-800 dark:text-slate-100 rounded-full border border-slate-200 dark:border-white/[0.12] focus:outline-none focus:border-rose-500/60 placeholder-slate-400 transition-all shadow-sm backdrop-blur-md"
           />
           <kbd className="absolute right-3 top-1/2 -translate-y-1/2 hidden md:inline-flex items-center px-1.5 py-0.5 text-[10px] font-semibold text-slate-400 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded">
             Ctrl+K
@@ -233,40 +233,20 @@ export const Header: React.FC<HeaderProps> = ({
         <button
           onClick={onOpenQuickAdd}
           title={lang === 'vi' ? 'Tạo nhanh bằng câu lệnh tự nhiên' : 'Quick add'}
-          className="flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-full text-xs font-bold shadow-sm shadow-blue-500/20 transition-all cursor-pointer"
+          className="glass-pill-primary text-xs cursor-pointer"
         >
           <Plus className="w-3.5 h-3.5" />
           <span className="hidden md:inline">{lang === 'vi' ? 'Tạo mới' : 'Create'}</span>
         </button>
 
-        {/* Gemini AI Macro Studio quick button */}
-        {onOpenGeminiMacro && (
-          <button
-            onClick={onOpenGeminiMacro}
-            title={lang === 'vi' ? 'Vortex Gemini AI Studio' : 'Gemini AI Studio'}
-            className="p-2 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-blue-600 dark:text-blue-400 transition-colors cursor-pointer hidden sm:flex items-center justify-center"
-          >
-            <Sparkles className="w-4 h-4" />
-          </button>
-        )}
-
-        {/* Right drawer notes toggle */}
-        {onToggleRightDrawer && (
-          <button
-            onClick={onToggleRightDrawer}
-            title={lang === 'vi' ? 'Ghi chú & Công việc nhanh' : 'Quick Notes & Tasks'}
-            className="p-2 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer hidden lg:flex items-center justify-center"
-          >
-            <FileText className="w-4 h-4" />
-          </button>
-        )}
+        
 
         {/* Notification Bell with Badge */}
         <div className="relative">
           <button
             onClick={() => setShowNotificationPopup(!showNotificationPopup)}
             title={lang === 'vi' ? 'Thông báo hệ thống' : 'Notifications'}
-            className="p-2 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer relative"
+            className="p-2 rounded-full bg-slate-100 dark:bg-white/[0.08] hover:bg-slate-200 dark:hover:bg-white/[0.16] text-slate-700 dark:text-slate-200 border border-transparent dark:border-white/[0.15] backdrop-blur-md transition-all cursor-pointer relative"
           >
             <Bell className="w-4 h-4" />
             {totalNotificationBadge > 0 && (
