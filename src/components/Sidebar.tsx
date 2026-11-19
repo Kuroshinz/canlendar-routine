@@ -180,15 +180,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
               onClick={() => onViewChange && onViewChange('dashboard')}
               className="flex items-center gap-3 cursor-pointer group"
             >
-              <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-blue-500/20 group-hover:scale-105 transition-transform">
-                <CalendarCheck2 className="w-5 h-5" />
+              <div className="w-11 h-11 rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700/80 shadow-md shadow-blue-500/10 group-hover:scale-105 transition-transform bg-white shrink-0">
+                <img src="/logo.png" alt="VortexCal Logo" className="w-full h-full object-cover" />
               </div>
               <div className="flex flex-col">
                 <span className="font-extrabold text-xl leading-tight tracking-tight text-slate-900 dark:text-white">
                   Vortex<span className="text-blue-600 dark:text-blue-400">Cal</span>
                 </span>
-                <span className="text-[11px] font-medium text-slate-400">
-                  {lang === 'vi' ? 'Executive Workspace' : 'Smart Executive Suite'}
+                <span className="text-[10px] font-semibold text-slate-400 tracking-wider uppercase">
+                  {lang === 'vi' ? 'Lịch trình • Sức khỏe • Luyện tập' : 'Routine • Health • Fitness'}
                 </span>
               </div>
             </div>
