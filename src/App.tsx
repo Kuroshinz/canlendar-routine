@@ -44,7 +44,7 @@ import { buildTaskEvents } from './utils/productivityUtils';
 import { buildWorkoutEvents, startOfWeek, tdee, calorieTarget, macroTargets } from './utils/fitnessMetrics';
 import { parseVnDate } from './components/productivity/fitness/RoadmapTab';
 import { User } from 'firebase/auth';
-import { initAuth, logout, getAccessToken, AppUser } from './services/auth';
+import { initAuth, logout, getAccessToken, googleSignIn, AppUser } from './services/auth';
 import { fetchGoogleCalendarEvents, createGoogleCalendarEvent } from './services/googleCalendarSync';
 import { fetchCalendarFromICalUrl } from './services/googleCalendarUrlSync';
 import { executeRealGoogleSync, hasOwnClientId } from './services/realGoogleAuth';
