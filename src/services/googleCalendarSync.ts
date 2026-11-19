@@ -18,6 +18,19 @@ export interface GoogleCalendarApiItem {
   attendees?: Array<{ email: string; displayName?: string; responseStatus?: string }>;
 }
 
+function formatLocalDate(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function formatLocalTime(d: Date): string {
+  const h = String(d.getHours()).padStart(2, '0');
+  const min = String(d.getMinutes()).padStart(2, '0');
+  return `${h}:${min}`;
+}
+
 /**
  * Fetch events from user's primary Google Calendar
  */
@@ -29,7 +42,7 @@ export async function fetchGoogleCalendarEvents(accessToken: string): Promise<Ca
     const res = await fetch(
       `https://www.googleapis.com/calendar/v3/calendars/primary/events?singleEvents=true&orderBy=startTime&timeMin=${encodeURIComponent(
         timeMin
-      )}&timeMax=${encodeURIComponent(timeMax)}&maxResults=100`,
+      )}&timeMax=${encodeURIComponent(timeMax)}&maxResults=150`,
       {
         headers: {
           Authorization: `Bearer ${accessToken}`,
@@ -66,18 +79,36 @@ export async function fetchGoogleCalendarEvents(accessToken: string): Promise<Ca
       const isAllDay = Boolean(item.start?.date && !item.start?.dateTime);
       let startDate = item.start?.date || '';
       let startTime = '09:00';
+      
+      // CRITICAL FIX: Use local browser date & time instead of UTC toISOString()
+      // to prevent early morning events (05:00 - 06:55 AM) from shifting to previous day
       if (item.start?.dateTime) {
         const dt = new Date(item.start.dateTime);
-        startDate = dt.toISOString().split('T')[0];
-        startTime = `${String(dt.getHours()).padStart(2, '0')}:${String(dt.getMinutes()).padStart(2, '0')}`;
+        startDate = formatLocalDate(dt);
+        startTime = formatLocalTime(dt);
       }
 
       let endDate = item.end?.date || startDate;
       let endTime = '10:00';
       if (item.end?.dateTime) {
         const dt = new Date(item.end.dateTime);
-        endDate = dt.toISOString().split('T')[0];
-        endTime = `${String(dt.getHours()).padStart(2, '0')}:${String(dt.getMinutes()).padStart(2, '0')}`;
+        endDate = formatLocalDate(dt);
+        endTime = formatLocalTime(dt);
+      } else if (isAllDay && item.end?.date && item.start?.date) {
+        // Google Calendar end.date for all-day events is exclusive (+1 day).
+        // For a 1-day event (start: 2026-10-26, end: 2026-10-27), set endDate = startDate.
+        const startParts = item.start.date.split('-').map(Number);
+        const endParts = item.end.date.split('-').map(Number);
+        const startD = new Date(startParts[0], startParts[1] - 1, startParts[2]);
+        const endD = new Date(endParts[0], endParts[1] - 1, endParts[2]);
+        const diffDays = Math.round((endD.getTime() - startD.getTime()) / (1000 * 60 * 60 * 24));
+        
+        if (diffDays <= 1) {
+          endDate = startDate;
+        } else {
+          endD.setDate(endD.getDate() - 1);
+          endDate = formatLocalDate(endD);
+        }
       }
 
       return {

@@ -199,6 +199,13 @@ export function normalizeEventTitle(title: string): string {
  * 2. If a timed event exists for a title on a date (e.g. "Học chính khóa 06:55 - 11:15"),
  *    removes the duplicate all-day placeholder with the same title on that date.
  */
+function normalizeTimeStr(t?: string): string {
+  if (!t) return '00:00';
+  const parts = t.trim().split(':');
+  if (parts.length < 2) return '00:00';
+  return `${parts[0].padStart(2, '0')}:${parts[1].padStart(2, '0')}`;
+}
+
 export function deduplicateEvents(events: CalendarEvent[]): CalendarEvent[] {
   if (!events || events.length === 0) return [];
 
@@ -213,7 +220,7 @@ export function deduplicateEvents(events: CalendarEvent[]): CalendarEvent[] {
   }
 
   const result: CalendarEvent[] = [];
-  const seenKeys = new Set<string>();
+  const seenExact = new Set<string>();
 
   for (const ev of events) {
     const normTitle = normalizeEventTitle(ev.title);
@@ -223,12 +230,15 @@ export function deduplicateEvents(events: CalendarEvent[]): CalendarEvent[] {
       continue;
     }
 
-    // Exact key: date + time range + title + allDay
-    const key = `${ev.startDate}_${ev.startTime || '00:00'}_${ev.endTime || '00:00'}_${normTitle}_${Boolean(ev.allDay)}`;
-    if (seenKeys.has(key)) {
+    // Exact key: date + normalized start/end time + normalized title + allDay
+    const startT = normalizeTimeStr(ev.startTime);
+    const endT = normalizeTimeStr(ev.endTime);
+    const key = `${ev.startDate}_${startT}_${endT}_${normTitle}_${Boolean(ev.allDay)}`;
+
+    if (seenExact.has(key)) {
       continue;
     }
-    seenKeys.add(key);
+    seenExact.add(key);
     result.push(ev);
   }
 
@@ -266,7 +276,6 @@ export function computeEventLayout(
       currentCluster.push(ev);
       clusterEnd = end;
     } else if (start < clusterEnd) {
-      // Overlaps
       currentCluster.push(ev);
       clusterEnd = Math.max(clusterEnd, end);
     } else {
@@ -279,16 +288,15 @@ export function computeEventLayout(
     clusters.push(currentCluster);
   }
 
-  // Layout each cluster using Google Calendar cascading overlap pattern
+  // Layout each cluster side-by-side so cards NEVER cover/obscure each other
   for (const cluster of clusters) {
-    // Assign columns within cluster
     const columns: CalendarEvent[][] = [];
     for (const ev of cluster) {
       const start = timeToMinutes(ev.startTime);
       let placed = false;
       for (let colIdx = 0; colIdx < columns.length; colIdx++) {
         const lastInCol = columns[colIdx][columns[colIdx].length - 1];
-        const lastEnd = Math.max(timeToMinutes(lastInCol.endTime), timeToMinutes(lastInCol.startTime) + 30);
+        const lastEnd = Math.max(timeToMinutes(lastInCol.endTime), timeToMinutes(lastInCol.startTime) + 25);
         if (start >= lastEnd) {
           columns[colIdx].push(ev);
           placed = true;
@@ -301,9 +309,7 @@ export function computeEventLayout(
     }
 
     const numCols = columns.length;
-    // Calculate cascading staggered offsets so cards never get squished below 65% width
-    const maxOffset = numCols > 1 ? Math.min(35, 10 * (numCols - 1)) : 0;
-    const offsetStep = numCols > 1 ? maxOffset / (numCols - 1) : 0;
+    const colWidth = 100 / numCols;
 
     columns.forEach((col, colIdx) => {
       col.forEach((ev) => {
@@ -312,15 +318,10 @@ export function computeEventLayout(
         const topPercent = (start / (24 * 60)) * 100;
         const heightPercent = ((end - start) / (24 * 60)) * 100;
 
-        let leftPercent = 0;
-        let widthPercent = 100;
-        let zIndex = 10;
-
-        if (numCols > 1) {
-          leftPercent = Number((colIdx * offsetStep).toFixed(1));
-          widthPercent = Number(Math.max(65, 100 - leftPercent).toFixed(1));
-          zIndex = 10 + colIdx;
-        }
+        // Side-by-side partitioned columns with 1% gap
+        const leftPercent = Number((colIdx * colWidth).toFixed(2));
+        const widthPercent = Number(Math.max(20, colWidth - 1).toFixed(2));
+        const zIndex = 10 + colIdx;
 
         layoutMap.set(ev.id, {
           topPercent,

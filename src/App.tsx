@@ -807,9 +807,14 @@ export default function App() {
       const gEvents = await fetchGoogleCalendarEvents(token);
       if (gEvents && gEvents.length > 0) {
         setEvents((prev) => {
+          const cleaned = prev.filter((e) => !e.id.startsWith('ev-'));
           const incomingIds = new Set(gEvents.map((e) => e.id));
-          const filtered = prev.filter((e) => !incomingIds.has(e.id));
-          return [...gEvents, ...filtered];
+          const filtered = cleaned.filter((e) => !incomingIds.has(e.id));
+          const merged = deduplicateEvents([...gEvents, ...filtered]);
+          try {
+            localStorage.setItem('gcal_events', JSON.stringify(merged));
+          } catch {}
+          return merged;
         });
       }
       const now = new Date();
@@ -1489,24 +1494,26 @@ export default function App() {
         onClose={() => setIsExportImportOpen(false)}
         events={events}
         onImportEvents={(imported) => {
-          setEvents((prev) => [...imported, ...prev]);
+          setEvents((prev) => {
+            const cleaned = prev.filter((e) => !e.id.startsWith('ev-'));
+            const map = new Map(cleaned.map((e) => [e.id, e]));
+            for (const item of imported) {
+              map.set(item.id, item);
+            }
+            const deduped = deduplicateEvents(Array.from(map.values()));
+            try {
+              localStorage.setItem('gcal_events', JSON.stringify(deduped));
+            } catch {}
+            return deduped;
+          });
         }}
-        onExportProductivityBackup={productivity.snapshot}
-        onImportProductivityBackup={productivity.restore}
         onResetEvents={() => {
           setEvents(INITIAL_EVENTS);
-          setCategories(DEFAULT_CALENDARS);
-          localStorage.removeItem('gcal_events');
-          localStorage.removeItem('gcal_categories');
-          // The productivity modules keep their own storage keys, so a full
-          // reset has to clear them explicitly or the button would look dead
-          // for tasks/goals/focus/money/health.
-          productivity.resetAll();
         }}
         lang={lang}
       />
 
-      {/* Cloud Sync & iCal Modal */}
+      {/* Cloud Sync Modal */}
       <CloudSyncModal
         isOpen={isCloudSyncOpen}
         onClose={() => setIsCloudSyncOpen(false)}
@@ -1517,11 +1524,16 @@ export default function App() {
         categories={categories}
         onImportEvents={(imported) => {
           setEvents((prev) => {
-            const map = new Map(prev.map((e) => [e.id, e]));
+            const cleaned = prev.filter((e) => !e.id.startsWith('ev-'));
+            const map = new Map(cleaned.map((e) => [e.id, e]));
             for (const item of imported) {
               map.set(item.id, item);
             }
-            return Array.from(map.values());
+            const deduped = deduplicateEvents(Array.from(map.values()));
+            try {
+              localStorage.setItem('gcal_events', JSON.stringify(deduped));
+            } catch {}
+            return deduped;
           });
           setLastSyncedTime(new Date().toLocaleTimeString(lang === 'vi' ? 'vi-VN' : 'en-US'));
           setSyncState('synced');
