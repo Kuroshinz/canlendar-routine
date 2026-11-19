@@ -67,17 +67,19 @@ export const CloudSyncModal: React.FC<CloudSyncModalProps> = ({
 
   const currentDomain = typeof window !== 'undefined' ? window.location.origin : 'https://vortexcal.vercel.app';
 
-  const handleDirectGoogleLogin = async () => {
+  const handleDirectGoogleLogin = async (overrideClientId?: string) => {
     setIsLoading(true);
     setErrorMsg(null);
     setSuccessMsg(null);
 
+    const activeClientId = (overrideClientId !== undefined ? overrideClientId : customClientId).trim();
+
     try {
-      if (customClientId.trim()) {
-        localStorage.setItem('gcal_custom_client_id', customClientId.trim());
+      if (activeClientId) {
+        localStorage.setItem('gcal_custom_client_id', activeClientId);
       }
       
-      const res = await executeRealGoogleSync(customClientId.trim() || undefined);
+      const res = await executeRealGoogleSync(activeClientId || undefined);
       if (res?.user) {
         if (res.events && res.events.length > 0) {
           onImportEvents(res.events);
@@ -95,6 +97,8 @@ export const CloudSyncModal: React.FC<CloudSyncModalProps> = ({
       console.error('Google Sign In failed:', err);
       const msg = err?.message || String(err);
       setErrorMsg(msg);
+      // Auto expand configuration so user can immediately paste Client ID
+      setShowAdvanced(true);
     } finally {
       setIsLoading(false);
     }
@@ -143,11 +147,14 @@ export const CloudSyncModal: React.FC<CloudSyncModalProps> = ({
   };
 
   const isOriginMismatch =
-    errorMsg &&
-    (errorMsg.includes('origin_mismatch') ||
-      errorMsg.includes('400') ||
-      errorMsg.includes('unauthorized') ||
-      errorMsg.includes('redirect_uri_mismatch'));
+    Boolean(errorMsg) &&
+    (errorMsg!.includes('origin') ||
+      errorMsg!.includes('400') ||
+      errorMsg!.includes('401') ||
+      errorMsg!.includes('invalid_client') ||
+      errorMsg!.includes('unauthorized') ||
+      errorMsg!.includes('redirect_uri_mismatch') ||
+      errorMsg!.includes('closed'));
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
@@ -188,7 +195,7 @@ export const CloudSyncModal: React.FC<CloudSyncModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -201,7 +208,7 @@ export const CloudSyncModal: React.FC<CloudSyncModalProps> = ({
             <div className="p-4 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 rounded-2xl flex items-start gap-3">
               <AlertCircle className="w-5 h-5 text-rose-500 shrink-0 mt-0.5" />
               <div className="text-xs text-rose-700 dark:text-rose-300 space-y-1">
-                <p className="font-semibold">{lang === 'vi' ? 'Lỗi đăng nhập Google:' : 'Google Login Error:'}</p>
+                <p className="font-semibold">{lang === 'vi' ? 'Trạng thái đăng nhập Google:' : 'Google Login Status:'}</p>
                 <p className="break-all">{errorMsg}</p>
               </div>
             </div>
@@ -279,18 +286,10 @@ export const CloudSyncModal: React.FC<CloudSyncModalProps> = ({
           ) : (
             /* User state: Not logged in */
             <div className="space-y-4">
-              <div className="text-center py-2">
-                <p className="text-sm text-slate-600 dark:text-slate-300">
-                  {lang === 'vi'
-                    ? 'Bấm nút bên dưới để mở cửa sổ đăng nhập Google chính thức. Toàn bộ lịch trình sẽ được đồng bộ trực tiếp với Google Calendar.'
-                    : 'Click below to open official Google Sign-In popup and sync your real Google Calendar.'}
-                </p>
-              </div>
-
               {/* Main One-Click Google Login Button */}
               <button
                 type="button"
-                onClick={handleDirectGoogleLogin}
+                onClick={() => handleDirectGoogleLogin()}
                 disabled={isLoading}
                 className="w-full flex items-center justify-center gap-3 py-3.5 px-6 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-800 dark:text-white font-bold text-sm rounded-2xl border-2 border-slate-200 dark:border-slate-700 hover:border-blue-400 dark:hover:border-blue-500 shadow-md transition-all cursor-pointer disabled:opacity-50 group"
               >
@@ -327,106 +326,102 @@ export const CloudSyncModal: React.FC<CloudSyncModalProps> = ({
                 </span>
               </button>
 
-              {/* Explanatory Origin Mismatch Card if on Vercel without domain whitelisted */}
+              {/* Explanatory Origin Mismatch / 401 Invalid Client Card */}
               {isOriginMismatch && (
                 <div className="p-4 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 rounded-2xl text-xs space-y-2.5">
                   <div className="flex items-center gap-2 font-bold text-amber-800 dark:text-amber-300">
                     <ShieldCheck className="w-4 h-4 text-amber-600" />
                     <span>
                       {lang === 'vi'
-                        ? 'Nguyên nhân lỗi xung đột trên Google:'
-                        : 'Why did Google reject this domain?'}
+                        ? 'Cách khắc phục trong tab Clients – Google Auth Platform bạn đang mở:'
+                        : 'How to fix in your open Google Auth Platform tab:'}
                     </span>
                   </div>
-                  <p className="text-amber-700 dark:text-amber-400 leading-relaxed">
-                    {lang === 'vi' ? (
-                      <>
-                        Google bảo mật chặn đăng nhập từ tên miền web chưa khai báo. Để mở khóa đăng nhập trên{' '}
-                        <code className="px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-900 font-mono font-bold">
-                          {currentDomain}
-                        </code>
-                        :
-                      </>
-                    ) : (
-                      <>
-                        Google OAuth strictly requires{' '}
-                        <code className="px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-900 font-mono">
-                          {currentDomain}
-                        </code>{' '}
-                        to be added to Authorized JavaScript Origins.
-                      </>
-                    )}
-                  </p>
-                  <ol className="list-decimal list-inside space-y-1 text-amber-700 dark:text-amber-400 pl-1">
+                  <ol className="list-decimal list-inside space-y-1.5 text-amber-800 dark:text-amber-300 pl-1 leading-relaxed">
                     <li>
-                      {lang === 'vi'
-                        ? 'Mở Google Cloud Console > APIs & Services > Credentials > OAuth 2.0 Client IDs'
-                        : 'Open Google Cloud Console > Credentials > OAuth 2.0 Client IDs'}
+                      {lang === 'vi' ? (
+                        <>
+                          Trong tab <b>Clients – Google Auth Platform</b>, bấm vào tên <b>OAuth 2.0 Client ID</b> của bạn.
+                        </>
+                      ) : (
+                        'In your Google Auth Platform tab, click on your OAuth 2.0 Client ID.'
+                      )}
                     </li>
                     <li>
                       {lang === 'vi' ? (
                         <>
-                          Thêm{' '}
-                          <code className="px-1 py-0.5 bg-amber-100 dark:bg-amber-900 font-mono">
+                          Kéo đến <b>Authorized JavaScript origins</b>, bấm <b>+ ADD URI</b> và dán:
+                          <div className="mt-1 p-1.5 bg-amber-100 dark:bg-amber-900 font-mono font-bold rounded select-all text-[11px] text-amber-900 dark:text-amber-100">
                             {currentDomain}
-                          </code>{' '}
-                          vào <b>Authorized JavaScript origins</b>
+                          </div>
                         </>
                       ) : (
                         <>
-                          Add <code className="px-1 py-0.5 bg-amber-100 font-mono">{currentDomain}</code> to{' '}
-                          <b>Authorized JavaScript origins</b>
+                          Add <code className="px-1 py-0.5 bg-amber-100 font-mono">{currentDomain}</code> to <b>Authorized JavaScript origins</b>
                         </>
                       )}
+                    </li>
+                    <li>
+                      {lang === 'vi'
+                        ? 'Bấm Lưu (SAVE). Sau đó copy Client ID của bạn dán vào ô bên dưới:'
+                        : 'Click Save, copy your Client ID and paste below:'}
                     </li>
                   </ol>
                 </div>
               )}
 
-              {/* Advanced Client ID / Token Accordion */}
-              <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setShowAdvanced(!showAdvanced)}
-                  className="w-full flex items-center justify-between py-2 text-xs font-semibold text-slate-500 hover:text-slate-800 dark:hover:text-slate-300 transition-colors cursor-pointer"
-                >
-                  <span>
+              {/* Client ID / Token Input Section */}
+              <div className="space-y-3 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700/60 animate-in fade-in duration-200">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center justify-between">
+                    <span>{lang === 'vi' ? 'Google OAuth Client ID của bạn:' : 'Your Google OAuth Client ID:'}</span>
+                    {customClientId && (
+                      <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-normal">
+                        ✓ {lang === 'vi' ? 'Đã lưu' : 'Saved'}
+                      </span>
+                    )}
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={customClientId}
+                      onChange={(e) => setCustomClientId(e.target.value)}
+                      placeholder="...apps.googleusercontent.com"
+                      className="flex-1 px-3 py-2 text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 font-mono text-slate-800 dark:text-white"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleDirectGoogleLogin(customClientId)}
+                      disabled={!customClientId.trim() || isLoading}
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition-all disabled:opacity-50 cursor-pointer shadow-xs"
+                    >
+                      {lang === 'vi' ? 'Lưu & Đăng nhập' : 'Save & Login'}
+                    </button>
+                  </div>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
                     {lang === 'vi'
-                      ? '⚙️ Cấu hình Client ID hoặc Access Token thủ công'
-                      : '⚙️ Configure Custom Client ID or Access Token'}
-                  </span>
-                  {showAdvanced ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                </button>
+                      ? 'Dán Client ID từ tab Google Cloud đã thêm domain vortexcal.vercel.app để đăng nhập ngay.'
+                      : 'Paste your Client ID with vortexcal.vercel.app whitelisted to login.'}
+                  </p>
+                </div>
 
-                {showAdvanced && (
-                  <div className="mt-3 space-y-4 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700/60 animate-in fade-in duration-200">
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                        {lang === 'vi' ? 'Google OAuth Client ID của bạn:' : 'Your Google OAuth Client ID:'}
-                      </label>
-                      <input
-                        type="text"
-                        value={customClientId}
-                        onChange={(e) => setCustomClientId(e.target.value)}
-                        placeholder="...apps.googleusercontent.com"
-                        className="w-full px-3 py-2 text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 font-mono text-slate-800 dark:text-white"
-                      />
-                      <p className="text-[11px] text-slate-400">
-                        {lang === 'vi'
-                          ? 'Dán Client ID đã thêm domain vortexcal.vercel.app để đăng nhập ngay lập tức.'
-                          : 'Paste Client ID with vortexcal.vercel.app whitelisted.'}
-                      </p>
-                    </div>
+                {/* Collapsible OAuth Playground token input */}
+                <div className="pt-2 border-t border-slate-200 dark:border-slate-700">
+                  <button
+                    type="button"
+                    onClick={() => setShowAdvanced(!showAdvanced)}
+                    className="w-full flex items-center justify-between py-1 text-[11px] font-semibold text-slate-500 hover:text-slate-800 dark:hover:text-slate-300 transition-colors cursor-pointer"
+                  >
+                    <span>
+                      {lang === 'vi'
+                        ? 'Hoặc đăng nhập tức thì bằng Access Token (Google OAuth Playground)'
+                        : 'Or login instantly with Access Token'}
+                    </span>
+                    {showAdvanced ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                  </button>
 
-                    <div className="space-y-1.5 pt-2 border-t border-slate-200 dark:border-slate-700">
-                      <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                        <Key className="w-3.5 h-3.5 text-blue-500" />
-                        <span>
-                          {lang === 'vi'
-                            ? 'Hoặc dán Access Token (Google OAuth Playground):'
-                            : 'Or paste Google Access Token:'}
-                        </span>
-                      </label>
+                  {showAdvanced && (
+                    <div className="mt-2 space-y-2 pt-2 animate-in fade-in duration-150">
                       <div className="flex gap-2">
                         <input
                           type="password"
@@ -439,7 +434,7 @@ export const CloudSyncModal: React.FC<CloudSyncModalProps> = ({
                           type="button"
                           onClick={handleManualTokenLogin}
                           disabled={!manualToken.trim() || isLoading}
-                          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition-all disabled:opacity-50 cursor-pointer"
+                          className="px-4 py-2 bg-slate-700 hover:bg-slate-800 text-white text-xs font-bold rounded-xl transition-all disabled:opacity-50 cursor-pointer"
                         >
                           {lang === 'vi' ? 'Xác thực' : 'Verify'}
                         </button>
@@ -448,14 +443,14 @@ export const CloudSyncModal: React.FC<CloudSyncModalProps> = ({
                         href="https://developers.google.com/oauthplayground"
                         target="_blank"
                         rel="noreferrer"
-                        className="inline-flex items-center gap-1 text-[11px] text-blue-500 hover:underline pt-1"
+                        className="inline-flex items-center gap-1 text-[11px] text-blue-500 hover:underline"
                       >
-                        <span>{lang === 'vi' ? 'Lấy token nhanh tại Google OAuth Playground' : 'Get token at OAuth Playground'}</span>
+                        <span>{lang === 'vi' ? 'Mở Google OAuth Playground để lấy token' : 'Open OAuth Playground to get token'}</span>
                         <ExternalLink className="w-3 h-3" />
                       </a>
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
             </div>
           )}
