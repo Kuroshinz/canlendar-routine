@@ -15,10 +15,7 @@ export const auth = getAuth(app);
 const provider = new GoogleAuthProvider();
 provider.addScope('https://www.googleapis.com/auth/calendar.events');
 provider.addScope('https://www.googleapis.com/auth/calendar.readonly');
-// Google Fitness API scopes for 1-Click Health & Macro Sync
-provider.addScope('https://www.googleapis.com/auth/fitness.activity.read');
-provider.addScope('https://www.googleapis.com/auth/fitness.body.read');
-provider.addScope('https://www.googleapis.com/auth/fitness.sleep.read');
+// Calendar & Profile scopes only
 
 const REAL_TOKEN_KEY = 'gcal_real_access_token';
 

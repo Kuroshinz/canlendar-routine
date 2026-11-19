@@ -20,7 +20,8 @@ declare global {
 const ENV_GOOGLE_CLIENT_ID = (import.meta.env?.VITE_GOOGLE_CLIENT_ID as string | undefined) || '';
 
 export const DEFAULT_GOOGLE_CLIENT_ID =
-  ENV_GOOGLE_CLIENT_ID || firebaseConfig.oAuthClientId || '';
+  ENV_GOOGLE_CLIENT_ID ||
+  '1010104633224-strrej25i8niu0va6db19aqpvl0cuctg.apps.googleusercontent.com';
 
 /**
  * True only when the user supplied their own OAuth Client ID (env or dialog).
@@ -30,8 +31,7 @@ export const DEFAULT_GOOGLE_CLIENT_ID =
  * launching a popup that ends on a Google error page.
  */
 export function hasOwnClientId(): boolean {
-  if (ENV_GOOGLE_CLIENT_ID) return true;
-  return Boolean(localStorage.getItem('gcal_custom_client_id'));
+  return true;
 }
 
 /**
@@ -92,8 +92,7 @@ export function requestRealGoogleOAuthToken(customClientId?: string): Promise<st
     try {
       const client = window.google.accounts.oauth2.initTokenClient({
         client_id: clientId,
-        scope:
-          'https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/fitness.activity.read https://www.googleapis.com/auth/fitness.body.read https://www.googleapis.com/auth/fitness.sleep.read',
+        scope: 'https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email openid',
         callback: (response: any) => {
           if (response.error) {
             reject(
