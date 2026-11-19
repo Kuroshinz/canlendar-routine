@@ -241,6 +241,10 @@ export default function App() {
   const [eventToEdit, setEventToEdit] = useState<CalendarEvent | null>(null);
   const [modalDate, setModalDate] = useState<string | undefined>(undefined);
   const [modalTime, setModalTime] = useState<string | undefined>(undefined);
+  const [modalEndTime, setModalEndTime] = useState<string | undefined>(undefined);
+  const [modalTitle, setModalTitle] = useState<string | undefined>(undefined);
+  const [modalAllDay, setModalAllDay] = useState<boolean | undefined>(undefined);
+  const [modalColor, setModalColor] = useState<string | undefined>(undefined);
   const [modalType, setModalType] = useState<EventType>('event');
 
   const [selectedEventForDetail, setSelectedEventForDetail] = useState<CalendarEvent | null>(null);
@@ -667,11 +671,21 @@ export default function App() {
   };
 
   // Open create modal with pre-fills
-  const openCreateModal = (type: EventType = 'event', dateStr?: string, timeStr?: string) => {
+  const openCreateModal = (
+    type: EventType = 'event',
+    dateStr?: string,
+    timeStr?: string,
+    endTimeStr?: string,
+    titleStr?: string
+  ) => {
     setEventToEdit(null);
     setModalType(type);
     setModalDate(dateStr || formatDateString(currentDate));
     setModalTime(timeStr || '09:00');
+    setModalEndTime(endTimeStr || '10:00');
+    setModalTitle(titleStr || '');
+    setModalAllDay(false);
+    setModalColor(undefined);
     setIsEventModalOpen(true);
   };
 
@@ -1371,10 +1385,14 @@ export default function App() {
         endTime={miniPopover.endTime}
         categories={categories}
         onSave={handleSaveEvent}
-        onOpenFullModal={(dateStr, startTime, endTime, title) => {
+        onOpenFullModal={(dateStr, startTime, endTime, title, allDay, color) => {
           setEventToEdit(null);
           setModalDate(dateStr);
           setModalTime(startTime);
+          setModalEndTime(endTime);
+          setModalTitle(title || '');
+          setModalAllDay(Boolean(allDay));
+          setModalColor(color);
           setIsEventModalOpen(true);
         }}
         onClose={() => setMiniPopover((prev) => ({ ...prev, isOpen: false }))}
@@ -1427,6 +1445,10 @@ export default function App() {
           eventToEdit={eventToEdit}
           initialDate={modalDate}
           initialTime={modalTime}
+          initialEndTime={modalEndTime}
+          initialTitle={modalTitle}
+          initialAllDay={modalAllDay}
+          initialColor={modalColor}
           initialType={modalType}
           categories={categories}
           onSave={handleSaveEvent}

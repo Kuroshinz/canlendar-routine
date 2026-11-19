@@ -11,6 +11,14 @@ import {
   Trash2,
   Copy,
   Check,
+  ChevronDown,
+  Bold,
+  Italic,
+  Underline,
+  List,
+  ListOrdered,
+  Link2,
+  RemoveFormatting,
 } from 'lucide-react';
 import {
   CalendarEvent,
@@ -28,6 +36,10 @@ interface EventModalProps {
   eventToEdit: CalendarEvent | null;
   initialDate?: string;
   initialTime?: string;
+  initialEndTime?: string;
+  initialTitle?: string;
+  initialAllDay?: boolean;
+  initialColor?: string;
   initialType?: EventType;
   categories: CalendarCategory[];
   onSave: (event: CalendarEvent) => void;
@@ -41,6 +53,10 @@ export const EventModal: React.FC<EventModalProps> = ({
   eventToEdit,
   initialDate,
   initialTime,
+  initialEndTime,
+  initialTitle,
+  initialAllDay,
+  initialColor,
   initialType = 'event',
   categories,
   onSave,
@@ -52,18 +68,20 @@ export const EventModal: React.FC<EventModalProps> = ({
   const [startDate, setStartDate] = useState(initialDate || new Date().toISOString().split('T')[0]);
   const [startTime, setStartTime] = useState(initialTime || '09:00');
   const [endDate, setEndDate] = useState(initialDate || new Date().toISOString().split('T')[0]);
-  const [endTime, setEndTime] = useState('10:00');
-  const [allDay, setAllDay] = useState(false);
+  const [endTime, setEndTime] = useState(initialEndTime || '10:00');
+  const [allDay, setAllDay] = useState(initialAllDay || false);
   const [recurrence, setRecurrence] = useState<RecurrenceType>('none');
   const [location, setLocation] = useState('');
   const [description, setDescription] = useState('');
   const [calendarId, setCalendarId] = useState('personal');
-  const [color, setColor] = useState('#039BE5');
+  const [color, setColor] = useState(initialColor || '#039BE5');
   const [meetUrl, setMeetUrl] = useState<string | undefined>(undefined);
   const [guests, setGuests] = useState<EventGuest[]>([]);
   const [guestInput, setGuestInput] = useState('');
-  const [reminderMinutes, setReminderMinutes] = useState<number>(10);
+  const [reminderMinutes, setReminderMinutes] = useState<number>(30);
+  const [showOtherActions, setShowOtherActions] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [activeTab, setActiveTab] = useState<'details' | 'find_time'>('details');
 
   // Synchronize state when modal opens
   useEffect(() => {
@@ -82,30 +100,28 @@ export const EventModal: React.FC<EventModalProps> = ({
       setColor(eventToEdit.color || '#039BE5');
       setMeetUrl(eventToEdit.meetUrl);
       setGuests(eventToEdit.guests || []);
-      setReminderMinutes(eventToEdit.reminders?.[0] ?? 10);
+      setReminderMinutes(eventToEdit.reminders?.[0] ?? 30);
     } else {
       const today = initialDate || new Date().toISOString().split('T')[0];
-      setTitle('');
+      setTitle(initialTitle || '');
       setType(initialType);
       setStartDate(today);
       setStartTime(initialTime || '09:00');
       setEndDate(today);
-      // default end time: 1 hour later
-      const startH = parseInt(initialTime?.split(':')[0] || '9', 10);
-      const endH = (startH + 1) % 24;
-      setEndTime(`${String(endH).padStart(2, '0')}:00`);
-      setAllDay(false);
+      setEndTime(initialEndTime || '10:00');
+      setAllDay(initialAllDay || false);
       setRecurrence('none');
       setLocation('');
       setDescription('');
       setCalendarId('personal');
-      setColor('#039BE5');
+      setColor(initialColor || '#039BE5');
       setMeetUrl(undefined);
       setGuests([]);
       setGuestInput('');
-      setReminderMinutes(10);
+      setReminderMinutes(30);
     }
-  }, [eventToEdit, initialDate, initialTime, initialType, isOpen]);
+    setShowOtherActions(false);
+  }, [eventToEdit, initialDate, initialTime, initialEndTime, initialTitle, initialAllDay, initialColor, initialType, isOpen]);
 
   if (!isOpen) return null;
 
@@ -138,8 +154,8 @@ export const EventModal: React.FC<EventModalProps> = ({
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     const finalEvent: CalendarEvent = {
       id: eventToEdit ? eventToEdit.id : `ev-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
       title: title.trim() || (lang === 'vi' ? '(Chưa có tiêu đề)' : '(Untitled)'),
@@ -159,6 +175,7 @@ export const EventModal: React.FC<EventModalProps> = ({
       reminders: [reminderMinutes],
       isCompleted: eventToEdit?.isCompleted ?? false,
       createdAt: eventToEdit?.createdAt ?? Date.now(),
+      updatedAt: Date.now(),
     };
 
     onSave(finalEvent);
@@ -166,310 +183,360 @@ export const EventModal: React.FC<EventModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/45 backdrop-blur-xs">
-      <div className="bg-white dark:bg-[#1a1e24] rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 w-full max-w-xl max-h-[92vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-        {/* Header Bar */}
-        <div className="px-5 py-3 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between bg-gray-50/70 dark:bg-gray-900/50">
-          <div className="flex items-center gap-1.5 p-1 bg-gray-200/60 dark:bg-gray-800 rounded-lg">
-            {(['event', 'task', 'reminder'] as EventType[]).map((t) => (
-              <button
-                key={t}
-                type="button"
-                onClick={() => setType(t)}
-                className={`px-3 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer ${
-                  type === t
-                    ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-xs'
-                    : 'text-gray-600 dark:text-gray-300 hover:text-gray-900'
-                }`}
-              >
-                {t === 'event'
-                  ? lang === 'vi' ? 'Sự kiện' : 'Event'
-                  : t === 'task'
-                  ? lang === 'vi' ? 'Tác vụ' : 'Task'
-                  : lang === 'vi' ? 'Nhắc nhở' : 'Reminder'}
-              </button>
-            ))}
-          </div>
-
-          <div className="flex items-center gap-2">
-            {eventToEdit && onDelete && (
-              <button
-                type="button"
-                onClick={() => {
-                  onDelete(eventToEdit.id);
-                  onClose();
-                }}
-                title={lang === 'vi' ? 'Xóa sự kiện' : 'Delete event'}
-                className="p-1.5 rounded-full hover:bg-red-50 dark:hover:bg-red-950/40 text-gray-500 hover:text-red-600 transition-colors cursor-pointer"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
-            )}
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
+      <div className="bg-[#1e1e1e] text-gray-100 rounded-2xl shadow-2xl border border-gray-700/80 w-full max-w-4xl max-h-[94vh] flex flex-col overflow-hidden">
+        {/* Google Calendar Top App Bar */}
+        <div className="px-5 py-3 border-b border-gray-700/60 flex items-center justify-between bg-[#1e1e1e] shrink-0">
+          <div className="flex items-center gap-4 flex-1 mr-4">
             <button
               type="button"
               onClick={onClose}
-              className="p-1.5 rounded-full hover:bg-gray-200 dark:hover:bg-[#242931] text-gray-500 dark:text-gray-400 cursor-pointer"
+              className="p-1.5 rounded-full hover:bg-white/10 text-gray-400 hover:text-white transition-colors cursor-pointer"
+              title={lang === 'vi' ? 'Đóng' : 'Close'}
             >
               <X className="w-5 h-5" />
             </button>
-          </div>
-        </div>
-
-        {/* Form Body */}
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-5 space-y-4">
-          {/* Title Input */}
-          <div>
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder={lang === 'vi' ? 'Thêm tiêu đề' : 'Add title'}
               autoFocus
-              className="w-full text-xl md:text-2xl font-normal text-gray-900 dark:text-gray-100 placeholder-gray-400 border-b border-gray-300 dark:border-gray-700 focus:border-blue-600 pb-2 focus:outline-none bg-transparent transition-colors"
+              className="w-full text-lg sm:text-xl font-medium text-white placeholder-gray-400 bg-transparent border-b border-transparent focus:border-blue-500 pb-0.5 focus:outline-hidden transition-colors"
             />
           </div>
 
-          {/* Date & Time Row */}
-          <div className="flex items-start gap-3 text-sm text-gray-700 dark:text-gray-200">
-            <Clock className="w-5 h-5 text-gray-400 mt-1 shrink-0" />
-            <div className="flex-1 space-y-2">
-              <div className="flex flex-wrap items-center gap-2">
-                <input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  className="px-2.5 py-1.5 border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-xs text-gray-800 dark:text-gray-100 focus:outline-blue-500"
-                />
-                {!allDay && (
-                  <input
-                    type="time"
-                    value={startTime}
-                    onChange={(e) => setStartTime(e.target.value)}
-                    className="px-2.5 py-1.5 border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-xs text-gray-800 dark:text-gray-100 focus:outline-blue-500"
-                  />
-                )}
-                <span className="text-gray-400">–</span>
-                {!allDay && (
-                  <input
-                    type="time"
-                    value={endTime}
-                    onChange={(e) => setEndTime(e.target.value)}
-                    className="px-2.5 py-1.5 border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-xs text-gray-800 dark:text-gray-100 focus:outline-blue-500"
-                  />
-                )}
-                <input
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  className="px-2.5 py-1.5 border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-xs text-gray-800 dark:text-gray-100 focus:outline-blue-500"
-                />
-              </div>
+          <div className="flex items-center gap-3">
+            {/* Nút Lưu Google Blue Pill */}
+            <button
+              type="button"
+              onClick={() => handleSubmit()}
+              className="px-6 py-1.5 bg-[#8ab4f8] hover:bg-[#aecbfa] text-gray-900 rounded-full font-bold text-xs shadow-md transition-all cursor-pointer"
+            >
+              {lang === 'vi' ? 'Lưu' : 'Save'}
+            </button>
 
-              <div className="flex flex-wrap items-center gap-4 text-xs">
-                <label className="flex items-center gap-1.5 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={allDay}
-                    onChange={(e) => setAllDay(e.target.checked)}
-                    className="rounded text-blue-600 focus:ring-blue-500"
-                  />
-                  <span>{lang === 'vi' ? 'Cả ngày' : 'All day'}</span>
-                </label>
+            {/* Menu Thao tác khác */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setShowOtherActions((v) => !v)}
+                className="px-3 py-1.5 rounded-lg hover:bg-white/10 text-xs font-medium text-gray-300 flex items-center gap-1 cursor-pointer"
+              >
+                <span>{lang === 'vi' ? 'Thao tác khác' : 'More actions'}</span>
+                <ChevronDown className="w-3.5 h-3.5" />
+              </button>
 
-                {/* Recurrence Dropdown */}
-                <select
-                  value={recurrence}
-                  onChange={(e) => setRecurrence(e.target.value as RecurrenceType)}
-                  className="px-2.5 py-1 border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-xs text-gray-700 dark:text-gray-200 focus:outline-blue-500"
-                >
-                  <option value="none">{lang === 'vi' ? 'Không lặp lại' : 'Does not repeat'}</option>
-                  <option value="daily">{lang === 'vi' ? 'Hàng ngày' : 'Daily'}</option>
-                  <option value="weekly">{lang === 'vi' ? 'Hàng tuần' : 'Weekly'}</option>
-                  <option value="monthly">{lang === 'vi' ? 'Hàng tháng' : 'Monthly'}</option>
-                  <option value="yearly">{lang === 'vi' ? 'Hàng năm' : 'Yearly'}</option>
-                </select>
-              </div>
+              {showOtherActions && (
+                <>
+                  <div className="fixed inset-0 z-30" onClick={() => setShowOtherActions(false)} />
+                  <div className="absolute right-0 mt-1 w-44 bg-[#28292a] border border-gray-700 rounded-xl shadow-xl py-1 z-40 text-xs">
+                    {eventToEdit && onDelete && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onDelete(eventToEdit.id);
+                          onClose();
+                        }}
+                        className="w-full px-4 py-2 text-left text-red-400 hover:bg-white/10 flex items-center gap-2 cursor-pointer"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>{lang === 'vi' ? 'Xóa sự kiện' : 'Delete'}</span>
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const copy = { ...eventToEdit, id: `ev-${Date.now()}`, title: `${title} (Bản sao)` };
+                        onSave(copy as CalendarEvent);
+                        onClose();
+                      }}
+                      className="w-full px-4 py-2 text-left text-gray-200 hover:bg-white/10 flex items-center gap-2 cursor-pointer"
+                    >
+                      <Copy className="w-3.5 h-3.5" />
+                      <span>{lang === 'vi' ? 'Tạo bản sao' : 'Duplicate'}</span>
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
+        </div>
 
-          {/* Google Meet Conferencing Section */}
-          <div className="flex items-center gap-3 text-sm">
-            <Video className="w-5 h-5 text-gray-400 shrink-0" />
-            <div className="flex-1">
-              {!meetUrl ? (
+        {/* Date & Time Ribbon Row - Exactly matching Google Calendar */}
+        <div className="px-6 py-3.5 border-b border-gray-700/60 bg-[#1e1e1e] flex flex-wrap items-center gap-x-4 gap-y-2 text-xs shrink-0">
+          {/* Start Date & Time */}
+          <div className="flex items-center gap-2">
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="px-2.5 py-1.5 rounded-md bg-[#2d2e30] border border-gray-700 text-white text-xs focus:outline-blue-500 font-medium"
+            />
+            {!allDay && (
+              <input
+                type="time"
+                value={startTime}
+                onChange={(e) => setStartTime(e.target.value)}
+                className="px-2.5 py-1.5 rounded-md bg-[#2d2e30] border border-gray-700 text-white text-xs font-mono focus:outline-blue-500"
+              />
+            )}
+          </div>
+
+          <span className="text-gray-400 font-medium">{lang === 'vi' ? 'tới' : 'to'}</span>
+
+          {/* End Date & Time */}
+          <div className="flex items-center gap-2">
+            {!allDay && (
+              <input
+                type="time"
+                value={endTime}
+                onChange={(e) => setEndTime(e.target.value)}
+                className="px-2.5 py-1.5 rounded-md bg-[#2d2e30] border border-gray-700 text-white text-xs font-mono focus:outline-blue-500"
+              />
+            )}
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="px-2.5 py-1.5 rounded-md bg-[#2d2e30] border border-gray-700 text-white text-xs focus:outline-blue-500 font-medium"
+            />
+          </div>
+
+          <span className="text-gray-400 text-[11px] hidden md:inline">
+            (GMT+07:00) Giờ Đông Dương - TP Hồ Chí Minh
+          </span>
+
+          {/* All-Day checkbox & Recurrence Dropdown */}
+          <div className="flex items-center gap-3 ml-auto">
+            <label className="flex items-center gap-1.5 cursor-pointer text-gray-300">
+              <input
+                type="checkbox"
+                checked={allDay}
+                onChange={(e) => setAllDay(e.target.checked)}
+                className="rounded text-blue-500 focus:ring-0"
+              />
+              <span>{lang === 'vi' ? 'Cả ngày' : 'All day'}</span>
+            </label>
+
+            {/* Recurrence Dropdown */}
+            <select
+              value={recurrence}
+              onChange={(e) => setRecurrence(e.target.value as RecurrenceType)}
+              className="px-3 py-1.5 rounded-md bg-[#2d2e30] border border-gray-700 text-white text-xs font-medium focus:outline-blue-500 cursor-pointer"
+            >
+              <option value="none">{lang === 'vi' ? 'Không lặp lại' : 'Does not repeat'}</option>
+              <option value="daily">{lang === 'vi' ? 'Hàng ngày' : 'Daily'}</option>
+              <option value="weekly">{lang === 'vi' ? 'Mọi ngày trong tuần (từ thứ Hai tới thứ Sáu)' : 'Every weekday (Mon to Fri)'}</option>
+              <option value="monthly">{lang === 'vi' ? 'Hàng tháng' : 'Monthly'}</option>
+              <option value="yearly">{lang === 'vi' ? 'Hàng năm' : 'Yearly'}</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Modal Main Body: 2 Columns (Details left, Guests right) */}
+        <div className="flex-1 overflow-y-auto flex flex-col md:flex-row">
+          {/* Left Column: Event Details Form */}
+          <div className="flex-1 p-6 space-y-5 border-r border-gray-700/60">
+            {/* Tabs: Chi tiết sự kiện / Tìm thời gian */}
+            <div className="flex border-b border-gray-700/60 gap-6 text-xs font-semibold">
+              <button
+                type="button"
+                onClick={() => setActiveTab('details')}
+                className={`pb-2.5 border-b-2 cursor-pointer transition-colors ${
+                  activeTab === 'details'
+                    ? 'border-blue-400 text-blue-400'
+                    : 'border-transparent text-gray-400 hover:text-gray-200'
+                }`}
+              >
+                {lang === 'vi' ? 'Chi tiết sự kiện' : 'Event Details'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('find_time')}
+                className={`pb-2.5 border-b-2 cursor-pointer transition-colors ${
+                  activeTab === 'find_time'
+                    ? 'border-blue-400 text-blue-400'
+                    : 'border-transparent text-gray-400 hover:text-gray-200'
+                }`}
+              >
+                {lang === 'vi' ? 'Tìm thời gian' : 'Find a time'}
+              </button>
+            </div>
+
+            {/* Google Meet Button */}
+            <div className="flex items-center gap-3">
+              <Video className="w-5 h-5 text-gray-400 shrink-0" />
+              {meetUrl ? (
+                <div className="flex-1 flex items-center justify-between p-2.5 rounded-xl bg-blue-950/40 border border-blue-800 text-xs text-blue-300">
+                  <span className="font-mono truncate">{meetUrl}</span>
+                  <button
+                    type="button"
+                    onClick={handleCopyMeet}
+                    className="p-1 hover:bg-blue-900 rounded text-blue-200 cursor-pointer ml-2"
+                    title={lang === 'vi' ? 'Sao chép link' : 'Copy link'}
+                  >
+                    {copiedLink ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                  </button>
+                </div>
+              ) : (
                 <button
                   type="button"
                   onClick={handleAddMeet}
-                  className="px-3.5 py-2 bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100 dark:hover:bg-blue-900/60 text-blue-600 dark:text-blue-400 rounded-lg text-xs font-semibold flex items-center gap-2 border border-blue-200 dark:border-blue-800 transition-colors cursor-pointer"
+                  className="px-4 py-2 bg-[#2d2e30] hover:bg-[#383a3c] text-white border border-gray-700 rounded-xl text-xs font-medium flex items-center gap-2 cursor-pointer transition-colors"
                 >
-                  <Video className="w-4 h-4 text-blue-500" />
-                  <span>{lang === 'vi' ? 'Thêm hội nghị truyền hình Google Meet' : 'Add Google Meet video conferencing'}</span>
+                  <Video className="w-4 h-4 text-blue-400" />
+                  <span>{lang === 'vi' ? 'Thêm hội nghị truyền hình trên Google Meet' : 'Add Google Meet video conferencing'}</span>
                 </button>
-              ) : (
-                <div className="flex items-center justify-between p-2.5 bg-blue-50/70 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 rounded-lg">
-                  <div className="flex items-center gap-2 truncate">
-                    <Video className="w-4 h-4 text-blue-600 shrink-0" />
-                    <span className="text-xs font-mono font-medium text-blue-700 dark:text-blue-300 truncate">
-                      {meetUrl}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1 shrink-0 ml-2">
+              )}
+            </div>
+
+            {/* Location Input */}
+            <div className="flex items-center gap-3">
+              <MapPin className="w-5 h-5 text-gray-400 shrink-0" />
+              <input
+                type="text"
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                placeholder={lang === 'vi' ? 'Thêm vị trí' : 'Add location'}
+                className="flex-1 bg-[#2d2e30] border border-gray-700 rounded-xl px-3.5 py-2 text-xs text-white placeholder-gray-400 focus:outline-blue-500"
+              />
+            </div>
+
+            {/* Notification / Reminder */}
+            <div className="flex items-center gap-3">
+              <Bell className="w-5 h-5 text-gray-400 shrink-0" />
+              <div className="flex items-center gap-2 text-xs">
+                <span className="text-gray-300">{lang === 'vi' ? 'Thông báo' : 'Notification'}</span>
+                <input
+                  type="number"
+                  min="0"
+                  max="1440"
+                  value={reminderMinutes}
+                  onChange={(e) => setReminderMinutes(parseInt(e.target.value, 10) || 10)}
+                  className="w-16 bg-[#2d2e30] border border-gray-700 rounded-lg px-2 py-1 text-center text-white"
+                />
+                <span className="text-gray-400">{lang === 'vi' ? 'phút' : 'minutes'}</span>
+              </div>
+            </div>
+
+            {/* Calendar Category & Color */}
+            <div className="flex items-center gap-3">
+              <CalIcon className="w-5 h-5 text-gray-400 shrink-0" />
+              <div className="flex items-center gap-3 flex-wrap">
+                <select
+                  value={calendarId}
+                  onChange={(e) => setCalendarId(e.target.value)}
+                  className="bg-[#2d2e30] border border-gray-700 rounded-xl px-3 py-1.5 text-xs text-white cursor-pointer"
+                >
+                  {categories.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {lang === 'vi' ? c.nameVi : c.name}
+                    </option>
+                  ))}
+                </select>
+
+                {/* Color Dot Picker */}
+                <div className="flex items-center gap-1.5">
+                  {GOOGLE_COLORS.slice(0, 8).map((c) => (
                     <button
+                      key={c.id}
                       type="button"
-                      onClick={handleCopyMeet}
-                      title={lang === 'vi' ? 'Sao chép đường liên kết' : 'Copy link'}
-                      className="p-1 hover:bg-blue-200/50 dark:hover:bg-blue-900 rounded text-blue-600 cursor-pointer"
+                      onClick={() => setColor(c.hex)}
+                      style={{ backgroundColor: c.hex }}
+                      className={`w-5 h-5 rounded-full transition-transform hover:scale-115 flex items-center justify-center cursor-pointer ${
+                        color === c.hex ? 'ring-2 ring-white scale-110 shadow-xs' : ''
+                      }`}
+                      title={lang === 'vi' ? c.nameVi : c.name}
                     >
-                      {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                      {color === c.hex && <Check className="w-3 h-3 text-white stroke-[3]" />}
                     </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Description Area with Google Calendar Style Formatting Toolbar */}
+            <div className="space-y-1 pt-1">
+              {/* Rich text formatting tools */}
+              <div className="flex items-center gap-1 p-1 bg-[#28292a] rounded-t-xl border border-b-0 border-gray-700 text-gray-400">
+                <button type="button" className="p-1 hover:text-white rounded hover:bg-white/10" title="Bold"><Bold className="w-3.5 h-3.5" /></button>
+                <button type="button" className="p-1 hover:text-white rounded hover:bg-white/10" title="Italic"><Italic className="w-3.5 h-3.5" /></button>
+                <button type="button" className="p-1 hover:text-white rounded hover:bg-white/10" title="Underline"><Underline className="w-3.5 h-3.5" /></button>
+                <span className="w-px h-3 bg-gray-700 mx-1" />
+                <button type="button" className="p-1 hover:text-white rounded hover:bg-white/10" title="Bullet List"><List className="w-3.5 h-3.5" /></button>
+                <button type="button" className="p-1 hover:text-white rounded hover:bg-white/10" title="Numbered List"><ListOrdered className="w-3.5 h-3.5" /></button>
+                <button type="button" className="p-1 hover:text-white rounded hover:bg-white/10" title="Link"><Link2 className="w-3.5 h-3.5" /></button>
+                <button type="button" className="p-1 hover:text-white rounded hover:bg-white/10" title="Clear Formatting"><RemoveFormatting className="w-3.5 h-3.5" /></button>
+              </div>
+
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder={lang === 'vi' ? 'Thêm nội dung mô tả' : 'Add description'}
+                rows={4}
+                className="w-full bg-[#2d2e30] border border-gray-700 rounded-b-xl p-3 text-xs text-white placeholder-gray-400 focus:outline-blue-500 resize-none"
+              />
+            </div>
+          </div>
+
+          {/* Right Column: Guests Section (Khách) */}
+          <div className="w-full md:w-80 p-6 space-y-4 bg-[#1e1e1e]">
+            <h3 className="text-xs font-bold text-gray-300 uppercase tracking-wider">
+              {lang === 'vi' ? 'Khách' : 'Guests'}
+            </h3>
+
+            <input
+              type="email"
+              value={guestInput}
+              onChange={(e) => setGuestInput(e.target.value)}
+              onKeyDown={handleAddGuest}
+              placeholder={lang === 'vi' ? 'Thêm khách' : 'Add guests'}
+              className="w-full bg-[#2d2e30] border border-gray-700 rounded-xl px-3.5 py-2 text-xs text-white placeholder-gray-400 focus:outline-blue-500"
+            />
+
+            {/* Guest List */}
+            {guests.length > 0 && (
+              <div className="space-y-1.5 max-h-36 overflow-y-auto">
+                {guests.map((g) => (
+                  <div
+                    key={g.email}
+                    className="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-[#28292a] text-xs"
+                  >
+                    <span className="truncate text-gray-300">{g.email}</span>
                     <button
                       type="button"
-                      onClick={() => setMeetUrl(undefined)}
-                      className="p-1 hover:bg-blue-200/50 dark:hover:bg-blue-900 rounded text-gray-400 hover:text-red-500 cursor-pointer"
+                      onClick={() => handleRemoveGuest(g.email)}
+                      className="text-gray-400 hover:text-red-400 ml-2"
                     >
                       <X className="w-3.5 h-3.5" />
                     </button>
                   </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Location Input */}
-          <div className="flex items-center gap-3 text-sm">
-            <MapPin className="w-5 h-5 text-gray-400 shrink-0" />
-            <input
-              type="text"
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              placeholder={lang === 'vi' ? 'Thêm vị trí (phòng họp, địa chỉ...)' : 'Add location or room'}
-              className="flex-1 px-3 py-1.5 border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-xs text-gray-800 dark:text-gray-100 focus:outline-blue-500"
-            />
-          </div>
-
-          {/* Guests / Attendees */}
-          <div className="flex items-start gap-3 text-sm">
-            <Users className="w-5 h-5 text-gray-400 mt-1 shrink-0" />
-            <div className="flex-1 space-y-2">
-              <input
-                type="email"
-                value={guestInput}
-                onChange={(e) => setGuestInput(e.target.value)}
-                onKeyDown={handleAddGuest}
-                placeholder={lang === 'vi' ? 'Thêm người tham dự (nhập email rồi nhấn Enter)' : 'Add guests (type email and hit Enter)'}
-                className="w-full px-3 py-1.5 border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-xs text-gray-800 dark:text-gray-100 focus:outline-blue-500"
-              />
-
-              {guests.length > 0 && (
-                <div className="flex flex-wrap gap-1.5">
-                  {guests.map((g) => (
-                    <span
-                      key={g.email}
-                      className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-xs text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-600"
-                    >
-                      <span>{g.email}</span>
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveGuest(g.email)}
-                        className="text-gray-400 hover:text-red-500 cursor-pointer"
-                      >
-                        ×
-                      </button>
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Calendar Category & Color */}
-          <div className="flex items-center gap-3 text-sm">
-            <CalIcon className="w-5 h-5 text-gray-400 shrink-0" />
-            <div className="flex-1 flex flex-wrap items-center gap-3">
-              <select
-                value={calendarId}
-                onChange={(e) => {
-                  setCalendarId(e.target.value);
-                  const selectedCat = categories.find((c) => c.id === e.target.value);
-                  if (selectedCat) setColor(selectedCat.color);
-                }}
-                className="px-3 py-1.5 border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-xs text-gray-800 dark:text-gray-100 focus:outline-blue-500"
-              >
-                {categories.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {lang === 'vi' ? c.nameVi : c.name}
-                  </option>
-                ))}
-              </select>
-
-              {/* Color dots picker */}
-              <div className="flex items-center gap-1.5 flex-wrap">
-                {GOOGLE_COLORS.map((gc) => (
-                  <button
-                    key={gc.id}
-                    type="button"
-                    onClick={() => setColor(gc.hex)}
-                    title={lang === 'vi' ? gc.nameVi : gc.name}
-                    style={{ backgroundColor: gc.hex }}
-                    className={`w-5 h-5 rounded-full cursor-pointer transition-transform hover:scale-115 flex items-center justify-center ${
-                      color === gc.hex ? 'ring-2 ring-offset-2 ring-gray-400 scale-110' : ''
-                    }`}
-                  >
-                    {color === gc.hex && <Check className="w-3 h-3 text-white stroke-[3]" />}
-                  </button>
                 ))}
               </div>
+            )}
+
+            {/* Guest Permissions */}
+            <div className="space-y-2 pt-2 border-t border-gray-700/60">
+              <span className="text-[11px] font-semibold text-gray-400 block">
+                {lang === 'vi' ? 'Quyền của khách' : 'Guest permissions'}
+              </span>
+              <label className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer">
+                <input type="checkbox" className="rounded text-blue-500" />
+                <span>{lang === 'vi' ? 'Sửa đổi sự kiện' : 'Modify event'}</span>
+              </label>
+              <label className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer">
+                <input type="checkbox" defaultChecked className="rounded text-blue-500" />
+                <span>{lang === 'vi' ? 'Mời những người khác' : 'Invite others'}</span>
+              </label>
+              <label className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer">
+                <input type="checkbox" defaultChecked className="rounded text-blue-500" />
+                <span>{lang === 'vi' ? 'Xem danh sách khách mời' : 'See guest list'}</span>
+              </label>
             </div>
           </div>
-
-          {/* Reminder Notification selector */}
-          <div className="flex items-center gap-3 text-sm">
-            <Bell className="w-5 h-5 text-gray-400 shrink-0" />
-            <select
-              value={reminderMinutes}
-              onChange={(e) => setReminderMinutes(parseInt(e.target.value, 10))}
-              className="px-3 py-1.5 border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-xs text-gray-800 dark:text-gray-100 focus:outline-blue-500"
-            >
-              <option value="5">{lang === 'vi' ? '5 phút trước' : '5 minutes before'}</option>
-              <option value="10">{lang === 'vi' ? '10 phút trước' : '10 minutes before'}</option>
-              <option value="15">{lang === 'vi' ? '15 phút trước' : '15 minutes before'}</option>
-              <option value="30">{lang === 'vi' ? '30 phút trước' : '30 minutes before'}</option>
-              <option value="60">{lang === 'vi' ? '1 giờ trước' : '1 hour before'}</option>
-              <option value="1440">{lang === 'vi' ? '1 ngày trước' : '1 day before'}</option>
-            </select>
-          </div>
-
-          {/* Description */}
-          <div className="flex items-start gap-3 text-sm">
-            <AlignLeft className="w-5 h-5 text-gray-400 mt-1 shrink-0" />
-            <textarea
-              rows={3}
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder={lang === 'vi' ? 'Thêm mô tả hoặc tài liệu đính kèm...' : 'Add description or notes...'}
-              className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-xs text-gray-800 dark:text-gray-100 focus:outline-blue-500"
-            />
-          </div>
-
-          {/* Action Buttons */}
-          <div className="pt-3 border-t border-gray-100 dark:border-gray-800 flex justify-end gap-2.5">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 rounded-lg text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer"
-            >
-              {lang === 'vi' ? 'Hủy bỏ' : 'Cancel'}
-            </button>
-            <button
-              type="submit"
-              className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-xs transition-colors cursor-pointer"
-            >
-              {lang === 'vi' ? 'Lưu sự kiện' : 'Save'}
-            </button>
-          </div>
-        </form>
+        </div>
       </div>
     </div>
   );
 };
-
