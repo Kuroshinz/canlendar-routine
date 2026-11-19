@@ -124,7 +124,7 @@ export const CalendarActionBar: React.FC<CalendarActionBarProps> = ({
               <button
                 onClick={onUndo}
                 title={lang === 'vi' ? 'Hoàn tác (Ctrl+Z)' : 'Undo (Ctrl+Z)'}
-                className="p-1 text-blue-600 dark:text-blue-400 hover:bg-white dark:hover:bg-slate-700 rounded-md transition-colors cursor-pointer"
+                className="p-1 text-rose-600 dark:text-rose-400 hover:bg-white dark:hover:bg-slate-700 rounded-md transition-colors cursor-pointer"
               >
                 <Undo className="w-3.5 h-3.5" />
               </button>
@@ -133,7 +133,7 @@ export const CalendarActionBar: React.FC<CalendarActionBarProps> = ({
               <button
                 onClick={onRedo}
                 title={lang === 'vi' ? 'Làm lại (Ctrl+Shift+Z)' : 'Redo (Ctrl+Shift+Z)'}
-                className="p-1 text-blue-600 dark:text-blue-400 hover:bg-white dark:hover:bg-slate-700 rounded-md transition-colors cursor-pointer"
+                className="p-1 text-rose-600 dark:text-rose-400 hover:bg-white dark:hover:bg-slate-700 rounded-md transition-colors cursor-pointer"
               >
                 <Redo className="w-3.5 h-3.5" />
               </button>
@@ -168,7 +168,7 @@ export const CalendarActionBar: React.FC<CalendarActionBarProps> = ({
             title={lang === 'vi' ? 'Bộ lọc lịch' : 'Filter calendars'}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
               showFilterDropdown
-                ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border-blue-300 dark:border-blue-800 shadow-xs'
+                ? 'bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border-rose-300 dark:border-rose-800 shadow-xs'
                 : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'
             }`}
           >
@@ -190,7 +190,7 @@ export const CalendarActionBar: React.FC<CalendarActionBarProps> = ({
                   {onAddCategory && (
                     <button
                       onClick={() => setShowNewCategory(!showNewCategory)}
-                      className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer flex items-center gap-0.5"
+                      className="text-[11px] font-semibold text-rose-600 dark:text-rose-400 hover:underline cursor-pointer flex items-center gap-0.5"
                     >
                       <Plus className="w-3 h-3" />
                       <span>{lang === 'vi' ? 'Thêm' : 'Add'}</span>
@@ -205,7 +205,7 @@ export const CalendarActionBar: React.FC<CalendarActionBarProps> = ({
                       value={newCatName}
                       onChange={(e) => setNewCatName(e.target.value)}
                       placeholder={lang === 'vi' ? 'Tên danh mục mới...' : 'New calendar name...'}
-                      className="w-full text-xs px-2 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md mb-2 text-slate-800 dark:text-slate-100 focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+                      className="w-full text-xs px-2 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md mb-2 text-slate-800 dark:text-slate-100 focus:outline-hidden focus:ring-1 focus:ring-rose-500"
                       autoFocus
                     />
                     <div className="flex items-center justify-between gap-2">
@@ -217,7 +217,7 @@ export const CalendarActionBar: React.FC<CalendarActionBarProps> = ({
                       />
                       <button
                         type="submit"
-                        className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-xs font-semibold cursor-pointer"
+                        className="px-2.5 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded-md text-xs font-semibold cursor-pointer"
                       >
                         {lang === 'vi' ? 'Lưu' : 'Save'}
                       </button>
@@ -267,7 +267,7 @@ export const CalendarActionBar: React.FC<CalendarActionBarProps> = ({
         {/* + Thêm sự kiện */}
         <button
           onClick={() => onOpenCreateModal('event')}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-xs transition-all cursor-pointer"
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-semibold shadow-xs transition-all cursor-pointer"
         >
           <Plus className="w-3.5 h-3.5" />
           <span>{lang === 'vi' ? 'Thêm sự kiện' : 'Add Event'}</span>

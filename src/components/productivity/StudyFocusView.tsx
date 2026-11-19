@@ -438,7 +438,7 @@ export const StudyFocusView: React.FC<StudyFocusViewProps> = ({
               onClick={() => switchMode(tab.id)}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-all cursor-pointer ${
                 mode === tab.id
-                  ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-xs'
+                  ? 'bg-white dark:bg-gray-700 text-rose-600 dark:text-rose-400 shadow-xs'
                   : 'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
               }`}
             >
@@ -453,7 +453,7 @@ export const StudyFocusView: React.FC<StudyFocusViewProps> = ({
       {mode === 'pomodoro' && (
         <div className="w-full max-w-sm mb-3.5">
           <div className="flex items-center gap-1.5 mb-1.5 px-0.5">
-            <Brain className="w-3.5 h-3.5 text-blue-500" />
+            <Brain className="w-3.5 h-3.5 text-rose-500" />
             <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
               {lang === 'vi' ? 'Phác đồ nhịp sinh học' : 'Scientific Focus Protocol'}
             </span>
@@ -466,7 +466,7 @@ export const StudyFocusView: React.FC<StudyFocusViewProps> = ({
                 onClick={() => handleSelectInterval(intv.id)}
                 className={`p-2 rounded-xl border text-left flex flex-col justify-between transition-all cursor-pointer ${
                   activeInterval.id === intv.id
-                    ? 'bg-blue-50 dark:bg-blue-950/40 border-blue-500 text-blue-700 dark:text-blue-300 shadow-2xs font-semibold'
+                    ? 'bg-rose-50 dark:bg-rose-950/40 border-rose-500 text-rose-700 dark:text-rose-300 shadow-2xs font-semibold'
                     : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 text-gray-700 dark:text-gray-300 hover:bg-slate-100 dark:hover:bg-slate-800'
                 }`}
               >
@@ -511,7 +511,7 @@ export const StudyFocusView: React.FC<StudyFocusViewProps> = ({
               onClick={() => selectCountdown(min)}
               className={`text-[10px] px-2.5 py-1 rounded-full font-semibold border cursor-pointer ${
                 countdownMinutes === min
-                  ? 'bg-blue-600 text-white border-transparent'
+                  ? 'bg-rose-600 text-white border-transparent'
                   : 'text-gray-500 dark:text-gray-400 border-slate-200 dark:border-gray-700'
               }`}
             >
@@ -597,7 +597,7 @@ export const StudyFocusView: React.FC<StudyFocusViewProps> = ({
       <div className="flex items-center gap-2">
         <button
           onClick={running ? pause : start}
-          className="flex items-center gap-2 px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold shadow-md transition-transform hover:scale-105 cursor-pointer"
+          className="flex items-center gap-2 px-6 py-3 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-sm font-semibold shadow-md transition-transform hover:scale-105 cursor-pointer"
         >
           {running ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
           <span>
@@ -635,7 +635,7 @@ export const StudyFocusView: React.FC<StudyFocusViewProps> = ({
           title={lang === 'vi' ? 'Âm thanh thông báo' : 'Notification sound'}
           className={`p-3 rounded-xl border cursor-pointer ${
             soundOn
-              ? 'border-blue-300 dark:border-blue-800 text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/40'
+              ? 'border-rose-300 dark:border-rose-800 text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40'
               : 'border-gray-300 dark:border-gray-700 text-gray-400'
           }`}
         >
@@ -756,7 +756,7 @@ export const StudyFocusView: React.FC<StudyFocusViewProps> = ({
                   ? 'Ví dụ: Đã đọc xong 20 trang sách, giải 5 bài toán khó, fix lỗi thanh toán...'
                   : 'e.g. Read 20 pages, solved 5 problem sets, refactored checkout...'
               }
-              className="w-full text-xs p-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-slate-900 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+              className="w-full text-xs p-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-slate-900 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-rose-500/30"
             />
           </div>
 
@@ -798,7 +798,7 @@ export const StudyFocusView: React.FC<StudyFocusViewProps> = ({
 
         {/* Inspirational quote */}
         <div className="max-w-md text-center mb-6 opacity-75 flex items-center justify-center gap-2 px-4 text-xs italic text-gray-300">
-          <Quote className="w-3.5 h-3.5 shrink-0 text-blue-400" />
+          <Quote className="w-3.5 h-3.5 shrink-0 text-rose-400" />
           <span>{lang === 'vi' ? ZEN_QUOTES[quoteIndex].vi : ZEN_QUOTES[quoteIndex].en}</span>
         </div>
 
@@ -825,7 +825,7 @@ export const StudyFocusView: React.FC<StudyFocusViewProps> = ({
         <div className="flex items-center gap-3 mt-10">
           <button
             onClick={running ? pause : start}
-            className="flex items-center gap-2 px-8 py-3.5 rounded-full bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold shadow-lg cursor-pointer"
+            className="flex items-center gap-2 px-8 py-3.5 rounded-full bg-rose-600 hover:bg-rose-500 text-white text-sm font-semibold shadow-lg cursor-pointer"
           >
             {running ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
             <span>{running ? (lang === 'vi' ? 'Tạm dừng' : 'Pause') : lang === 'vi' ? 'Bắt đầu' : 'Start'}</span>
@@ -933,7 +933,7 @@ export const StudyFocusView: React.FC<StudyFocusViewProps> = ({
           <div className="bg-white dark:bg-[#131b2e] p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-xs font-bold text-gray-900 dark:text-gray-100 flex items-center gap-1.5">
-                <BarChart3 className="w-3.5 h-3.5 text-blue-500" />
+                <BarChart3 className="w-3.5 h-3.5 text-rose-500" />
                 {lang === 'vi' ? 'Thời gian học 7 ngày' : 'Focus time — 7 days'}
               </h3>
               <span className="text-[10px] text-gray-400">

@@ -35,6 +35,8 @@ import {
   Coffee,
   Copy,
   Zap,
+  ShieldCheck,
+  Award,
 } from 'lucide-react';
 import { CalendarEvent, CalendarViewType } from '../../types/calendar';
 import {
@@ -109,9 +111,8 @@ export const ProductivityDashboard: React.FC<ProductivityDashboardProps> = ({
   onOpenMacroModal,
 }) => {
   const today = formatDateString(new Date());
-  const monthPrefix = monthPrefixOf(new Date());
 
-  // Active Category Filter: 'all' | 'activity' | 'nutrition' | 'sleep' | 'habits'
+  // Active Category Filter
   const [activeTab, setActiveTab] = useState<'all' | 'activity' | 'nutrition' | 'sleep' | 'habits'>('all');
   const [copiedCode, setCopiedCode] = useState(false);
   const [activeWorkoutType, setActiveWorkoutType] = useState<'cardio' | 'strength' | 'muscle' | 'nutrition'>('strength');
@@ -119,7 +120,7 @@ export const ProductivityDashboard: React.FC<ProductivityDashboardProps> = ({
   // Today's log & health score
   const todayLog = useMemo(() => healthLogs.find((l) => l.date === today), [healthLogs, today]);
   const fallbackLog: HealthDayLog = useMemo(
-    () => todayLog || { date: today, steps: 6500, waterMl: 1800, caloriesIn: 1800, protein: 120 },
+    () => todayLog || { date: today, steps: 7200, waterMl: 2000, caloriesIn: 1850, protein: 140 },
     [todayLog, today]
   );
   const todayHealthScore = useMemo(
@@ -143,7 +144,7 @@ export const ProductivityDashboard: React.FC<ProductivityDashboardProps> = ({
         title: ev.title,
         color: ev.color || (idx % 2 === 0 ? '#10b981' : '#f43f5e'),
         tag: ev.allDay ? 'Toàn thời gian' : 'Sự kiện lịch',
-        rawEvent: ev,
+        rawEvent: ev as CalendarEvent | undefined,
       }));
     }
     return [
@@ -191,8 +192,8 @@ export const ProductivityDashboard: React.FC<ProductivityDashboardProps> = ({
   }, [todayEvents, lang]);
 
   // Calorie & Macro calculations
-  const consumedCalories = todayLog?.caloriesIn || 1800;
-  const targetCalories = 2000;
+  const consumedCalories = todayLog?.caloriesIn || 1850;
+  const targetCalories = 2200;
   const calPercent = Math.min(100, Math.round((consumedCalories / targetCalories) * 100));
 
   const proteinG = todayLog?.protein || 145;
@@ -200,7 +201,7 @@ export const ProductivityDashboard: React.FC<ProductivityDashboardProps> = ({
   const fatG = todayLog?.fat || 52;
 
   // Sleep hours
-  const sleepHours = todayLog?.sleepHours || 7.5;
+  const sleepHours = todayLog?.sleepHours || 7.8;
 
   const handleCopyCode = () => {
     navigator.clipboard?.writeText('VORTEX-30DAY-STREAK');
@@ -220,95 +221,187 @@ export const ProductivityDashboard: React.FC<ProductivityDashboardProps> = ({
   ];
 
   return (
-    <div className="space-y-6 select-none font-sans max-w-7xl mx-auto pb-10">
+    <div className="relative select-none font-sans max-w-7xl mx-auto space-y-8 pb-16">
       {/* =========================================================================
-          1. TOP SUB-NAV BAR (Image 3 Header style: Activity, Nutrition, Sleep...)
+          BACKGROUND WATERMARK: VORTEX (As in ZENOX image background)
           ========================================================================= */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white flex items-center gap-2">
-              <span>{lang === 'vi' ? 'Tổng Quan Hệ Sinh Thái' : 'Wellness & Routine Hub'}</span>
-            </h1>
-            <span className="text-[11px] font-bold px-3 py-1 rounded-full bg-rose-500/15 border border-rose-500/30 text-rose-300">
-              VortexCal Luxury
+      <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-center pointer-events-none select-none z-0 overflow-hidden w-full max-w-6xl">
+        <span className="text-[110px] sm:text-[180px] lg:text-[240px] font-black tracking-[0.22em] text-white/[0.035] uppercase block leading-none">
+          VORTEX
+        </span>
+      </div>
+
+      {/* =========================================================================
+          1. THE ICONIC ZENOX HERO SHOWCASE (Direct 1:1 Composition of User's Image)
+          ========================================================================= */}
+      <div className="relative z-10 pt-4 pb-6 px-2 sm:px-4">
+        {/* Top Header Pill Nav within the Hero (matching ZENOX top bar) */}
+        <div className="flex items-center justify-between gap-4 mb-6">
+          <div className="flex items-center gap-2">
+            <span className="text-xl sm:text-2xl font-black tracking-widest text-white uppercase">
+              VORTEX<span className="text-rose-500">CAL</span>
             </span>
           </div>
-          <p className="text-xs text-slate-400 mt-1">
-            {lang === 'vi'
-              ? 'Trung tâm theo dõi thói quen, thể lực, dinh dưỡng & lịch trình đồng bộ'
-              : 'Holistic dashboard for routine habits, fitness, nutrition & unified schedule'}
-          </p>
-        </div>
 
-        {/* Quick Action Floating White Glass Pills */}
-        <div className="flex items-center gap-2.5 flex-wrap">
-          <button
-            onClick={onOpenLifeCopilot}
-            className="glass-pill-crimson text-xs cursor-pointer shadow-md"
-            title="Mở Trợ lý AI Siêu Năng Suất"
-          >
-            <Sparkles className="w-3.5 h-3.5 animate-pulse text-rose-400" />
-            <span>{lang === 'vi' ? 'Trợ lý AI' : 'AI Copilot'}</span>
-          </button>
+          <div className="hidden md:flex items-center gap-1.5 p-1 rounded-full bg-white/[0.05] border border-white/[0.12] backdrop-blur-xl">
+            {[
+              { id: 'all', labelVi: 'Tổng quan', labelEn: 'Overview' },
+              { id: 'activity', labelVi: 'Hoạt động', labelEn: 'Activity' },
+              { id: 'nutrition', labelVi: 'Dinh dưỡng', labelEn: 'Nutrition' },
+              { id: 'sleep', labelVi: 'Giấc ngủ', labelEn: 'Sleep' },
+              { id: 'habits', labelVi: 'Thói quen', labelEn: 'Habits' },
+            ].map((tab) => {
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id as any)}
+                  className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                    isActive
+                      ? 'glass-pill-primary text-slate-950 shadow-md'
+                      : 'text-slate-300 hover:text-white hover:bg-white/[0.06]'
+                  }`}
+                >
+                  {lang === 'vi' ? tab.labelVi : tab.labelEn}
+                </button>
+              );
+            })}
+          </div>
 
-          <button
-            onClick={() => onNavigate('health')}
-            className="glass-pill text-xs cursor-pointer"
-            title="Chuyển sang chi tiết Sức khỏe & Macro"
-          >
-            <Activity className="w-3.5 h-3.5 text-emerald-400" />
-            <span>{lang === 'vi' ? 'Quản lý Dinh Dưỡng' : 'Nutrition Hub'}</span>
-          </button>
-
-          <button
-            onClick={() => onNavigate('month')}
-            className="glass-pill-primary text-xs cursor-pointer"
-            title="Mở toàn bộ Lịch trình"
-          >
-            <Calendar className="w-3.5 h-3.5 text-slate-950" />
-            <span>{lang === 'vi' ? 'Xem Lịch Trình' : 'Full Calendar'}</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Category Pills Filter */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-        {[
-          { id: 'all', labelVi: 'Tất cả', labelEn: 'Overview' },
-          { id: 'activity', labelVi: 'Hoạt động', labelEn: 'Activity' },
-          { id: 'nutrition', labelVi: 'Dinh dưỡng', labelEn: 'Nutrition' },
-          { id: 'sleep', labelVi: 'Giấc ngủ', labelEn: 'Sleep' },
-          { id: 'habits', labelVi: 'Thói quen', labelEn: 'Habits' },
-        ].map((tab) => {
-          const isActive = activeTab === tab.id;
-          return (
+          <div className="flex items-center gap-2">
             <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
-              className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
-                isActive
-                  ? 'glass-pill-primary text-slate-950'
-                  : 'glass-pill text-slate-300 hover:text-white'
-              }`}
+              onClick={onOpenLifeCopilot}
+              className="glass-pill-crimson text-xs cursor-pointer shadow-md"
             >
-              {lang === 'vi' ? tab.labelVi : tab.labelEn}
+              <Sparkles className="w-3.5 h-3.5 text-rose-400 animate-pulse" />
+              <span>{lang === 'vi' ? 'Trợ lý AI' : 'AI Copilot'}</span>
             </button>
-          );
-        })}
+          </div>
+        </div>
+
+        {/* Central Display: 3D Emblem Centerpiece with Surrounding Floating HUD Cards */}
+        <div className="relative min-h-[380px] sm:min-h-[440px] flex items-center justify-center my-4">
+          {/* Ambient Crimson Halo Glow */}
+          <div className="absolute w-72 sm:w-96 h-72 sm:h-96 rounded-full bg-gradient-to-tr from-rose-600/40 via-rose-500/25 to-transparent blur-3xl pointer-events-none" />
+
+          {/* Center 3D Vortex Emblem */}
+          <div className="relative z-10 flex flex-col items-center justify-center group cursor-pointer">
+            <div className="relative w-48 h-48 sm:w-64 sm:h-64 flex items-center justify-center transition-transform duration-700 group-hover:scale-105">
+              <img
+                src="/logo-icon.png"
+                alt="VortexCal 3D Emblem"
+                className="w-full h-full object-contain filter drop-shadow-[0_12px_45px_rgba(225,29,72,0.65)]"
+              />
+            </div>
+          </div>
+
+          {/* FLOATING HUD CARD: LEFT (Matching ZENOX Left Glass Callout) */}
+          <div className="absolute left-0 top-1/2 -translate-y-1/2 hidden lg:flex flex-col max-w-xs p-4 sm:p-5 rounded-3xl bg-white/[0.04] backdrop-blur-2xl border border-white/[0.12] shadow-2xl z-20 transition-transform hover:-translate-y-[52%]">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[10px] font-bold tracking-widest text-slate-400 uppercase">
+                INNOVATION • ROUTINE • BIOMETRICS
+              </span>
+              <button
+                onClick={() => onNavigate('health')}
+                className="w-6 h-6 rounded-full bg-rose-500/30 border border-rose-500/50 flex items-center justify-center text-rose-300 hover:text-white transition-colors"
+              >
+                <ArrowUpRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            <h3 className="text-xs sm:text-sm font-extrabold uppercase tracking-wide text-white leading-snug">
+              ENGINEERED FOR THOSE WHO DEMAND PEAK ROUTINE PERFORMANCE IN EVERY MOMENT.
+            </h3>
+
+            <div className="mt-4 pt-3 border-t border-white/[0.08] flex items-center gap-3">
+              <div className="flex -space-x-2">
+                <div className="w-6 h-6 rounded-full bg-rose-600 border border-slate-900 flex items-center justify-center text-[10px] text-white font-bold">
+                  A
+                </div>
+                <div className="w-6 h-6 rounded-full bg-amber-500 border border-slate-900 flex items-center justify-center text-[10px] text-white font-bold">
+                  N
+                </div>
+                <div className="w-6 h-6 rounded-full bg-emerald-500 border border-slate-900 flex items-center justify-center text-[10px] text-white font-bold">
+                  K
+                </div>
+              </div>
+              <span className="text-[11px] font-semibold text-slate-300">
+                10k+ Thành viên Kỷ Luật
+              </span>
+            </div>
+          </div>
+
+          {/* FLOATING HUD CARD: BOTTOM-CENTER DIAL (Matching ZENOX '80+ Hours EXTENDED BATTERY LIFE') */}
+          <div className="absolute bottom-0 left-1/2 -translate-x-1/2 hidden sm:flex items-center gap-4 px-6 py-3 rounded-full bg-black/40 backdrop-blur-xl border border-white/[0.1] shadow-2xl z-20">
+            {/* Radial Ticks Dial */}
+            <div className="relative w-12 h-12 rounded-full border border-rose-500/40 flex items-center justify-center shadow-lg">
+              <div className="absolute inset-0 rounded-full dial-ticks-ring opacity-60" />
+              <div className="flex flex-col items-center">
+                <span className="text-xs font-black text-white font-mono leading-none">98%</span>
+                <span className="text-[8px] text-rose-400 font-bold uppercase">Vital</span>
+              </div>
+            </div>
+
+            <div className="flex flex-col">
+              <span className="text-xs font-black tracking-wider uppercase text-white">
+                VORTEX VITALITY & BIO-RHYTHM
+              </span>
+              <span className="text-[10px] text-slate-400">
+                Hệ thống nhịp sinh học duy trì năng lượng & kỷ luật cao độ suốt 24h
+              </span>
+            </div>
+          </div>
+
+          {/* FLOATING HUD CARD: RIGHT UPPER (Matching ZENOX 'ADVANCED AUDIO TECHNOLOGY') */}
+          <div className="absolute right-0 top-6 hidden lg:flex flex-col max-w-[240px] p-4 rounded-3xl bg-gradient-to-br from-rose-950/40 to-black/60 backdrop-blur-2xl border border-rose-500/25 shadow-2xl z-20">
+            <div className="flex items-center justify-between gap-3 mb-2">
+              <div>
+                <span className="text-[9px] font-bold uppercase tracking-wider text-rose-400 block">
+                  VORTEX BIOMETRICS
+                </span>
+                <span className="text-xs font-extrabold text-white uppercase">
+                  ADVANCED AI & BIO-SYNC ENGINE
+                </span>
+              </div>
+              <div className="w-10 h-10 rounded-2xl bg-rose-600/20 border border-rose-500/40 flex items-center justify-center shrink-0">
+                <Activity className="w-5 h-5 text-rose-400" />
+              </div>
+            </div>
+            {/* Red progress line indicator */}
+            <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden mt-1">
+              <div className="w-3/4 h-full bg-gradient-to-r from-rose-500 to-rose-400 rounded-full" />
+            </div>
+          </div>
+
+          {/* FLOATING HUD CARD: RIGHT LOWER (Matching ZENOX 'Designed for immersive sound...' + 'Pre-Order Now') */}
+          <div className="absolute right-0 bottom-4 hidden lg:flex flex-col items-end text-right max-w-xs z-20">
+            <p className="text-xs text-slate-300 font-medium leading-relaxed mb-3">
+              {lang === 'vi'
+                ? 'Thiết kế cho năng suất tối đa, kiểm soát dinh dưỡng chuẩn xác và kỷ luật bền bỉ mỗi ngày.'
+                : 'Designed for peak productivity, macro precision, and lasting vitality wherever you go.'}
+            </p>
+            <button
+              onClick={() => onNavigate('month')}
+              className="glass-pill-primary text-xs font-extrabold px-6 py-2.5 shadow-2xl hover:scale-105 active:scale-95 transition-all cursor-pointer flex items-center gap-2"
+            >
+              <span>{lang === 'vi' ? 'Bắt Đầu Lịch Trình' : 'Start Routine Now'}</span>
+              <ArrowUpRight className="w-4 h-4 text-slate-950" />
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* =========================================================================
-          2. MAIN 2-COLUMN GRID (Left: Wellness Matrix | Right: Connected Schedule)
+          2. THE WELLNESS HUB MATRIX (Image 3 Left Grid + Image 3 Right Timeline)
           ========================================================================= */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* -----------------------------------------------------------------------
-            LEFT COLUMN: 7 COLUMNS (Hero Health Cards, Workout & Nutrition)
+            LEFT COLUMN: 7 COLUMNS (Wellness Hub Cards in Frosted Crimson Glass)
             ----------------------------------------------------------------------- */}
         <div className="lg:col-span-7 space-y-6">
-          {/* TOP ROW: 3 CARDS (Daily Health Score, Sleep Tracking, 30-Day Challenge) */}
+          {/* TOP ROW: 3 HERO CARDS (Health Gauge, Sleep Curve, 30-Day Routine) */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {/* CARD 1: DAILY HEALTH SCORE (Image 3 Left Gauge) */}
+            {/* CARD 1: DAILY HEALTH SCORE GAUGE */}
             <div className="glass-panel p-5 flex flex-col justify-between relative overflow-hidden group">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-bold text-slate-300">
@@ -370,7 +463,7 @@ export const ProductivityDashboard: React.FC<ProductivityDashboardProps> = ({
               </div>
             </div>
 
-            {/* CARD 2: SLEEP TRACKING (Image 3 Middle Curve Chart) */}
+            {/* CARD 2: SLEEP TRACKING SPLINE CURVE */}
             <div className="glass-panel p-5 flex flex-col justify-between relative overflow-hidden">
               <div className="flex items-center justify-between mb-1">
                 <span className="text-xs font-bold text-slate-300">
@@ -386,16 +479,14 @@ export const ProductivityDashboard: React.FC<ProductivityDashboardProps> = ({
                 <svg viewBox="0 0 140 50" className="w-full h-full overflow-visible">
                   <defs>
                     <linearGradient id="sleep-curve-glow" x1="0%" y1="0%" x2="0%" y2="100%">
-                      <stop offset="0%" stopColor="#f43f5e" stopOpacity="0.35" />
+                      <stop offset="0%" stopColor="#f43f5e" stopOpacity="0.4" />
                       <stop offset="100%" stopColor="#f43f5e" stopOpacity="0.0" />
                     </linearGradient>
                   </defs>
-                  {/* Area fill */}
                   <path
                     d="M 10 38 Q 30 42, 50 25 T 90 20 T 130 15 L 130 50 L 10 50 Z"
                     fill="url(#sleep-curve-glow)"
                   />
-                  {/* Glowing Stroke */}
                   <path
                     d="M 10 38 Q 30 42, 50 25 T 90 20 T 130 15"
                     fill="none"
@@ -403,7 +494,6 @@ export const ProductivityDashboard: React.FC<ProductivityDashboardProps> = ({
                     strokeWidth="2.5"
                     strokeLinecap="round"
                   />
-                  {/* Highlight Node */}
                   <circle cx="90" cy="20" r="3.5" fill="#ffffff" stroke="#f43f5e" strokeWidth="2" />
                 </svg>
               </div>
@@ -420,7 +510,7 @@ export const ProductivityDashboard: React.FC<ProductivityDashboardProps> = ({
               </div>
             </div>
 
-            {/* CARD 3: 30-DAY CHALLENGE (Image 3 Right Card) */}
+            {/* CARD 3: 30-DAY ROUTINE CHALLENGE */}
             <div className="glass-panel p-5 flex flex-col justify-between relative overflow-hidden bg-gradient-to-br from-white/[0.04] to-rose-950/20 border-rose-500/20">
               <div className="flex items-center justify-between mb-1">
                 <div className="flex items-center gap-1.5">
@@ -436,7 +526,7 @@ export const ProductivityDashboard: React.FC<ProductivityDashboardProps> = ({
                   18 <span className="text-xs font-normal text-slate-400">/ 30 ngày 🔥</span>
                 </div>
                 <p className="text-[10px] text-slate-300 mt-0.5 line-clamp-1">
-                  {lang === 'vi' ? 'Chuỗi hoàn thành thói quen' : 'Active habit streak streak'}
+                  {lang === 'vi' ? 'Chuỗi hoàn thành thói quen' : 'Active routine streak'}
                 </p>
               </div>
 
@@ -459,9 +549,9 @@ export const ProductivityDashboard: React.FC<ProductivityDashboardProps> = ({
             </div>
           </div>
 
-          {/* BOTTOM ROW: 2 CARDS (Workout Plan & Nutrition Log) */}
+          {/* BOTTOM ROW: WORKOUT PLAN & NUTRITION LOG */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* WORKOUT PLAN CARD (Image 3 Bottom-Left) */}
+            {/* WORKOUT PLAN CARD */}
             <div className="glass-panel p-5 space-y-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -530,7 +620,7 @@ export const ProductivityDashboard: React.FC<ProductivityDashboardProps> = ({
               </div>
             </div>
 
-            {/* NUTRITION LOG CARD (Image 3 Bottom-Right) */}
+            {/* NUTRITION LOG CARD */}
             <div className="glass-panel p-5 space-y-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -588,7 +678,7 @@ export const ProductivityDashboard: React.FC<ProductivityDashboardProps> = ({
             RIGHT COLUMN: 5 COLUMNS (Connected Vertical Timeline Schedule)
             ----------------------------------------------------------------------- */}
         <div className="lg:col-span-5 glass-panel p-6 space-y-6">
-          {/* Header & Date Selector (Image 3 Right Top) */}
+          {/* Header & Date Selector */}
           <div className="flex items-center justify-between pb-3 border-b border-white/[0.08]">
             <div>
               <div className="text-base sm:text-lg font-black text-white">

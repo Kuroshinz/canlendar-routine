@@ -13,10 +13,11 @@
     font-family: 'Google Sans', 'Roboto', system-ui, -apple-system, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    background-color: #060103;
   }
 }
 
-/* Google-style subtle scrollbar */
+/* Luxury Crimson Scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -27,20 +28,20 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(156, 163, 175, 0.4);
+  background: rgba(225, 29, 72, 0.25);
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(156, 163, 175, 0.7);
+  background: rgba(225, 29, 72, 0.55);
 }
 
 .dark ::-webkit-scrollbar-thumb {
-  background: rgba(75, 85, 99, 0.5);
+  background: rgba(244, 63, 94, 0.3);
 }
 
 .dark ::-webkit-scrollbar-thumb:hover {
-  background: rgba(75, 85, 99, 0.8);
+  background: rgba(244, 63, 94, 0.6);
 }
 
 /* =========================================================================
@@ -48,11 +49,11 @@
    ========================================================================= */
 
 .vortex-canvas {
-  background-color: #070204;
+  background-color: #050102;
   background-image: 
-    radial-gradient(circle at 80% 12%, rgba(225, 29, 72, 0.16) 0%, transparent 48%),
-    radial-gradient(circle at 12% 85%, rgba(190, 18, 60, 0.10) 0%, transparent 42%),
-    radial-gradient(circle at 50% 50%, rgba(244, 63, 94, 0.03) 0%, transparent 60%);
+    radial-gradient(ellipse at 50% 22%, rgba(190, 18, 60, 0.38) 0%, rgba(136, 19, 55, 0.22) 32%, rgba(5, 1, 2, 0.98) 72%),
+    radial-gradient(circle at 88% 12%, rgba(225, 29, 72, 0.22) 0%, transparent 45%),
+    radial-gradient(circle at 12% 82%, rgba(190, 18, 60, 0.18) 0%, transparent 40%);
   background-attachment: fixed;
 }
 
@@ -62,14 +63,14 @@
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.45);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.55);
   border-radius: 1.5rem;
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .glass-panel:hover {
   border-color: rgba(255, 255, 255, 0.16);
-  box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.55), 0 0 20px rgba(225, 29, 72, 0.08);
+  box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.65), 0 0 25px rgba(225, 29, 72, 0.12);
 }
 
 /* Floating White Glass Pill Button - 'cac nut noi trang glass khong dam' */
@@ -82,7 +83,7 @@
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.20);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25), 0 0 10px rgba(255, 255, 255, 0.04);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3), 0 0 12px rgba(255, 255, 255, 0.05);
   color: #ffffff;
   font-size: 0.8125rem;
   font-weight: 600;
@@ -96,7 +97,7 @@
 .glass-pill:hover {
   background: rgba(255, 255, 255, 0.16);
   border-color: rgba(255, 255, 255, 0.35);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3), 0 0 14px rgba(255, 255, 255, 0.1);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35), 0 0 16px rgba(255, 255, 255, 0.12);
   transform: translateY(-1px);
 }
 
@@ -117,7 +118,7 @@
   font-weight: 700;
   border-radius: 9999px;
   padding: 0.55rem 1.25rem;
-  box-shadow: 0 4px 20px rgba(255, 255, 255, 0.35), 0 0 30px rgba(225, 29, 72, 0.2);
+  box-shadow: 0 4px 20px rgba(255, 255, 255, 0.35), 0 0 35px rgba(225, 29, 72, 0.3);
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   cursor: pointer;
   user-select: none;
@@ -126,7 +127,7 @@
 
 .glass-pill-primary:hover {
   background: #f8fafc;
-  box-shadow: 0 6px 26px rgba(255, 255, 255, 0.5), 0 0 40px rgba(225, 29, 72, 0.3);
+  box-shadow: 0 6px 26px rgba(255, 255, 255, 0.5), 0 0 45px rgba(225, 29, 72, 0.4);
   transform: translateY(-1px) scale(1.02);
 }
 
@@ -140,11 +141,11 @@
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  background: rgba(225, 29, 72, 0.16);
+  background: rgba(225, 29, 72, 0.18);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
-  border: 1px solid rgba(244, 63, 94, 0.35);
-  box-shadow: 0 4px 16px rgba(225, 29, 72, 0.15);
+  border: 1px solid rgba(244, 63, 94, 0.38);
+  box-shadow: 0 4px 16px rgba(225, 29, 72, 0.2);
   color: #fecdd3;
   font-size: 0.8125rem;
   font-weight: 600;
@@ -156,8 +157,8 @@
 }
 
 .glass-pill-crimson:hover {
-  background: rgba(225, 29, 72, 0.28);
-  border-color: rgba(244, 63, 94, 0.6);
+  background: rgba(225, 29, 72, 0.32);
+  border-color: rgba(244, 63, 94, 0.65);
   color: #ffffff;
   transform: translateY(-1px);
 }
@@ -177,5 +178,16 @@
   outline: none;
   border-color: rgba(244, 63, 94, 0.6);
   background: rgba(255, 255, 255, 0.08);
-  box-shadow: 0 0 0 3px rgba(225, 29, 72, 0.2);
+  box-shadow: 0 0 0 3px rgba(225, 29, 72, 0.25);
+}
+
+/* Radial ticks dial */
+.dial-ticks-ring {
+  background: repeating-conic-gradient(
+    from 0deg,
+    rgba(255, 255, 255, 0.5) 0deg 1.5deg,
+    transparent 1.5deg 6deg
+  );
+  mask-image: radial-gradient(circle, transparent 65%, black 66%, black 100%);
+  -webkit-mask-image: radial-gradient(circle, transparent 65%, black 66%, black 100%);
 }

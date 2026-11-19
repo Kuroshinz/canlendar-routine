@@ -120,10 +120,10 @@ export const MonthView: React.FC<MonthViewProps> = ({
               }}
               className={`min-h-0 overflow-hidden border-r border-b border-gray-200 dark:border-gray-800 p-1.5 flex flex-col transition-colors cursor-pointer group relative ${
                 isDragTarget
-                  ? 'bg-blue-100/60 dark:bg-blue-900/40 ring-2 ring-blue-500 ring-inset'
+                  ? 'bg-rose-100/60 dark:bg-blue-900/40 ring-2 ring-rose-500 ring-inset'
                   : !dayItem.isCurrentMonth
                   ? 'bg-gray-50/50 dark:bg-gray-900/50 text-gray-400 dark:text-gray-600'
-                  : 'bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 hover:bg-blue-50/20 dark:hover:bg-blue-900/10'
+                  : 'bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 hover:bg-rose-50/20 dark:hover:bg-blue-900/10'
               }`}
             >
               {/* Day Header with Solar Number, Lunar Date, and Day Planner trigger */}
@@ -132,7 +132,7 @@ export const MonthView: React.FC<MonthViewProps> = ({
                   <span
                     className={`text-xs font-semibold w-6 h-6 flex items-center justify-center rounded-full transition-transform group-hover:scale-110 ${
                       dayItem.isToday
-                        ? 'bg-blue-600 text-white font-bold shadow-xs'
+                        ? 'bg-rose-600 text-white font-bold shadow-xs'
                         : dayItem.isCurrentMonth
                         ? 'text-gray-700 dark:text-gray-200'
                         : 'text-gray-400 dark:text-gray-600'
@@ -148,7 +148,7 @@ export const MonthView: React.FC<MonthViewProps> = ({
                       onOpenDayPlanner?.(dateStr);
                     }}
                     title={lang === 'vi' ? 'Mở lịch chi tiết ngày' : 'Open day planner'}
-                    className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-400 hover:text-blue-600 transition-all"
+                    className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-400 hover:text-rose-600 transition-all"
                   >
                     <Clock className="w-3.5 h-3.5" />
                   </button>
@@ -245,14 +245,14 @@ export const MonthView: React.FC<MonthViewProps> = ({
                         </span>
                       )}
 
-                      {ev.meetUrl && <Video className="w-2.5 h-2.5 shrink-0 text-blue-500 opacity-90" />}
+                      {ev.meetUrl && <Video className="w-2.5 h-2.5 shrink-0 text-rose-500 opacity-90" />}
 
                       {ev.type === 'task' && (
                         <Check className="w-2.5 h-2.5 shrink-0 stroke-[3] text-purple-500" />
                       )}
 
                       <span
-                        className={`truncate text-gray-800 dark:text-gray-200 group-hover/item:text-blue-600 dark:group-hover/item:text-blue-400 font-medium ${
+                        className={`truncate text-gray-800 dark:text-gray-200 group-hover/item:text-rose-600 dark:group-hover/item:text-rose-400 font-medium ${
                           ev.isCompleted ? 'line-through opacity-50' : ''
                         }`}
                       >
@@ -266,7 +266,7 @@ export const MonthView: React.FC<MonthViewProps> = ({
                 {hiddenCount > 0 && (
                   <button
                     onClick={(e) => handleOverflowClick(e, dateStr)}
-                    className="shrink-0 h-[18px] max-w-full text-[10px] font-semibold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 px-1.5 rounded text-left transition-colors truncate whitespace-nowrap"
+                    className="shrink-0 h-[18px] max-w-full text-[10px] font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 px-1.5 rounded text-left transition-colors truncate whitespace-nowrap"
                   >
                     +{hiddenCount} {lang === 'vi' ? 'sự kiện nữa' : 'more'}
                   </button>

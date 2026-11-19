@@ -200,7 +200,7 @@ export const TimeGridView: React.FC<TimeGridViewProps> = ({
                   >
                     <span
                       className={`text-[11px] font-semibold tracking-wider ${
-                        isToday ? 'text-blue-600 dark:text-blue-400 font-bold' : 'text-gray-500 dark:text-gray-400'
+                        isToday ? 'text-rose-600 dark:text-rose-400 font-bold' : 'text-gray-500 dark:text-gray-400'
                       }`}
                     >
                       {label}
@@ -208,7 +208,7 @@ export const TimeGridView: React.FC<TimeGridViewProps> = ({
                     <span
                       className={`text-xl font-medium w-9 h-9 flex items-center justify-center rounded-full mt-0.5 transition-all ${
                         isToday
-                          ? 'bg-blue-600 text-white font-bold shadow-md'
+                          ? 'bg-rose-600 text-white font-bold shadow-md'
                           : 'text-gray-800 dark:text-gray-100'
                       }`}
                     >
@@ -336,7 +336,7 @@ export const TimeGridView: React.FC<TimeGridViewProps> = ({
                               durationMinutes: 60,
                             });
                           }}
-                          className="h-14 border-b border-gray-100 dark:border-gray-800/80 hover:bg-blue-50/20 dark:hover:bg-blue-900/10 cursor-pointer relative"
+                          className="h-14 border-b border-gray-100 dark:border-gray-800/80 hover:bg-rose-50/20 dark:hover:bg-blue-900/10 cursor-pointer relative"
                         >
                           {/* Half-hour subtle dashed line */}
                           <div className="absolute inset-x-0 top-1/2 border-b border-dashed border-gray-100 dark:border-[#1a1e24]/60 pointer-events-none" />
@@ -353,15 +353,15 @@ export const TimeGridView: React.FC<TimeGridViewProps> = ({
                           left: '4px',
                           right: '4px',
                         }}
-                        className="absolute z-30 rounded-lg bg-blue-500/25 border-2 border-blue-500 shadow-md pointer-events-none flex flex-col justify-between p-1.5"
+                        className="absolute z-30 rounded-lg bg-rose-500/25 border-2 border-rose-500 shadow-md pointer-events-none flex flex-col justify-between p-1.5"
                       >
-                        <div className="bg-blue-600 text-white text-[10px] font-mono font-bold px-2 py-0.5 rounded shadow-sm w-fit flex items-center gap-1">
+                        <div className="bg-rose-600 text-white text-[10px] font-mono font-bold px-2 py-0.5 rounded shadow-sm w-fit flex items-center gap-1">
                           <Clock className="w-3 h-3" />
                           <span>
                             {dragCreation.startTime} – {dragCreation.currentEndTime} ({formatLiveDuration(dragCreation.durationMinutes, lang)})
                           </span>
                         </div>
-                        <span className="text-[11px] font-semibold text-blue-700 dark:text-blue-300">
+                        <span className="text-[11px] font-semibold text-rose-700 dark:text-rose-300">
                           {lang === 'vi' ? '(Thả chuột để thêm sự kiện)' : '(Release to create event)'}
                         </span>
                       </div>
@@ -393,7 +393,7 @@ export const TimeGridView: React.FC<TimeGridViewProps> = ({
                       >
                         {/* Live Floating Tooltip Badge */}
                         <div className="absolute -top-7 left-1/2 -translate-x-1/2 bg-gray-900/95 text-white text-[11px] px-2.5 py-0.5 rounded-md shadow-xl whitespace-nowrap z-40 font-medium flex items-center gap-1.5 border border-white/10 backdrop-blur-xs">
-                          <Clock className="w-3 h-3 text-blue-400 shrink-0" />
+                          <Clock className="w-3 h-3 text-rose-400 shrink-0" />
                           <span className="font-mono">
                             {dndState.currentPreview!.startTime} – {dndState.currentPreview!.endTime}
                           </span>
@@ -441,7 +441,7 @@ export const TimeGridView: React.FC<TimeGridViewProps> = ({
                             zIndex: isCurrentlyActive ? 50 : (layout.zIndex || 10),
                           }}
                           className={`absolute rounded-md p-1.5 text-white shadow-sm cursor-grab active:cursor-grabbing overflow-hidden transition-all duration-150 hover:brightness-105 border border-white/20 flex flex-col justify-between group/card hover:z-40 hover:!left-[2%] hover:!w-[96%] hover:shadow-xl hover:ring-2 hover:ring-white/40 ${
-                            isCurrentlyActive ? 'ring-2 ring-blue-400' : ''
+                            isCurrentlyActive ? 'ring-2 ring-rose-400' : ''
                           }`}
                         >
                           <div>

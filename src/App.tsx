@@ -964,7 +964,7 @@ export default function App() {
 
       {/* Reminder Banner Toast */}
       {activeAlert && (
-        <div className="fixed top-4 right-4 bg-blue-600 text-white px-4 py-2.5 rounded-2xl shadow-xl z-50 flex items-center gap-3 animate-in slide-in-from-top">
+        <div className="fixed top-4 right-4 bg-rose-600 text-white px-4 py-2.5 rounded-2xl shadow-xl z-50 flex items-center gap-3 animate-in slide-in-from-top">
           <Bell className="w-4 h-4 animate-bounce" />
           <div className="text-xs">
             <span className="font-bold">{lang === 'vi' ? 'Nhắc nhở: ' : 'Reminder: '}</span>
@@ -974,7 +974,7 @@ export default function App() {
           </div>
           <button
             onClick={() => setActiveAlert(null)}
-            className="p-1 hover:bg-blue-700 rounded-lg text-white font-bold cursor-pointer"
+            className="p-1 hover:bg-rose-700 rounded-lg text-white font-bold cursor-pointer"
           >
             ✕
           </button>

@@ -379,7 +379,7 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
           <div className="flex items-center gap-2">
-            <ListChecks className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+            <ListChecks className="w-6 h-6 text-rose-600 dark:text-rose-400" />
             <h1 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-gray-100">
               {lang === 'vi' ? 'Công Việc & Mục Tiêu' : 'Tasks & Goals'}
             </h1>
@@ -397,7 +397,7 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
               resetTaskForm();
               setShowTaskForm(true);
             }}
-            className="flex items-center gap-1.5 px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-semibold shadow-xs transition-colors cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             <span>{lang === 'vi' ? 'Thêm công việc' : 'New task'}</span>
@@ -418,7 +418,7 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
           {
             label: lang === 'vi' ? 'Tổng công việc' : 'Total tasks',
             value: counts.all,
-            cls: 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/40',
+            cls: 'text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40',
             icon: ListChecks,
           },
           {
@@ -469,7 +469,7 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
             className="bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200 dark:border-slate-800 p-2.5 shadow-xs flex flex-wrap sm:flex-nowrap items-center gap-2"
           >
             <div className="flex items-center gap-2 flex-1 min-w-[200px]">
-              <Plus className="w-4 h-4 text-blue-500 shrink-0 ml-1.5" />
+              <Plus className="w-4 h-4 text-rose-500 shrink-0 ml-1.5" />
               <input
                 type="text"
                 value={quickTitle}
@@ -526,7 +526,7 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
                   onClick={() => setQuickDueOption('today')}
                   className={`px-2 py-1 rounded-md transition-all cursor-pointer ${
                     quickDueOption === 'today'
-                      ? 'bg-blue-600 text-white shadow-xs'
+                      ? 'bg-rose-600 text-white shadow-xs'
                       : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'
                   }`}
                 >
@@ -537,7 +537,7 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
                   onClick={() => setQuickDueOption('tomorrow')}
                   className={`px-2 py-1 rounded-md transition-all cursor-pointer ${
                     quickDueOption === 'tomorrow'
-                      ? 'bg-blue-600 text-white shadow-xs'
+                      ? 'bg-rose-600 text-white shadow-xs'
                       : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'
                   }`}
                 >
@@ -548,7 +548,7 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
                   onClick={() => setQuickDueOption('none')}
                   className={`px-2 py-1 rounded-md transition-all cursor-pointer ${
                     quickDueOption === 'none'
-                      ? 'bg-blue-600 text-white shadow-xs'
+                      ? 'bg-rose-600 text-white shadow-xs'
                       : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'
                   }`}
                 >
@@ -559,7 +559,7 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
               <button
                 type="submit"
                 disabled={!quickTitle.trim()}
-                className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+                className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 disabled:opacity-40 text-white rounded-lg text-xs font-semibold transition-colors cursor-pointer"
               >
                 {lang === 'vi' ? 'Thêm' : 'Add'}
               </button>
@@ -573,7 +573,7 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
                 onClick={() => setViewMode('list')}
                 className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer ${
                   viewMode === 'list'
-                    ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-xs'
+                    ? 'bg-white dark:bg-gray-700 text-rose-600 dark:text-rose-400 shadow-xs'
                     : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100'
                 }`}
               >
@@ -584,7 +584,7 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
                 onClick={() => setViewMode('matrix')}
                 className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer ${
                   viewMode === 'matrix'
-                    ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-xs'
+                    ? 'bg-white dark:bg-gray-700 text-rose-600 dark:text-rose-400 shadow-xs'
                     : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100'
                 }`}
               >
@@ -602,7 +602,7 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
                       onClick={() => setStatusFilter(tab.id)}
                       className={`px-2 py-1 rounded-lg transition-all cursor-pointer text-[11px] ${
                         statusFilter === tab.id
-                          ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-xs'
+                          ? 'bg-white dark:bg-gray-700 text-rose-600 dark:text-rose-400 shadow-xs'
                           : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100'
                       }`}
                     >
@@ -703,15 +703,15 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
               </div>
 
               {/* Q2: Schedule */}
-              <div className="bg-blue-50/40 dark:bg-blue-950/20 border border-blue-300/80 dark:border-blue-900/60 rounded-2xl p-4 flex flex-col min-h-[220px]">
+              <div className="bg-rose-50/40 dark:bg-rose-950/20 border border-rose-300/80 dark:border-rose-900/60 rounded-2xl p-4 flex flex-col min-h-[220px]">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-blue-500" />
-                    <h4 className="text-xs font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wider">
+                    <span className="w-2.5 h-2.5 rounded-full bg-rose-500" />
+                    <h4 className="text-xs font-bold text-rose-700 dark:text-rose-300 uppercase tracking-wider">
                       {lang === 'vi' ? 'Q2: Lên Kế Hoạch (Quan trọng, Chưa gấp)' : 'Q2: Schedule (Important, Not Urgent)'}
                     </h4>
                   </div>
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-blue-200/60 dark:bg-blue-900/40 text-blue-800 dark:text-blue-200 font-bold">
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-rose-200/60 dark:bg-blue-900/40 text-rose-800 dark:text-rose-200 font-bold">
                     {matrixQuadrants.q2.length}
                   </span>
                 </div>
@@ -727,7 +727,7 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
                     matrixQuadrants.q2.map((t) => (
                       <div
                         key={t.id}
-                        className="bg-white dark:bg-[#131b2e] p-2.5 rounded-xl border border-blue-200/50 dark:border-blue-900/40 flex items-center justify-between gap-2 text-xs shadow-2xs"
+                        className="bg-white dark:bg-[#131b2e] p-2.5 rounded-xl border border-rose-200/50 dark:border-rose-900/40 flex items-center justify-between gap-2 text-xs shadow-2xs"
                       >
                         <div className="flex items-center gap-2 min-w-0">
                           <button
@@ -952,7 +952,7 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
                                 setFormNotes(task.notes || '');
                                 setShowTaskForm(true);
                               }}
-                              className="p-1 text-gray-400 hover:text-blue-600 rounded cursor-pointer"
+                              className="p-1 text-gray-400 hover:text-rose-600 rounded cursor-pointer"
                               title={lang === 'vi' ? 'Sửa' : 'Edit'}
                             >
                               <Pencil className="w-3.5 h-3.5" />
@@ -1014,7 +1014,7 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
                           {task.dueDate && task.startTime && (
                             <button
                               onClick={() => onOpenTaskOnCalendar(task.dueDate!)}
-                              className="text-[10px] px-1.5 py-0.5 rounded text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 font-medium cursor-pointer"
+                              className="text-[10px] px-1.5 py-0.5 rounded text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 font-medium cursor-pointer"
                             >
                               {lang === 'vi' ? 'Xem trên Lịch' : 'View on Calendar'}
                             </button>
@@ -1096,7 +1096,7 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
                                 placeholder={
                                   lang === 'vi' ? 'Thêm việc con...' : 'Add sub-task...'
                                 }
-                                className="flex-1 text-[11px] bg-transparent border-b border-transparent focus:border-blue-400 outline-hidden py-0.5 text-gray-700 dark:text-gray-300"
+                                className="flex-1 text-[11px] bg-transparent border-b border-transparent focus:border-rose-400 outline-hidden py-0.5 text-gray-700 dark:text-gray-300"
                               />
                             </form>
                           </div>
@@ -1319,7 +1319,7 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
                               done
                                 ? 'bg-emerald-500 text-white font-bold shadow-xs'
                                 : d.isToday
-                                  ? 'bg-blue-500/15 text-blue-600 dark:text-blue-400 font-bold border border-blue-500/30'
+                                  ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400 font-bold border border-rose-500/30'
                                   : 'bg-slate-100 dark:bg-slate-800/70 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
                             }`}
                             title={`${d.dayName} (${d.dateStr})`}
@@ -1506,7 +1506,7 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
               </button>
               <button
                 type="submit"
-                className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold cursor-pointer"
+                className="px-4 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-semibold cursor-pointer"
               >
                 {lang === 'vi' ? 'Lưu' : 'Save'}
               </button>
