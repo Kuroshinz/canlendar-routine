@@ -3,6 +3,8 @@ import { User } from 'firebase/auth';
 import { CalendarEvent, CalendarCategory, SyncState } from '../../types/calendar';
 import { AppUser } from '../../services/auth';
 import { executeRealGoogleSync } from '../../services/realGoogleAuth';
+import { playSuccessSound } from '../../utils/sound';
+import { notifySuccess } from '../../utils/notify';
 import {
   X,
   LogIn,
@@ -81,6 +83,13 @@ export const CloudSyncModal: React.FC<CloudSyncModalProps> = ({
       
       const res = await executeRealGoogleSync(activeClientId || undefined);
       if (res?.user) {
+        playSuccessSound();
+        notifySuccess(
+          lang === 'vi' ? 'Đã kết nối Google Calendar!' : 'Google Calendar Connected!',
+          lang === 'vi'
+            ? `Tài khoản ${res.user.email} đã đồng bộ thành công ${res.events?.length || 0} sự kiện.`
+            : `Synced ${res.events?.length || 0} events for ${res.user.email}.`
+        );
         if (res.events && res.events.length > 0) {
           onImportEvents(res.events);
         }
@@ -138,6 +147,11 @@ export const CloudSyncModal: React.FC<CloudSyncModalProps> = ({
     setErrorMsg(null);
     try {
       await onSyncGoogleCalendar();
+      playSuccessSound();
+      notifySuccess(
+        lang === 'vi' ? 'Làm mới lịch Google thành công!' : 'Google Calendar refreshed!',
+        lang === 'vi' ? 'Dữ liệu sự kiện đã được cập nhật mới nhất.' : 'Events up to date.'
+      );
       setSuccessMsg(lang === 'vi' ? 'Đã làm mới dữ liệu lịch Google!' : 'Google Calendar refreshed!');
     } catch (err: any) {
       setErrorMsg(err?.message || 'Lỗi làm mới lịch Google.');

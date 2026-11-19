@@ -14,7 +14,7 @@ import {
 } from './types/calendar';
 import { INITIAL_EVENTS } from './data/initialEvents';
 import { formatDateString, parseDateString, deduplicateEvents } from './utils/calendarUtils';
-import { playNotificationSound } from './utils/sound';
+import { playNotificationSound, playSuccessSound } from './utils/sound';
 import { notifySuccess } from './utils/notify';
 import { useCalendarDnD } from './hooks/useCalendarDnD';
 import { Header } from './components/Header';
@@ -727,6 +727,11 @@ export default function App() {
       if (realRes?.user) {
         setUser(realRes.user);
         setSyncState('synced');
+        playSuccessSound();
+        notifySuccess(
+          lang === 'vi' ? 'Đã kết nối Google Calendar thành công!' : 'Google Calendar Connected!',
+          realRes.user.email || 'Google'
+        );
         if (realRes.events && realRes.events.length > 0) {
           setEvents(realRes.events);
         }
@@ -815,6 +820,11 @@ export default function App() {
       });
       setLastSyncedTime(timeStr);
       setSyncState('synced');
+      playSuccessSound();
+      notifySuccess(
+        lang === 'vi' ? 'Đồng bộ Google Calendar thành công!' : 'Google Calendar Synced!',
+        lang === 'vi' ? `Đã đồng bộ ${gEvents?.length || 0} sự kiện.` : `Synced ${gEvents?.length || 0} events.`
+      );
     } catch (err) {
       console.error('Failed to sync Google Calendar:', err);
       setActiveAlert({
