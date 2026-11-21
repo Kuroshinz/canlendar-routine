@@ -63,7 +63,6 @@ import { DayPlannerDrawer } from './components/DayPlannerDrawer';
 import { ShortcutsModal } from './components/ShortcutsModal';
 import { ExportImportModal } from './components/ExportImportModal';
 import { CloudSyncModal } from './components/sync/CloudSyncModal';
-import { LiveSyncModal } from './components/sync/LiveSyncModal';
 import { RightSidebar } from './components/RightSidebar';
 import { MultiHubDrawer } from './components/MultiHubDrawer';
 import { ProductivityDashboard } from './components/productivity/ProductivityDashboard';
@@ -454,7 +453,6 @@ export default function App() {
 
   // Google OAuth & Cloud Sync State
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
-  const [isLiveSyncOpen, setIsLiveSyncOpen] = useState(false);
   const [isLiveSyncEnabled, setIsLiveSyncEnabled] = useState<boolean>(() => {
     try {
       return localStorage.getItem('zenox_live_sync_enabled') !== 'false';
@@ -1410,7 +1408,6 @@ export default function App() {
           syncState={syncState}
           isLiveSyncEnabled={isLiveSyncEnabled}
           onToggleLiveSync={handleToggleLiveSync}
-          onOpenLiveSync={() => setIsLiveSyncOpen(true)}
           pendingTasksCount={productivity.tasks.filter((t) => t.status !== 'completed').length}
           nutritionSummary={nutritionSummary}
           activeRoadmapSummary={activeRoadmapSummary}
@@ -1572,9 +1569,6 @@ export default function App() {
                     });
                   }}
                   onOpenMacroModal={() => setIsGeminiMacroOpen(true)}
-                  syncState={syncState}
-                  isLiveSyncEnabled={isLiveSyncEnabled}
-                  onToggleLiveSync={handleToggleLiveSync}
                 />
               )}
 
@@ -1890,20 +1884,6 @@ export default function App() {
         onResetEvents={() => {
           setEvents(INITIAL_EVENTS);
         }}
-        lang={lang}
-      />
-
-      {/* Live Sync Modal featuring ThreeUI SkeuomorphicToggleCollection */}
-      <LiveSyncModal
-        isOpen={isLiveSyncOpen}
-        onClose={() => setIsLiveSyncOpen(false)}
-        isEnabled={isLiveSyncEnabled}
-        onToggleLiveSync={handleToggleLiveSync}
-        syncState={syncState}
-        lastSyncedTime={lastSyncedTime}
-        isLoggedInGoogle={Boolean(user)}
-        userEmail={user?.email || undefined}
-        onForceSync={() => runLiveSyncCheck(false)}
         lang={lang}
       />
 

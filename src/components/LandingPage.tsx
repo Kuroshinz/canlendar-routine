@@ -1,6 +1,3 @@
-import { SkeuomorphicToggleCollection } from '@designcodeio/threeui';
-import '@designcodeio/threeui/style.css';
-import { playToggleSound, playLiveSyncChime } from '../utils/sound';
 import React, { useState, useEffect } from 'react';
 import {
   Sun,
@@ -268,27 +265,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </button>
           </div>
 
-          {/* ThreeUI Live Sync Switch (Chỉ là nút và trạng thái, không nền xám) */}
-          <div className="mt-6 mb-2 flex items-center justify-center">
-            <div className="w-[190px] h-[115px] bg-transparent relative live-sync-pure-button">
-              <SkeuomorphicToggleCollection
-                variant="shader"
-                mode="auto"
-                speed={1.00}
-                size={0.95}
-                opacity={1.00}
-                hue={-85}
-                saturation={1.25}
-                brightness={1.05}
-                defaultOn={true}
-                label="ĐÃ ĐỒNG BỘ"
-                onChange={(on) => {
-                  playToggleSound(on);
-                  if (on) playLiveSyncChime();
-                }}
-              />
-            </div>
-          </div>
 
           {/* ANCHORED 4-METRIC CRAFTED BAR (Replaces Chaotic Orbiting Sway Nodes) */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 max-w-4xl mx-auto w-full mt-12 text-left">

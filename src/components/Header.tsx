@@ -108,7 +108,6 @@ interface HeaderProps {
   taskAlerts?: HeaderTaskAlerts | null;
   weightTrendAlert?: HeaderWeightTrendAlert | null;
   isLiveSyncEnabled?: boolean;
-  onOpenLiveSync?: () => void;
   onToggleLiveSync?: (enabled: boolean) => void;
 }
 
@@ -142,7 +141,6 @@ export const Header: React.FC<HeaderProps> = ({
   taskAlerts,
   weightTrendAlert,
   isLiveSyncEnabled = true,
-  onOpenLiveSync,
   onToggleLiveSync,
 }) => {
   const [showNotificationPopup, setShowNotificationPopup] = useState(false);
@@ -623,23 +621,6 @@ export const Header: React.FC<HeaderProps> = ({
                 </div>
 
                 <div className="space-y-1">
-                  {onOpenLiveSync && (
-                    <button
-                      onClick={() => {
-                        setShowProfileMenu(false);
-                        onOpenLiveSync();
-                      }}
-                      className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors text-left cursor-pointer"
-                    >
-                      <div className="flex items-center gap-2.5">
-                        <Radio className="w-4 h-4 text-rose-500 animate-pulse" />
-                        <span>{lang === 'vi' ? 'Hệ thống Live Sync' : 'Live Sync Engine'}</span>
-                      </div>
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${isLiveSyncEnabled ? 'bg-emerald-500/15 text-emerald-500' : 'bg-slate-500/15 text-slate-400'}`}>
-                        {isLiveSyncEnabled ? 'ON' : 'OFF'}
-                      </span>
-                    </button>
-                  )}
 
                   {onOpenCloudSync && (
                     <button
