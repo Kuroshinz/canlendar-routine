@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import {
+  Github,
+  Code2,
+  GitBranch,
   Sun,
   Moon,
   Activity,
@@ -175,6 +178,18 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
           {/* Column 3: Actions (Theme Toggle, Workspace Launch, User Glass Button) */}
           <div className="flex items-center justify-end gap-2 shrink-0">
+            {/* GitHub Open Source Repository Button */}
+            <a
+              href="https://github.com/Kuroshinz/zenox_aio"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/[0.05] hover:bg-white/[0.12] border border-white/10 text-zinc-300 hover:text-white text-xs font-mono transition-all cursor-pointer shadow-sm group shrink-0"
+              title="View Open Source Code on GitHub"
+            >
+              <Github className="w-3.5 h-3.5 text-rose-400 group-hover:scale-110 transition-transform" />
+              <span className="hidden sm:inline font-semibold">GitHub</span>
+            </a>
+
             {/* Dark / Light Mode Toggle Button */}
             <button
               onClick={onToggleDarkMode}
@@ -227,12 +242,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
         {/* HERO SECTION WITH CALM ENTRANCE & CRISP TYPOGRAPHY */}
         <div id="hero" className="relative z-20 flex-1 flex flex-col justify-center items-center px-4 sm:px-8 py-12 sm:py-16 text-center max-w-5xl mx-auto w-full animate-calm-fade-rise select-none">
-          {/* Version Badge */}
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/[0.04] border border-white/15 text-xs text-zinc-300 mb-6 shadow-sm">
-            <span className="w-1.5 h-1.5 rounded-full bg-rose-400 shadow-[0_0_8px_rgba(251,113,133,0.8)]"></span>
-            <span className="font-medium tracking-wide">Hệ điều hành hiệu suất cá nhân</span>
-            <span className="text-zinc-600">·</span>
-            <span className="text-zinc-400 font-mono text-[11px]">v2.4 Core</span>
+          {/* Open Source Developer Project Badge */}
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/[0.04] border border-white/15 text-xs text-zinc-300 mb-6 shadow-sm flex-wrap justify-center">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)] animate-pulse"></span>
+            <span className="font-semibold text-emerald-400 font-mono text-[11px] uppercase tracking-wider">Open Source Developer Project</span>
+            <span className="text-zinc-600 hidden sm:inline">•</span>
+            <span className="text-zinc-400 font-mono text-[11px]">MIT License</span>
+            <span className="text-zinc-600 hidden sm:inline">•</span>
+            <span className="text-zinc-300 font-medium tracking-wide">React 19 + TypeScript + Three.js</span>
           </div>
 
           {/* Grand Headline: Solid High-Contrast Typography (No Blurry Gradient Text) */}
@@ -263,6 +280,26 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               <span>Khám Phá Tính Năng</span>
               <span className="text-xs text-zinc-400">↓</span>
             </button>
+          </div>
+
+          {/* Open-Source Tech Stack & Architecture Badges */}
+          <div className="flex flex-wrap items-center justify-center gap-2 mt-6 text-[11px] font-mono text-zinc-300">
+            <span className="px-2.5 py-1 rounded-full bg-white/[0.04] border border-white/10 text-zinc-300 flex items-center gap-1.5">
+              <Code2 className="w-3 h-3 text-sky-400" />
+              TypeScript & React 19
+            </span>
+            <span className="px-2.5 py-1 rounded-full bg-white/[0.04] border border-white/10 text-zinc-300 flex items-center gap-1.5">
+              <Zap className="w-3 h-3 text-amber-400" />
+              Three.js WebGL Shaders
+            </span>
+            <span className="px-2.5 py-1 rounded-full bg-white/[0.04] border border-white/10 text-zinc-300 flex items-center gap-1.5">
+              <Lock className="w-3 h-3 text-emerald-400" />
+              Client-Side Vault Encryption
+            </span>
+            <span className="px-2.5 py-1 rounded-full bg-white/[0.04] border border-white/10 text-zinc-300 flex items-center gap-1.5">
+              <GitBranch className="w-3 h-3 text-rose-400" />
+              100% Free & Open Source
+            </span>
           </div>
 
 
@@ -891,20 +928,36 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               alt="ZENOX"
               className="h-6 w-auto object-contain opacity-95 hover:opacity-100 transition-opacity"
             />
-            <span className="text-zinc-400">· Hệ điều hành hiệu suất cá nhân © 2026</span>
+            <span className="text-zinc-400">© 2026 ZENOX • Free & Open-Source Software</span>
             <span className="text-zinc-600 hidden sm:inline">|</span>
-            <span className="text-rose-400 font-mono text-[11px] font-semibold tracking-wider">
-              Dev By Zenox Development
-            </span>
+            <a
+              href="https://github.com/Kuroshinz/zenox_aio"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-rose-400 hover:text-rose-300 font-mono text-[11px] font-semibold tracking-wider inline-flex items-center gap-1 transition-colors"
+            >
+              <Github className="w-3.5 h-3.5" />
+              <span>GitHub: Kuroshinz/zenox_aio</span>
+            </a>
           </div>
 
-          <div className="flex items-center gap-6 font-mono text-[11px]">
-            <span className="text-zinc-500">Thiết kế theo chuẩn Cinema Viewport &amp; Neural Nodes</span>
+          <div className="flex items-center gap-4 font-mono text-[11px]">
+            <span className="text-zinc-500">MIT License</span>
+            <span className="text-zinc-700">•</span>
+            <a
+              href="https://github.com/Kuroshinz/zenox_aio"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-zinc-400 hover:text-white transition-colors"
+            >
+              Source Code
+            </a>
+            <span className="text-zinc-700">•</span>
             <button
               onClick={onEnterApp}
               className="text-rose-400 hover:text-rose-300 transition-colors cursor-pointer font-semibold"
             >
-              Khởi động ứng dụng →
+              Vào Ứng Dụng →
             </button>
           </div>
         </div>

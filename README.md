@@ -1,3 +1,14 @@
+# ZENOX - Open-Source Developer Productivity & Bio-Performance Platform
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-rose.svg)](https://opensource.org/licenses/MIT)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue.svg)](https://www.typescriptlang.org/)
+[![React](https://img.shields.io/badge/React-19-61dafb.svg)](https://react.dev/)
+[![Three.js](https://img.shields.io/badge/Three.js-WebGL-black.svg)](https://threejs.org/)
+
+ZENOX is a 100% free, non-commercial open-source developer productivity operating system, calendar schedule manager, and routine intelligence web application built with React 19, TypeScript, Vite, Tailwind CSS, and Three.js/WebGL.
+
+---
+
 # Google Calendar Pro — Lịch Thông Minh
 
 Ứng dụng quản lý lịch & thói quen viết bằng React 19 + TypeScript + Vite + Tailwind CSS v4, tích hợp **đồng bộ dữ liệu thật** với Google Calendar.
