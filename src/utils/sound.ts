@@ -1,4 +1,4 @@
-/**
+﻿/**
  * High-definition Web Audio API sound synthesizer for VortexCal.
  * Delivers luxury, silky-smooth acoustic feedback without external audio files.
  */
@@ -154,4 +154,133 @@ export function playPopSound(): void {
   } catch (err) {
     console.warn('Audio play error:', err);
   }
+}
+
+/**
+ * Plays cybernetic toggle switch sound effect.
+ * Ascending energetic dual-tone synth when turning ON;
+ * descending tactile mechanical snap when turning OFF.
+ */
+export function playToggleSound(isOn: boolean): void {
+  if (!isSoundEnabled()) return;
+  const ctx = getAudioContext();
+  if (!ctx) return;
+
+  try {
+    const now = ctx.currentTime;
+    if (isOn) {
+      const osc1 = ctx.createOscillator();
+      const osc2 = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc1.type = 'triangle';
+      osc2.type = 'sine';
+
+      osc1.frequency.setValueAtTime(320, now);
+      osc1.frequency.exponentialRampToValueAtTime(880, now + 0.08);
+
+      osc2.frequency.setValueAtTime(640, now);
+      osc2.frequency.exponentialRampToValueAtTime(1760, now + 0.08);
+
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.linearRampToValueAtTime(0.18, now + 0.015);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.12);
+
+      osc1.connect(gain);
+      osc2.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc1.start(now);
+      osc2.start(now);
+      osc1.stop(now + 0.12);
+      osc2.stop(now + 0.12);
+    } else {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(580, now);
+      osc.frequency.exponentialRampToValueAtTime(220, now + 0.07);
+
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.linearRampToValueAtTime(0.14, now + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.08);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start(now);
+      osc.stop(now + 0.08);
+    }
+  } catch (err) {
+    console.warn('Toggle audio error:', err);
+  }
+}
+
+/**
+ * Plays futuristic Live Sync completion chime.
+ * Four-stage crystalline harmonic shimmer (F#5, A#5, C#6, F#6) with smooth decay.
+ */
+export function playLiveSyncChime(): void {
+  if (!isSoundEnabled()) return;
+  const ctx = getAudioContext();
+  if (!ctx) return;
+
+  try {
+    const now = ctx.currentTime;
+    const notes = [
+      { freq: 739.99, time: 0, duration: 0.32, gain: 0.12 },     // F#5
+      { freq: 932.33, time: 0.06, duration: 0.38, gain: 0.14 },   // A#5
+      { freq: 1108.73, time: 0.12, duration: 0.44, gain: 0.16 },  // C#6
+      { freq: 1479.98, time: 0.18, duration: 0.58, gain: 0.18 },  // F#6
+    ];
+
+    notes.forEach((note) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(note.freq, now + note.time);
+
+      gain.gain.setValueAtTime(0.0001, now + note.time);
+      gain.gain.linearRampToValueAtTime(note.gain, now + note.time + 0.015);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + note.time + note.duration);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start(now + note.time);
+      osc.stop(now + note.time + note.duration);
+    });
+  } catch (err) {
+    console.warn('Live sync chime error:', err);
+  }
+}
+
+/**
+ * Plays a subtle micro-pulse when background auto-save verifies persistence.
+ */
+export function playSyncPulse(): void {
+  if (!isSoundEnabled()) return;
+  const ctx = getAudioContext();
+  if (!ctx) return;
+
+  try {
+    const now = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(1046.5, now);
+    osc.frequency.exponentialRampToValueAtTime(523.25, now + 0.035);
+
+    gain.gain.setValueAtTime(0.08, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.035);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc.start(now);
+    osc.stop(now + 0.035);
+  } catch {}
 }

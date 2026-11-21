@@ -27,6 +27,7 @@ import {
   AlertTriangle,
   X,
   Info,
+  Radio,
 } from 'lucide-react';
 import {
   getStoredNotifications,
@@ -104,6 +105,8 @@ interface HeaderProps {
   activeRoadmapSummary?: HeaderRoadmapSummary | null;
   taskAlerts?: HeaderTaskAlerts | null;
   weightTrendAlert?: HeaderWeightTrendAlert | null;
+  isLiveSyncEnabled?: boolean;
+  onOpenLiveSync?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -135,6 +138,8 @@ export const Header: React.FC<HeaderProps> = ({
   activeRoadmapSummary,
   taskAlerts,
   weightTrendAlert,
+  isLiveSyncEnabled = true,
+  onOpenLiveSync,
 }) => {
   const [showNotificationPopup, setShowNotificationPopup] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
@@ -227,6 +232,37 @@ export const Header: React.FC<HeaderProps> = ({
         </button>
 
         
+
+        {/* Live Sync ThreeUI Control Button */}
+        {onOpenLiveSync && (
+          <button
+            onClick={onOpenLiveSync}
+            title={
+              isLiveSyncEnabled
+                ? (lang === 'vi' ? 'Live Sync: Đang bật (Đồng bộ tức thì)' : 'Live Sync: Active')
+                : (lang === 'vi' ? 'Live Sync: Đã tắt (Chế độ thủ công)' : 'Live Sync: Off')
+            }
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border backdrop-blur-md transition-all cursor-pointer hover:scale-[1.02] active:scale-[0.98] ${
+              isLiveSyncEnabled
+                ? 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border-rose-500/25 shadow-xs'
+                : 'bg-slate-100 dark:bg-white/[0.08] hover:bg-slate-200 dark:hover:bg-white/[0.14] text-slate-500 dark:text-slate-400 border-slate-200 dark:border-white/10'
+            }`}
+          >
+            <span className="relative flex h-2 w-2">
+              {isLiveSyncEnabled && (
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+              )}
+              <span
+                className={`relative inline-flex rounded-full h-2 w-2 ${
+                  isLiveSyncEnabled ? 'bg-rose-500' : 'bg-slate-400'
+                }`}
+              ></span>
+            </span>
+            <span className="font-mono text-[11px] font-bold">
+              {isLiveSyncEnabled ? 'LIVE SYNC' : 'SYNC OFF'}
+            </span>
+          </button>
+        )}
 
         {/* Notification Bell with Badge */}
         <div className="relative">
@@ -565,6 +601,24 @@ export const Header: React.FC<HeaderProps> = ({
                 </div>
 
                 <div className="space-y-1">
+                  {onOpenLiveSync && (
+                    <button
+                      onClick={() => {
+                        setShowProfileMenu(false);
+                        onOpenLiveSync();
+                      }}
+                      className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors text-left cursor-pointer"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <Radio className="w-4 h-4 text-rose-500 animate-pulse" />
+                        <span>{lang === 'vi' ? 'Hệ thống Live Sync' : 'Live Sync Engine'}</span>
+                      </div>
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${isLiveSyncEnabled ? 'bg-emerald-500/15 text-emerald-500' : 'bg-slate-500/15 text-slate-400'}`}>
+                        {isLiveSyncEnabled ? 'ON' : 'OFF'}
+                      </span>
+                    </button>
+                  )}
+
                   {onOpenCloudSync && (
                     <button
                       onClick={() => {
