@@ -22,8 +22,11 @@ import {
   BALANCED_MEAL_COMBOS,
   generateCtgPeriodizedRoadmap,
   calculatePhaseNutrition,
+  calculateCronometerNutrientScores,
+  calculateMuscleVolumeLandmarks,
+  compareProgressiveOverload,
 } from './fitnessMetrics';
-import { BodyPoint, CtgProfile, HealthDayLog, NutritionSettings, SetLog, SportSession } from '../types/productivity';
+import { BodyPoint, CtgProfile, HealthDayLog, MealLog, NutritionSettings, SetLog, SportSession, WorkoutSession } from '../types/productivity';
 
 const mockProfile: CtgProfile = {
   name: 'Test User',
@@ -228,5 +231,110 @@ const minicutNut = calculatePhaseNutrition('male', 175, 70, 'minicut');
 assert(minicutNut.targetKcal < bulkNut.targetKcal, 'Minicut kcal should be significantly lower than bulk');
 assert(minicutNut.protein > bulkNut.protein, 'Minicut protein should be higher to spare muscle');
 
-console.log('All fitness metrics tests passed successfully!');
+
+// 13. Tracked.gg & CTG Adaptive Metabolism & Trend Weight Tests
+import {
+  calculateAdaptiveTDEE,
+  calculateTrendWeights,
+  calculateProteinDistribution,
+  calculateMicronutrientSummary,
+  calculateCarbCyclingTargets,
+} from './fitnessMetrics';
+
+const mockPointsForTrend: BodyPoint[] = [
+  { id: 'p1', date: '2026-11-01', weightKg: 68.5, bodyFatPct: 18.2, createdAt: 1 },
+  { id: 'p2', date: '2026-11-04', weightKg: 68.2, bodyFatPct: 18.0, createdAt: 2 },
+  { id: 'p3', date: '2026-11-08', weightKg: 67.9, bodyFatPct: 17.8, createdAt: 3 },
+  { id: 'p4', date: '2026-11-12', weightKg: 67.7, bodyFatPct: 17.6, createdAt: 4 },
+];
+
+const trendResult = calculateTrendWeights(mockPointsForTrend);
+assert(trendResult.currentRaw === 67.7, 'Current raw weight should match latest');
+assert(trendResult.currentTrend > 67.0 && trendResult.currentTrend < 68.5, 'Trend weight should be smoothed');
+assert(trendResult.weeklyRateKg < 0, 'Trend weekly rate should be negative indicating fat loss');
+
+// Adaptive TDEE
+const mockRecentMeals: MealLog[] = [
+  {
+    id: 'm1',
+    date: '2026-11-10',
+    slot: 'lunch',
+    description: 'Ức gà và cơm',
+    items: [{ name: 'Ức gà', amount: 200, unit: 'g', kcal: 650, protein: 48, carbs: 70, fat: 12 }],
+    createdAt: 1,
+  },
+  {
+    id: 'm2',
+    date: '2026-11-11',
+    slot: 'dinner',
+    description: 'Thịt bò và khoai',
+    items: [{ name: 'Bò bít tết', amount: 200, unit: 'g', kcal: 750, protein: 50, carbs: 65, fat: 22 }],
+    createdAt: 2,
+  },
+];
+
+const adaptiveTdee = calculateAdaptiveTDEE(mockRecentMeals, mockPointsForTrend, 2400, 'bulk');
+assert(adaptiveTdee.adaptiveTdee > 1800 && adaptiveTdee.adaptiveTdee < 3500, 'Adaptive TDEE should be in healthy range');
+assert(adaptiveTdee.recommendedCaloTarget > 0, 'Recommended target must be > 0');
+
+// Protein distribution & Leucine trigger
+const mpsResult = calculateProteinDistribution(mockRecentMeals, 140, 56);
+assert(mpsResult.totalProteinGrams === 98, 'Total protein should match sum of meals');
+assert(mpsResult.successfulMpsTriggers >= 2, 'Both 48g and 50g meals should hit the MPS threshold (>=25g)');
+
+// Micronutrients
+const microSummary = calculateMicronutrientSummary(mockRecentMeals, 2500);
+assert(microSummary.waterMl === 2500, 'Water should be 2500ml');
+assert(microSummary.fiberGrams > 0, 'Should estimate realistic fiber');
+
+// Carb Cycling
+const carbCycling = calculateCarbCyclingTargets(2200, 150, 250, 60);
+assert(carbCycling.trainingDay.carbs > carbCycling.restDay.carbs, 'Training day must have more carbs than rest day');
+assert(carbCycling.refeedDay.fat <= 30, 'Refeed day must have ultra-low fat');
+
+// Cronometer Nutrient Scores Test
+const cronoScores = calculateCronometerNutrientScores(mockRecentMeals, 2800, 150);
+assert(cronoScores.potassiumMg > 500, 'Potassium should be estimated from foods');
+assert(cronoScores.magnesiumMg > 50, 'Magnesium should be estimated from foods');
+assert(cronoScores.electrolyteScorePct >= 0 && cronoScores.electrolyteScorePct <= 100, 'Electrolyte score between 0-100');
+assert(cronoScores.recoveryScorePct >= 0 && cronoScores.recoveryScorePct <= 100, 'Recovery score between 0-100');
+assert(cronoScores.vitalityScorePct >= 0 && cronoScores.vitalityScorePct <= 100, 'Vitality score between 0-100');
+
+// Muscle Volume Landmarks Test
+const mockWorkouts: WorkoutSession[] = [
+  {
+    id: 'w1',
+    date: '2026-11-18',
+    title: 'Chest & Back Hypertrophy',
+    startedAt: Date.now() - 2 * 86400000,
+    sets: [
+      { id: 's1', exerciseId: 'bench-press', setIndex: 1, weightKg: 80, reps: 8 },
+      { id: 's2', exerciseId: 'bench-press', setIndex: 2, weightKg: 80, reps: 8 },
+      { id: 's3', exerciseId: 'bench-press', setIndex: 3, weightKg: 80, reps: 7 },
+      { id: 's4', exerciseId: 'barbell-row', setIndex: 1, weightKg: 70, reps: 10 },
+      { id: 's5', exerciseId: 'barbell-row', setIndex: 2, weightKg: 70, reps: 10 },
+    ],
+  },
+];
+
+const volumeLandmarks = calculateMuscleVolumeLandmarks(mockWorkouts, 7);
+assert(volumeLandmarks.length >= 7, 'Should compute volume for all major muscle groups');
+const chestVolume = volumeLandmarks.find((v) => v.muscle === 'chest');
+assert(chestVolume !== undefined && chestVolume.currentSets === 3, 'Chest should have 3 recorded sets');
+assert(chestVolume !== undefined && chestVolume.mavSets === 14, 'Chest MAV should be 14 sets');
+
+// Progressive Overload Comparison Test
+const overloadComp = compareProgressiveOverload(
+  'bench-press',
+  [{ weightKg: 82.5, reps: 8 }],
+  mockWorkouts,
+  'Barbell Bench Press'
+);
+assert(overloadComp.hasPreviousData === true, 'Should find previous bench press data');
+assert(overloadComp.weightDeltaKg === 2.5, 'Weight delta should be +2.5kg');
+assert(overloadComp.isNewPr === true, 'Increased weight with same reps should be a new PR');
+assert(overloadComp.status === 'improved', 'Status should be improved');
+
+console.log('All fitness metrics & world-class nutrition tests passed successfully!');
+
 

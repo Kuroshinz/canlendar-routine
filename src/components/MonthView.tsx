@@ -1,3 +1,11 @@
+function normalizeEventColor(color?: string): string {
+  if (!color) return '#E11D48';
+  const c = color.toLowerCase();
+  if (c === '#039be5' || c === '#0284c7' || c === '#2563eb' || c === '#1a73e8' || c === '#3b82f6') {
+    return '#E11D48';
+  }
+  return color;
+}
 import React, { useState } from 'react';
 import { CalendarEvent } from '../types/calendar';
 import { formatDateString, getMonthDays, doesEventOccurOnDate } from '../utils/calendarUtils';
@@ -53,7 +61,7 @@ export const MonthView: React.FC<MonthViewProps> = ({
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden bg-white dark:bg-gray-900 select-none">
+    <div className="flex-1 flex flex-col h-full overflow-hidden bg-white dark:bg-[#070103]/90 select-none">
       {/* Weekday headers */}
       <div className="grid grid-cols-7 border-b border-gray-200 dark:border-gray-800 text-center py-2 bg-gray-50/70 dark:bg-[#1a1e24]/70 shrink-0">
         {weekdays.map((day, idx) => (
@@ -195,7 +203,7 @@ export const MonthView: React.FC<MonthViewProps> = ({
                           setHoveredEvent(null);
                           onSelectEvent(ev, e.currentTarget);
                         }}
-                        style={{ backgroundColor: ev.color }}
+                        style={{ backgroundColor: normalizeEventColor(ev.color) }}
                         className="shrink-0 h-[18px] px-2 rounded text-[11px] font-medium text-white truncate flex items-center gap-1.5 shadow-2xs hover:brightness-110 cursor-grab active:cursor-grabbing transition-all"
                       >
                         {ev.meetUrl && <Video className="w-2.5 h-2.5 shrink-0 opacity-90" />}
@@ -235,7 +243,7 @@ export const MonthView: React.FC<MonthViewProps> = ({
                       {/* Single crisp colored dot */}
                       <span
                         className="w-2 h-2 rounded-full shrink-0 shadow-2xs group-hover/item:scale-125 transition-transform"
-                        style={{ backgroundColor: ev.color }}
+                        style={{ backgroundColor: normalizeEventColor(ev.color) }}
                       />
 
                       {/* Start time */}
@@ -292,9 +300,9 @@ export const MonthView: React.FC<MonthViewProps> = ({
               top: `${Math.min(overflowAnchor.top, window.innerHeight - 300)}px`,
               left: `${overflowAnchor.left}px`,
             }}
-            className="absolute z-50 w-72 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 p-3.5 max-h-80 overflow-y-auto animate-in fade-in zoom-in-95 duration-100"
+            className="absolute z-50 w-72 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-white/[0.1] p-3.5 max-h-80 overflow-y-auto animate-in fade-in zoom-in-95 duration-100"
           >
-            <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-700 pb-2 mb-2">
+            <div className="flex items-center justify-between border-b border-gray-100 dark:border-white/[0.1] pb-2 mb-2">
               <span className="text-xs font-bold text-gray-800 dark:text-gray-100">
                 {overflowDate}
               </span>
@@ -318,7 +326,7 @@ export const MonthView: React.FC<MonthViewProps> = ({
                     style={{ backgroundColor: `${ev.color}20` }}
                     className="px-2.5 py-1.5 rounded-lg text-xs font-medium cursor-pointer hover:brightness-95 flex items-center gap-2 truncate text-gray-800 dark:text-gray-100 border border-transparent hover:border-black/10"
                   >
-                    <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: ev.color }} />
+                    <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: normalizeEventColor(ev.color) }} />
                     <span className="font-mono text-[10px] text-gray-500 shrink-0">{ev.startTime}</span>
                     <span className="truncate">{ev.title}</span>
                   </div>

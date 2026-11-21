@@ -1,138 +1,157 @@
-export function playNotificationSound(): void {
+/**
+ * High-definition Web Audio API sound synthesizer for VortexCal.
+ * Delivers luxury, silky-smooth acoustic feedback without external audio files.
+ */
+
+let audioCtx: AudioContext | null = null;
+
+function getAudioContext(): AudioContext | null {
+  if (typeof window === 'undefined') return null;
   try {
-    const AudioContextClass =
+    const AudioCtx =
       window.AudioContext ||
       (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-    if (!AudioContextClass) return;
-
-    const ctx = new AudioContextClass();
-
-    const play = () => {
-      const now = ctx.currentTime;
-      // First chime note (D5 ~ 587.33 Hz)
-      const osc1 = ctx.createOscillator();
-      const gain1 = ctx.createGain();
-      osc1.type = 'sine';
-      osc1.frequency.setValueAtTime(587.33, now);
-      gain1.gain.setValueAtTime(0, now);
-      gain1.gain.linearRampToValueAtTime(0.25, now + 0.04);
-      gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
-      osc1.connect(gain1);
-      gain1.connect(ctx.destination);
-      osc1.start(now);
-      osc1.stop(now + 0.5);
-
-      // Second chime note (A5 ~ 880 Hz)
-      const osc2 = ctx.createOscillator();
-      const gain2 = ctx.createGain();
-      osc2.type = 'sine';
-      osc2.frequency.setValueAtTime(880, now + 0.12);
-      gain2.gain.setValueAtTime(0, now + 0.12);
-      gain2.gain.linearRampToValueAtTime(0.3, now + 0.16);
-      gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.7);
-      osc2.connect(gain2);
-      gain2.connect(ctx.destination);
-      osc2.start(now + 0.12);
-      osc2.stop(now + 0.75);
-    };
-
-    if (ctx.state === 'suspended') {
-      ctx.resume().then(play).catch(play);
-    } else {
-      play();
+    if (!AudioCtx) return null;
+    if (!audioCtx || audioCtx.state === 'closed') {
+      audioCtx = new AudioCtx();
     }
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume().catch(() => {});
+    }
+    return audioCtx;
   } catch {
-    // Audio context may be restricted by autoplay policy
+    return null;
   }
 }
 
 /**
- * Crisp, uplifting, high-fidelity success chime for action completions.
- * Arpeggio: C5 (523.25Hz) -> E5 (659.25Hz) -> G5 (783.99Hz) -> C6 (1046.5Hz shimmer)
+ * Checks if sound feedback is allowed.
+ * Always returns true per user requirement for active acoustic feedback.
+ */
+export function isSoundEnabled(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    const pref = localStorage.getItem('vortexcal_sound_enabled');
+    if (pref === 'false') {
+      localStorage.setItem('vortexcal_sound_enabled', 'true');
+    }
+  } catch {}
+  return true;
+}
+
+/**
+ * Toggles sound feedback
+ */
+export function setSoundEnabled(enabled: boolean): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem('vortexcal_sound_enabled', String(enabled));
+  } catch {}
+}
+
+/**
+ * Plays an Apple / Stripe-grade luxury success chime.
+ * Ascending harmonic arpeggio (C6 -> E6 -> G6 -> C7) with smooth exponential decay.
  */
 export function playSuccessSound(): void {
+  if (!isSoundEnabled()) return;
+  const ctx = getAudioContext();
+  if (!ctx) return;
+
   try {
-    const AudioContextClass =
-      window.AudioContext ||
-      (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-    if (!AudioContextClass) return;
+    const now = ctx.currentTime;
+    const notes = [
+      { freq: 1046.5, time: 0, duration: 0.35, gain: 0.14 },     // C6
+      { freq: 1318.51, time: 0.07, duration: 0.40, gain: 0.16 },   // E6
+      { freq: 1567.98, time: 0.14, duration: 0.45, gain: 0.17 },   // G6
+      { freq: 2093.0, time: 0.22, duration: 0.55, gain: 0.12 },    // C7
+    ];
 
-    const ctx = new AudioContextClass();
-
-    const play = () => {
-      const now = ctx.currentTime;
-      const notes = [
-        { freq: 523.25, time: 0.0, dur: 0.28, vol: 0.22 }, // C5
-        { freq: 659.25, time: 0.08, dur: 0.28, vol: 0.25 }, // E5
-        { freq: 783.99, time: 0.16, dur: 0.35, vol: 0.28 }, // G5
-        { freq: 1046.5, time: 0.24, dur: 0.65, vol: 0.32 }, // C6
-      ];
-
-      notes.forEach(({ freq, time, dur, vol }) => {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(freq, now + time);
-
-        gain.gain.setValueAtTime(0, now + time);
-        gain.gain.linearRampToValueAtTime(vol, now + time + 0.02);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + time + dur);
-
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-
-        osc.start(now + time);
-        osc.stop(now + time + dur + 0.05);
-      });
-    };
-
-    if (ctx.state === 'suspended') {
-      ctx.resume().then(play).catch(play);
-    } else {
-      play();
-    }
-  } catch {
-    // Audio autoplay restrictions
-  }
-}
-
-/**
- * Short, clean pop sound for fast interactive feedback (clicks, toggles).
- */
-export function playPopSound(): void {
-  try {
-    const AudioContextClass =
-      window.AudioContext ||
-      (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-    if (!AudioContextClass) return;
-
-    const ctx = new AudioContextClass();
-    const play = () => {
-      const now = ctx.currentTime;
+    notes.forEach((note) => {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
 
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(440, now);
-      osc.frequency.exponentialRampToValueAtTime(880, now + 0.05);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(note.freq, now + note.time);
 
-      gain.gain.setValueAtTime(0.2, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+      gain.gain.setValueAtTime(0.0001, now + note.time);
+      gain.gain.linearRampToValueAtTime(note.gain, now + note.time + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + note.time + note.duration);
 
       osc.connect(gain);
       gain.connect(ctx.destination);
 
-      osc.start(now);
-      osc.stop(now + 0.09);
-    };
+      osc.start(now + note.time);
+      osc.stop(now + note.time + note.duration);
+    });
+  } catch (err) {
+    console.warn('Audio play error:', err);
+  }
+}
 
-    if (ctx.state === 'suspended') {
-      ctx.resume().then(play).catch(play);
-    } else {
-      play();
-    }
-  } catch {
-    // Ignore audio errors
+/**
+ * Plays a clean, pleasant notification tone (A5 -> D6).
+ */
+export function playNotificationSound(): void {
+  if (!isSoundEnabled()) return;
+  const ctx = getAudioContext();
+  if (!ctx) return;
+
+  try {
+    const now = ctx.currentTime;
+    const notes = [
+      { freq: 880.0, time: 0, duration: 0.28, gain: 0.13 },      // A5
+      { freq: 1174.66, time: 0.08, duration: 0.35, gain: 0.15 },   // D6
+    ];
+
+    notes.forEach((note) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(note.freq, now + note.time);
+
+      gain.gain.setValueAtTime(0.0001, now + note.time);
+      gain.gain.linearRampToValueAtTime(note.gain, now + note.time + 0.015);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + note.time + note.duration);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start(now + note.time);
+      osc.stop(now + note.time + note.duration);
+    });
+  } catch (err) {
+    console.warn('Audio play error:', err);
+  }
+}
+
+/**
+ * Plays a quick tactile pop / tap sound.
+ */
+export function playPopSound(): void {
+  if (!isSoundEnabled()) return;
+  const ctx = getAudioContext();
+  if (!ctx) return;
+
+  try {
+    const now = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(320, now);
+    osc.frequency.exponentialRampToValueAtTime(80, now + 0.045);
+
+    gain.gain.setValueAtTime(0.15, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.045);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc.start(now);
+    osc.stop(now + 0.045);
+  } catch (err) {
+    console.warn('Audio play error:', err);
   }
 }

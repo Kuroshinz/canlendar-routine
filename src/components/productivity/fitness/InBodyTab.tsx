@@ -564,7 +564,7 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
                 setPhotoDate(todayStr);
                 setShowPhotoModal(true);
               }}
-              className="px-3 py-2.5 rounded-xl bg-white/80 dark:bg-gray-800/80 hover:bg-white dark:hover:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 text-xs font-semibold cursor-pointer shadow-2xs transition-colors flex items-center gap-1.5"
+              className="px-3 py-2.5 rounded-xl bg-white/80 dark:bg-gray-800/80 hover:bg-white dark:hover:bg-gray-800 border border-gray-300 dark:border-white/[0.1] text-gray-700 dark:text-gray-200 text-xs font-semibold cursor-pointer shadow-2xs transition-colors flex items-center gap-1.5"
               title="Chụp hoặc tải ảnh check body hôm nay"
             >
               <Camera className="w-4 h-4 text-blue-500" />
@@ -737,7 +737,7 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
           <button
             type="button"
             onClick={() => setShowBfGuide((v) => !v)}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/80 dark:bg-gray-800/80 hover:bg-white dark:hover:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 text-xs font-semibold cursor-pointer shadow-2xs transition-all"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/80 dark:bg-gray-800/80 hover:bg-white dark:hover:bg-gray-800 border border-gray-300 dark:border-white/[0.1] text-gray-700 dark:text-gray-200 text-xs font-semibold cursor-pointer shadow-2xs transition-all"
             title="Xem hình ảnh đối chiếu và các phân khúc % mỡ"
           >
             <Eye className="w-4 h-4 text-blue-500" />
@@ -756,8 +756,8 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
 
       {/* Visual Body Fat Matrix Guide */}
       {showBfGuide && (
-        <div className="bg-white dark:bg-[#131b2e] p-5 rounded-2xl border border-blue-200 dark:border-blue-900/60 shadow-sm space-y-4">
-          <div className="flex items-center justify-between border-b border-gray-100 dark:border-slate-800 pb-3">
+        <div className="bg-white dark:bg-white/[0.03] backdrop-blur-xl p-5 rounded-2xl border border-blue-200 dark:border-blue-900/60 shadow-sm space-y-4">
+          <div className="flex items-center justify-between border-b border-gray-100 dark:border-white/[0.08] pb-3">
             <div>
               <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
                 <Eye className="w-4 h-4 text-blue-500" />
@@ -817,8 +817,8 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
 
       {/* Add Form */}
       {showForm && (
-        <form onSubmit={handleAdd} className="bg-white dark:bg-[#131b2e] p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
-          <div className="flex items-center justify-between border-b border-gray-100 dark:border-slate-800 pb-3">
+        <form onSubmit={handleAdd} className="bg-white dark:bg-white/[0.03] backdrop-blur-xl p-4 rounded-2xl border border-slate-200 dark:border-white/[0.08] shadow-xs space-y-4">
+          <div className="flex items-center justify-between border-b border-gray-100 dark:border-white/[0.08] pb-3">
             <h3 className="text-xs font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-orange-500" />
               Thêm số đo InBody & Thước dây
@@ -840,7 +840,7 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
                 required
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                className="mt-1 w-full text-xs px-2.5 py-1.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
+                className="mt-1 w-full text-xs px-2.5 py-1.5 rounded-lg border border-gray-300 dark:border-white/[0.1] bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
               />
             </div>
             <div>
@@ -851,7 +851,7 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
                 required
                 value={weightKg}
                 onChange={(e) => setWeightKg(e.target.value)}
-                className="mt-1 w-full text-xs px-2.5 py-1.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
+                className="mt-1 w-full text-xs px-2.5 py-1.5 rounded-lg border border-gray-300 dark:border-white/[0.1] bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
               />
             </div>
             <div>
@@ -862,7 +862,7 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
                 required
                 value={bodyFatPct}
                 onChange={(e) => setBodyFatPct(e.target.value)}
-                className="mt-1 w-full text-xs px-2.5 py-1.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
+                className="mt-1 w-full text-xs px-2.5 py-1.5 rounded-lg border border-gray-300 dark:border-white/[0.1] bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
               />
             </div>
             <div>
@@ -872,7 +872,7 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
                 step="0.5"
                 value={chestCm}
                 onChange={(e) => setChestCm(e.target.value)}
-                className="mt-1 w-full text-xs px-2.5 py-1.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
+                className="mt-1 w-full text-xs px-2.5 py-1.5 rounded-lg border border-gray-300 dark:border-white/[0.1] bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
               />
             </div>
             <div>
@@ -882,7 +882,7 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
                 step="0.5"
                 value={armCm}
                 onChange={(e) => setArmCm(e.target.value)}
-                className="mt-1 w-full text-xs px-2.5 py-1.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
+                className="mt-1 w-full text-xs px-2.5 py-1.5 rounded-lg border border-gray-300 dark:border-white/[0.1] bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
               />
             </div>
             <div>
@@ -892,7 +892,7 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
                 step="0.5"
                 value={thighCm}
                 onChange={(e) => setThighCm(e.target.value)}
-                className="mt-1 w-full text-xs px-2.5 py-1.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
+                className="mt-1 w-full text-xs px-2.5 py-1.5 rounded-lg border border-gray-300 dark:border-white/[0.1] bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
               />
             </div>
           </div>
@@ -903,7 +903,7 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
               placeholder="Ghi chú (ví dụ: Đo sáng sớm chưa ăn uống...)"
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              className="flex-1 text-xs px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
+              className="flex-1 text-xs px-3 py-2 rounded-lg border border-gray-300 dark:border-white/[0.1] bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
             />
             <button
               type="submit"
@@ -917,27 +917,35 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
 
       {/* Main Metric Cards Grid */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-        <div className="bg-white dark:bg-[#131b2e] p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
+        <div className="bg-white dark:bg-white/[0.03] backdrop-blur-xl p-3.5 rounded-2xl border border-slate-200 dark:border-white/[0.08] shadow-xs">
           <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Cân nặng hiện tại</div>
           <div className="text-xl font-bold text-gray-900 dark:text-gray-100 mt-1">
             {fmt1(currentWeight)} <span className="text-xs font-normal text-gray-400">kg</span>
           </div>
-          <div className="text-[10px] text-gray-400 mt-0.5">
-            Mục tiêu: {profile.targetWeightKg} kg
+          <div className="text-[10px] text-gray-400 mt-0.5 font-mono">
+            Mục tiêu: {profile.targetWeightKg} kg {currentWeight !== profile.targetWeightKg && (
+              <span className={currentWeight > profile.targetWeightKg ? 'text-amber-400 font-semibold' : 'text-blue-400 font-semibold'}>
+                ({currentWeight > profile.targetWeightKg ? `-${(currentWeight - profile.targetWeightKg).toFixed(1)}kg` : `+${(profile.targetWeightKg - currentWeight).toFixed(1)}kg`})
+              </span>
+            )}
           </div>
         </div>
 
-        <div className="bg-white dark:bg-[#131b2e] p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
+        <div className="bg-white dark:bg-white/[0.03] backdrop-blur-xl p-3.5 rounded-2xl border border-slate-200 dark:border-white/[0.08] shadow-xs">
           <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">% Mỡ cơ thể</div>
           <div className="text-xl font-bold text-orange-600 dark:text-orange-400 mt-1">
             {fmt1(currentBf)} <span className="text-xs font-normal text-gray-400">%</span>
           </div>
-          <div className="text-[10px] text-gray-400 mt-0.5">
-            Mục tiêu: {profile.targetBodyFatPct}%
+          <div className="text-[10px] text-gray-400 mt-0.5 font-mono">
+            Mục tiêu: {profile.targetBodyFatPct}% {currentBf !== profile.targetBodyFatPct && (
+              <span className={currentBf > profile.targetBodyFatPct ? 'text-amber-400 font-semibold' : 'text-emerald-400 font-semibold'}>
+                ({currentBf > profile.targetBodyFatPct ? `-${(currentBf - profile.targetBodyFatPct).toFixed(1)}%` : `+${(profile.targetBodyFatPct - currentBf).toFixed(1)}%`})
+              </span>
+            )}
           </div>
         </div>
 
-        <div className="bg-white dark:bg-[#131b2e] p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
+        <div className="bg-white dark:bg-white/[0.03] backdrop-blur-xl p-3.5 rounded-2xl border border-slate-200 dark:border-white/[0.08] shadow-xs">
           <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Khối cơ nạc (LBM)</div>
           <div className="text-xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">
             {fmt1(userLeanKg)} <span className="text-xs font-normal text-gray-400">kg</span>
@@ -947,9 +955,9 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
           </div>
         </div>
 
-        <div className="bg-white dark:bg-[#131b2e] p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
+        <div className="bg-white dark:bg-white/[0.03] backdrop-blur-xl p-3.5 rounded-2xl border border-slate-200 dark:border-white/[0.08] shadow-xs">
           <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Chỉ số FFMI</div>
-          <div className="text-xl font-bold text-indigo-600 dark:text-indigo-400 mt-1">
+          <div className="text-xl font-bold text-rose-500 dark:text-rose-400 mt-1">
             {fmt1(userFfmi)}
           </div>
           <div className="text-[10px] text-gray-400 mt-0.5">
@@ -957,7 +965,7 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
           </div>
         </div>
 
-        <div className="bg-white dark:bg-[#131b2e] p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
+        <div className="bg-white dark:bg-white/[0.03] backdrop-blur-xl p-3.5 rounded-2xl border border-slate-200 dark:border-white/[0.08] shadow-xs">
           <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Chỉ số BMI</div>
           <div className="text-xl font-bold text-blue-600 dark:text-blue-400 mt-1">
             {fmt1(userBmi)}
@@ -967,7 +975,7 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
           </div>
         </div>
 
-        <div className="bg-white dark:bg-[#131b2e] p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
+        <div className="bg-white dark:bg-white/[0.03] backdrop-blur-xl p-3.5 rounded-2xl border border-slate-200 dark:border-white/[0.08] shadow-xs">
           <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">BMR / TDEE</div>
           <div className="text-xl font-bold text-purple-600 dark:text-purple-400 mt-1">
             {userTdee} <span className="text-xs font-normal text-gray-400">kcal</span>
@@ -979,7 +987,7 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
       </div>
 
       {/* Interactive InBody Trend Chart (Weight & Body Fat Dual-Series) */}
-      <div className="bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200 dark:border-slate-800 p-4 shadow-xs space-y-3">
+      <div className="bg-white dark:bg-white/[0.03] backdrop-blur-xl rounded-2xl border border-slate-200 dark:border-white/[0.08] p-4 shadow-xs space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
             <h3 className="text-xs font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
@@ -1022,12 +1030,12 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
           <div className="bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-transparent dark:from-indigo-950/20 dark:via-purple-950/20 rounded-2xl border border-indigo-200 dark:border-indigo-900/50 p-4 shadow-xs">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-indigo-500" />
+                <Sparkles className="w-4 h-4 text-rose-500" />
                 <h4 className="text-xs font-bold text-gray-900 dark:text-gray-100">
                   Đánh Giá Chỉ Số Cơ Nạc FFMI: <span className={ffmiEval.tone}>{ffmiEval.label}</span>
                 </h4>
               </div>
-              <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 font-mono">
+              <span className="text-xs font-bold text-rose-500 dark:text-rose-400 font-mono">
                 FFMI {fmt1(userFfmi)}
               </span>
             </div>
@@ -1041,7 +1049,7 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
       {/* Delta Rate & Tape Measurements */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Progress Rate Card */}
-        <div className="bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200 dark:border-slate-800 p-4 shadow-xs">
+        <div className="bg-white dark:bg-white/[0.03] backdrop-blur-xl rounded-2xl border border-slate-200 dark:border-white/[0.08] p-4 shadow-xs">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-xs font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
               <Activity className="w-4 h-4 text-emerald-500" />
@@ -1056,7 +1064,7 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
 
           {delta ? (
             <div className="grid grid-cols-3 gap-3">
-              <div className="p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-slate-800">
+              <div className="p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-white/[0.08]">
                 <div className="text-[10px] text-gray-400 uppercase font-semibold">Tốc độ cân nặng</div>
                 <div className={`text-base font-bold mt-1 ${delta.weightRate <= 0 ? 'text-emerald-600' : 'text-orange-600'}`}>
                   {fmtSigned(delta.weightRate)} kg/tuần
@@ -1066,7 +1074,7 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
                 </div>
               </div>
 
-              <div className="p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-slate-800">
+              <div className="p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-white/[0.08]">
                 <div className="text-[10px] text-gray-400 uppercase font-semibold">Tốc độ mỡ</div>
                 <div className="text-base font-bold text-orange-600 dark:text-orange-400 mt-1">
                   {fmtSigned(delta.fatRate)} kg/tuần
@@ -1076,9 +1084,9 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
                 </div>
               </div>
 
-              <div className="p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-slate-800">
+              <div className="p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-white/[0.08]">
                 <div className="text-[10px] text-gray-400 uppercase font-semibold">Dự kiến đạt mục tiêu</div>
-                <div className="text-base font-bold text-indigo-600 dark:text-indigo-400 mt-1">
+                <div className="text-base font-bold text-rose-500 dark:text-rose-400 mt-1">
                   {eta !== null ? `~${eta} tuần` : 'Đang đi đúng hướng'}
                 </div>
                 <div className="text-[10px] text-gray-400 mt-0.5">
@@ -1094,7 +1102,7 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
         </div>
 
         {/* Tape Measurements Card */}
-        <div className="bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200 dark:border-slate-800 p-4 shadow-xs">
+        <div className="bg-white dark:bg-white/[0.03] backdrop-blur-xl rounded-2xl border border-slate-200 dark:border-white/[0.08] p-4 shadow-xs">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-xs font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
               <Ruler className="w-4 h-4 text-blue-500" />
@@ -1114,7 +1122,7 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
                 val: latest ? leanMassKg(latest.weightKg, latest.bodyFatPct) : undefined,
                 init: first ? leanMassKg(first.weightKg, first.bodyFatPct) : undefined,
                 unit: 'kg',
-                color: 'text-indigo-600 dark:text-indigo-400',
+                color: 'text-rose-500 dark:text-rose-400',
                 isLbm: true,
               },
               { label: 'Vòng ngực', val: latest?.chestCm, init: first?.chestCm, unit: 'cm', color: 'text-blue-600' },
@@ -1124,7 +1132,7 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
               const diff = t.val !== undefined && t.init !== undefined ? Math.round((t.val - t.init) * 10) / 10 : null;
               const isGood = t.isLbm ? (diff !== null && diff > 0) : (diff !== null && diff < 0);
               return (
-                <div key={t.label} className="p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 text-center border border-gray-100 dark:border-slate-800">
+                <div key={t.label} className="p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 text-center border border-gray-100 dark:border-white/[0.08]">
                   <div className="text-[10px] text-gray-400 uppercase font-semibold">{t.label}</div>
                   <div className={`text-base font-bold mt-1 ${t.color}`}>
                     {t.val ? `${t.val} ${t.unit}` : '—'}
@@ -1144,15 +1152,15 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
       </div>
 
       {/* 4. Body Check Photos & Visual Progress */}
-      <div className="bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs p-4 sm:p-5 space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-100 dark:border-slate-800 pb-3">
+      <div className="bg-white dark:bg-white/[0.03] backdrop-blur-xl rounded-2xl border border-slate-200 dark:border-white/[0.08] shadow-xs p-4 sm:p-5 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-100 dark:border-white/[0.08] pb-3">
           <div>
             <div className="flex items-center gap-2">
-              <Camera className="w-5 h-5 text-[#2563EB]" />
+              <Camera className="w-5 h-5 text-rose-400" />
               <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100">
                 Hình Ảnh Check Body &amp; Tiến Trình Thực Tế
               </h3>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#2563EB]/15 text-[#2563EB] border border-[#2563EB]/25">
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-600/15 text-rose-400 border border-[#2563EB]/25">
                 {bodyPhotos.length} ảnh
               </span>
             </div>
@@ -1169,7 +1177,7 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
                 className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
                   compareMode
                     ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
-                    : 'border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800'
+                    : 'border-gray-300 dark:border-white/[0.1] text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800'
                 }`}
               >
                 <Columns className="w-3.5 h-3.5" />
@@ -1186,7 +1194,7 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
                 }
                 setShowPhotoModal(true);
               }}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-xs font-bold shadow-xs cursor-pointer transition-colors"
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold shadow-xs cursor-pointer transition-colors"
             >
               <Plus className="w-4 h-4" />
               <span>Thêm ảnh mới</span>
@@ -1302,7 +1310,7 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
               {/* After Column */}
               <div className="bg-slate-100 dark:bg-slate-800/60 rounded-xl p-3 border border-white/10 space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase tracking-wider bg-[#2563EB] text-white">
+                  <span className="px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase tracking-wider bg-rose-600 text-white">
                     Mốc Sau (After)
                   </span>
                   <select
@@ -1367,7 +1375,7 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
                 onClick={() => setPhotoPoseFilter(poseKey)}
                 className={`px-3 py-1.5 rounded-xl font-medium shrink-0 transition-colors cursor-pointer flex items-center gap-1.5 ${
                   active
-                    ? 'bg-[#2563EB] text-white font-bold shadow-xs'
+                    ? 'bg-rose-600 text-white font-bold shadow-xs'
                     : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
                 }`}
               >
@@ -1386,8 +1394,8 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
 
         {/* Gallery Grid or Empty State */}
         {filteredPhotos.length === 0 ? (
-          <div className="py-10 px-4 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800 text-center flex flex-col items-center justify-center space-y-3">
-            <div className="w-12 h-12 rounded-2xl bg-orange-500/10 dark:bg-orange-950/30 flex items-center justify-center text-[#2563EB]">
+          <div className="py-10 px-4 rounded-2xl border-2 border-dashed border-slate-200 dark:border-white/[0.08] text-center flex flex-col items-center justify-center space-y-3">
+            <div className="w-12 h-12 rounded-2xl bg-orange-500/10 dark:bg-orange-950/30 flex items-center justify-center text-rose-400">
               <Camera className="w-6 h-6" />
             </div>
             <div className="max-w-md">
@@ -1404,7 +1412,7 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
             <button
               type="button"
               onClick={() => setShowPhotoModal(true)}
-              className="mt-2 px-4 py-2 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-xs font-bold shadow-xs cursor-pointer transition-colors"
+              className="mt-2 px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold shadow-xs cursor-pointer transition-colors"
             >
               Tải lên ảnh đầu tiên
             </button>
@@ -1416,7 +1424,7 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
               return (
                 <div
                   key={photo.id}
-                  className="group rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-gray-50 dark:bg-[#121418] flex flex-col shadow-xs hover:shadow-md transition-shadow relative"
+                  className="group rounded-2xl overflow-hidden border border-slate-200 dark:border-white/[0.08] bg-gray-50 dark:bg-[#121418] flex flex-col shadow-xs hover:shadow-md transition-shadow relative"
                 >
                   {/* Photo with Overlay */}
                   <div
@@ -1470,7 +1478,7 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
                       <span className="text-[10px] text-gray-400 italic">Không có ghi chú</span>
                     )}
 
-                    <div className="flex items-center justify-between pt-1 border-t border-gray-100 dark:border-slate-800/80 gap-1">
+                    <div className="flex items-center justify-between pt-1 border-t border-gray-100 dark:border-white/[0.08]/80 gap-1">
                       <div className="flex items-center gap-1">
                         <button
                           type="button"
@@ -1495,7 +1503,7 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
                           }}
                           className={`text-[10px] px-1.5 py-0.5 rounded-md font-semibold cursor-pointer transition-colors ${
                             afterPhotoId === photo.id
-                              ? 'bg-[#2563EB] text-white'
+                              ? 'bg-rose-600 text-white'
                               : 'bg-gray-200 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-300'
                           }`}
                           title="Đặt làm mốc Sau để so sánh"
@@ -1526,7 +1534,7 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
       </div>
 
       {/* Measurement History Table */}
-      <div className="bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs p-4">
+      <div className="bg-white dark:bg-white/[0.03] backdrop-blur-xl rounded-2xl border border-slate-200 dark:border-white/[0.08] shadow-xs p-4">
         <h3 className="text-xs font-bold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2">
           <Calendar className="w-4 h-4 text-orange-500" />
           Lịch Sử Đo InBody ({points.length} lần đo)
@@ -1534,7 +1542,7 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs text-gray-600 dark:text-gray-300">
-            <thead className="text-[10px] uppercase font-semibold bg-gray-50 dark:bg-gray-800/50 text-gray-400 border-b border-slate-200 dark:border-slate-800">
+            <thead className="text-[10px] uppercase font-semibold bg-gray-50 dark:bg-gray-800/50 text-gray-400 border-b border-slate-200 dark:border-white/[0.08]">
               <tr>
                 <th className="py-2.5 px-3">Ngày</th>
                 <th className="py-2.5 px-3">Cân nặng</th>
@@ -1610,10 +1618,10 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
       {/* Upload Photo Modal */}
       {showPhotoModal && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-white dark:bg-[#131b2e] rounded-3xl border border-slate-200 dark:border-slate-800 max-w-lg w-full p-5 sm:p-6 space-y-4 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-gray-100 dark:border-slate-800 pb-3">
+          <div className="bg-white dark:bg-white/[0.03] backdrop-blur-xl rounded-3xl border border-slate-200 dark:border-white/[0.08] max-w-lg w-full p-5 sm:p-6 space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-gray-100 dark:border-white/[0.08] pb-3">
               <div className="flex items-center gap-2">
-                <div className="p-2 rounded-xl bg-orange-500/10 text-[#2563EB]">
+                <div className="p-2 rounded-xl bg-orange-500/10 text-rose-400">
                   <Camera className="w-5 h-5" />
                 </div>
                 <div>
@@ -1652,7 +1660,7 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
                   Hình ảnh thể hình
                 </label>
                 {photoPreview ? (
-                  <div className="relative rounded-2xl overflow-hidden border border-gray-300 dark:border-gray-700 bg-slate-100 dark:bg-slate-800/60 aspect-[4/3] flex items-center justify-center">
+                  <div className="relative rounded-2xl overflow-hidden border border-gray-300 dark:border-white/[0.1] bg-slate-100 dark:bg-slate-800/60 aspect-[4/3] flex items-center justify-center">
                     <img
                       src={photoPreview}
                       alt="Preview"
@@ -1671,8 +1679,8 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
                     </div>
                   </div>
                 ) : (
-                  <label className="border-2 border-dashed border-gray-300 dark:border-gray-700 hover:border-[#2563EB] dark:hover:border-[#2563EB] rounded-2xl p-6 flex flex-col items-center justify-center gap-2 cursor-pointer transition-colors bg-gray-50 dark:bg-gray-800/40">
-                    <div className="w-12 h-12 rounded-2xl bg-orange-500/10 text-[#2563EB] flex items-center justify-center">
+                  <label className="border-2 border-dashed border-gray-300 dark:border-white/[0.1] hover:border-rose-500 dark:hover:border-rose-500 rounded-2xl p-6 flex flex-col items-center justify-center gap-2 cursor-pointer transition-colors bg-gray-50 dark:bg-white/[0.03]">
+                    <div className="w-12 h-12 rounded-2xl bg-orange-500/10 text-rose-400 flex items-center justify-center">
                       <Upload className="w-6 h-6" />
                     </div>
                     <div className="text-center">
@@ -1684,7 +1692,7 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
                       </p>
                     </div>
                     {isCompressing && (
-                      <span className="text-xs text-[#2563EB] font-semibold animate-pulse">
+                      <span className="text-xs text-rose-400 font-semibold animate-pulse">
                         Đang tối ưu &amp; nén ảnh...
                       </span>
                     )}
@@ -1713,8 +1721,8 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
                         onClick={() => setPhotoPose(p)}
                         className={`py-2 px-2.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer text-center ${
                           active
-                            ? 'bg-[#2563EB] text-white border-[#2563EB] shadow-xs'
-                            : 'border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50'
+                            ? 'bg-rose-600 text-white border-[#2563EB] shadow-xs'
+                            : 'border-slate-200 dark:border-white/[0.1] bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50'
                         }`}
                       >
                         {POSE_LABELS[p].label}
@@ -1735,7 +1743,7 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
                     required
                     value={photoDate}
                     onChange={(e) => setPhotoDate(e.target.value)}
-                    className="w-full text-xs px-2.5 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
+                    className="w-full text-xs px-2.5 py-2 rounded-xl border border-gray-300 dark:border-white/[0.1] bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
                   />
                 </div>
                 <div>
@@ -1748,7 +1756,7 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
                     placeholder="VD: 68.5"
                     value={photoWeight}
                     onChange={(e) => setPhotoWeight(e.target.value)}
-                    className="w-full text-xs px-2.5 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 font-bold"
+                    className="w-full text-xs px-2.5 py-2 rounded-xl border border-gray-300 dark:border-white/[0.1] bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 font-bold"
                   />
                 </div>
                 <div>
@@ -1761,7 +1769,7 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
                     placeholder="VD: 16.5"
                     value={photoBf}
                     onChange={(e) => setPhotoBf(e.target.value)}
-                    className="w-full text-xs px-2.5 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 font-bold"
+                    className="w-full text-xs px-2.5 py-2 rounded-xl border border-gray-300 dark:border-white/[0.1] bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 font-bold"
                   />
                 </div>
               </div>
@@ -1776,26 +1784,26 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
                   placeholder="Ví dụ: Buổi sáng lúc bụng rỗng, cơ bụng và ngực trên bắt đầu rõ..."
                   value={photoNote}
                   onChange={(e) => setPhotoNote(e.target.value)}
-                  className="w-full text-xs px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
+                  className="w-full text-xs px-3 py-2 rounded-xl border border-gray-300 dark:border-white/[0.1] bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
                 />
               </div>
 
               {/* Modal Actions */}
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-gray-100 dark:border-slate-800">
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-gray-100 dark:border-white/[0.08]">
                 <button
                   type="button"
                   onClick={() => {
                     setShowPhotoModal(false);
                     setPhotoPreview(null);
                   }}
-                  className="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-700 text-xs font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer"
+                  className="px-4 py-2 rounded-xl border border-gray-300 dark:border-white/[0.1] text-xs font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer"
                 >
                   Hủy
                 </button>
                 <button
                   type="submit"
                   disabled={!photoPreview || isCompressing}
-                  className="px-5 py-2 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] disabled:opacity-50 text-white text-xs font-bold shadow-xs cursor-pointer transition-colors"
+                  className="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-white text-xs font-bold shadow-xs cursor-pointer transition-colors"
                 >
                   Lưu Ảnh Vào Tiến Trình
                 </button>
@@ -1881,8 +1889,8 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
       )}
       {editingPoint && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200 dark:border-slate-800 max-w-lg w-full p-5 space-y-4 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-gray-100 dark:border-slate-800 pb-3">
+          <div className="bg-white dark:bg-white/[0.03] backdrop-blur-xl rounded-2xl border border-slate-200 dark:border-white/[0.08] max-w-lg w-full p-5 space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-gray-100 dark:border-white/[0.08] pb-3">
               <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
                 <Edit2 className="w-4 h-4 text-blue-500" />
                 Chỉnh Sửa Mốc Đo InBody ({editingPoint.date})
@@ -1920,7 +1928,7 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
                     type="date"
                     value={editingPoint.date}
                     onChange={(e) => setEditingPoint({ ...editingPoint, date: e.target.value })}
-                    className="mt-1 w-full text-xs px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
+                    className="mt-1 w-full text-xs px-3 py-2 rounded-xl border border-gray-300 dark:border-white/[0.1] bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
                     required
                   />
                 </div>
@@ -1933,7 +1941,7 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
                     onChange={(e) =>
                       setEditingPoint({ ...editingPoint, weightKg: Number(e.target.value) || 0 })
                     }
-                    className="mt-1 w-full text-xs px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 font-bold"
+                    className="mt-1 w-full text-xs px-3 py-2 rounded-xl border border-gray-300 dark:border-white/[0.1] bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 font-bold"
                     required
                   />
                 </div>
@@ -1946,7 +1954,7 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
                     onChange={(e) =>
                       setEditingPoint({ ...editingPoint, bodyFatPct: Number(e.target.value) || 0 })
                     }
-                    className="mt-1 w-full text-xs px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 font-bold"
+                    className="mt-1 w-full text-xs px-3 py-2 rounded-xl border border-gray-300 dark:border-white/[0.1] bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 font-bold"
                     required
                   />
                 </div>
@@ -1960,7 +1968,7 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
                       setEditingPoint({ ...editingPoint, chestCm: Number(e.target.value) || undefined })
                     }
                     placeholder="Tùy chọn"
-                    className="mt-1 w-full text-xs px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
+                    className="mt-1 w-full text-xs px-3 py-2 rounded-xl border border-gray-300 dark:border-white/[0.1] bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
                   />
                 </div>
                 <div>
@@ -1973,7 +1981,7 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
                       setEditingPoint({ ...editingPoint, armCm: Number(e.target.value) || undefined })
                     }
                     placeholder="Tùy chọn"
-                    className="mt-1 w-full text-xs px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
+                    className="mt-1 w-full text-xs px-3 py-2 rounded-xl border border-gray-300 dark:border-white/[0.1] bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
                   />
                 </div>
                 <div className="col-span-2">
@@ -1983,16 +1991,16 @@ export const InBodyTab: React.FC<InBodyTabProps> = ({
                     value={editingPoint.note || ''}
                     onChange={(e) => setEditingPoint({ ...editingPoint, note: e.target.value })}
                     placeholder="Ghi chú buổi đo InBody..."
-                    className="mt-1 w-full text-xs px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
+                    className="mt-1 w-full text-xs px-3 py-2 rounded-xl border border-gray-300 dark:border-white/[0.1] bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
                   />
                 </div>
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-gray-100 dark:border-slate-800">
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-gray-100 dark:border-white/[0.08]">
                 <button
                   type="button"
                   onClick={() => setEditingPoint(null)}
-                  className="px-3.5 py-2 rounded-xl border border-gray-300 dark:border-gray-700 text-xs font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-50 cursor-pointer"
+                  className="px-3.5 py-2 rounded-xl border border-gray-300 dark:border-white/[0.1] text-xs font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-50 cursor-pointer"
                 >
                   Hủy
                 </button>

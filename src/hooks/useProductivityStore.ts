@@ -197,40 +197,118 @@ const uid = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().toStrin
  * this hook so tasks, goals, focus sessions, money and health stay in sync
  * without duplicating state in individual views.
  */
+
+/**
+ * Scoped seed helper:
+ * Admin demo account gets rich demo seed data (Sprint 42, AI Project, etc.).
+ * Any other account (Google Account or Web Account) starts with their own fresh,
+ * clean, isolated personal data.
+ */
+function getAccountScopedSeed<T>(_unusedSeed: T, starterSeed: T): T {
+  return starterSeed;
+}
+
 export function useProductivityStore(): ProductivityStore {
-  const [tasks, setTasks] = usePersistentState<TaskItem[]>(KEYS.tasks, SEED_TASKS);
-  const [goals, setGoals] = usePersistentState<GoalItem[]>(KEYS.goals, SEED_GOALS);
-  const [sessions, setSessions] = usePersistentState<FocusSession[]>(KEYS.focus, SEED_FOCUS_SESSIONS);
+  const [tasks, setTasks] = usePersistentState<TaskItem[]>(
+    KEYS.tasks,
+    getAccountScopedSeed(SEED_TASKS, [
+      {
+        id: 'task-user-init',
+        title: 'Bắt đầu tuần tập luyện đầu tiên',
+        status: 'todo',
+        priority: 'high',
+        categoryId: 'health',
+        dueDate: 'Hôm nay',
+        subtasks: [],
+        createdAt: Date.now(),
+      },
+    ])
+  );
+  const [goals, setGoals] = usePersistentState<GoalItem[]>(
+    KEYS.goals,
+    getAccountScopedSeed(SEED_GOALS, [
+      {
+        id: 'goal-user-init',
+        title: 'Mục tiêu thể lực cá nhân',
+        description: 'Tối ưu hóa dinh dưỡng & theo dõi cơ bắp',
+        categoryId: 'health',
+        color: '#33B679',
+        targetDate: '2026-11-30',
+        createdAt: Date.now(),
+      },
+    ])
+  );
+  const [sessions, setSessions] = usePersistentState<FocusSession[]>(
+    KEYS.focus,
+    getAccountScopedSeed(SEED_FOCUS_SESSIONS, [])
+  );
   const [transactions, setTransactions] = usePersistentState<Transaction[]>(
     KEYS.transactions,
-    SEED_TRANSACTIONS
+    getAccountScopedSeed(SEED_TRANSACTIONS, [])
   );
   const [budget, setBudget] = usePersistentState<BudgetSettings>(KEYS.budget, DEFAULT_BUDGET);
-  const [healthLogs, setHealthLogs] = usePersistentState<HealthDayLog[]>(KEYS.health, SEED_HEALTH_LOGS);
-  const [workouts, setWorkouts] = usePersistentState<WorkoutLog[]>(KEYS.workouts, SEED_WORKOUTS);
-  const [wellness, setWellness] = usePersistentState<WellnessCheck[]>(KEYS.wellness, SEED_WELLNESS);
+  const [healthLogs, setHealthLogs] = usePersistentState<HealthDayLog[]>(
+    KEYS.health,
+    getAccountScopedSeed(SEED_HEALTH_LOGS, [])
+  );
+  const [workouts, setWorkouts] = usePersistentState<WorkoutLog[]>(
+    KEYS.workouts,
+    getAccountScopedSeed(SEED_WORKOUTS, [])
+  );
+  const [wellness, setWellness] = usePersistentState<WellnessCheck[]>(
+    KEYS.wellness,
+    getAccountScopedSeed(SEED_WELLNESS, [])
+  );
   const [healthProfile, setHealthProfile] = usePersistentState<HealthProfile>(
     KEYS.profile,
     DEFAULT_HEALTH_PROFILE
   );
-  const [habits, setHabits] = usePersistentState<HabitItem[]>(KEYS.habits, SEED_HABITS);
+  const [habits, setHabits] = usePersistentState<HabitItem[]>(
+    KEYS.habits,
+    getAccountScopedSeed(SEED_HABITS, [])
+  );
 
   // CTG Fitness States
-  const [ctgProfile, setCtgProfile] = usePersistentState<CtgProfile>(KEYS.ctgProfile, SEED_CTG_PROFILE);
-  const [bodyPoints, setBodyPoints] = usePersistentState<BodyPoint[]>(KEYS.bodyPoints, SEED_BODY_POINTS);
+  const [ctgProfile, setCtgProfile] = usePersistentState<CtgProfile>(
+    KEYS.ctgProfile,
+    getAccountScopedSeed(SEED_CTG_PROFILE, {
+      ...SEED_CTG_PROFILE,
+      name: (() => {
+        try {
+          const raw = typeof window !== 'undefined' ? localStorage.getItem('gcal_active_user') : null;
+          if (raw) return JSON.parse(raw)?.displayName || 'Thành viên ZENOX';
+        } catch {}
+        return 'Thành viên ZENOX';
+      })(),
+      email: (() => {
+        try {
+          const raw = typeof window !== 'undefined' ? localStorage.getItem('gcal_active_user') : null;
+          if (raw) return JSON.parse(raw)?.email || '';
+        } catch {}
+        return '';
+      })(),
+    })
+  );
+  const [bodyPoints, setBodyPoints] = usePersistentState<BodyPoint[]>(
+    KEYS.bodyPoints,
+    getAccountScopedSeed(SEED_BODY_POINTS, [])
+  );
   const [plannedSessions, setPlannedSessions] = usePersistentState<PlannedSession[]>(
     KEYS.plannedSessions,
-    SEED_PLANNED_SESSIONS
+    getAccountScopedSeed(SEED_PLANNED_SESSIONS, [])
   );
   const [workoutSessions, setWorkoutSessions] = usePersistentState<WorkoutSession[]>(
     KEYS.workoutSessions,
-    SEED_WORKOUT_SESSIONS
+    getAccountScopedSeed(SEED_WORKOUT_SESSIONS, [])
   );
   const [sportSessions, setSportSessions] = usePersistentState<SportSession[]>(
     KEYS.sportSessions,
-    SEED_SPORTS
+    getAccountScopedSeed(SEED_SPORTS, [])
   );
-  const [meals, setMeals] = usePersistentState<MealLog[]>(KEYS.meals, SEED_MEALS);
+  const [meals, setMeals] = usePersistentState<MealLog[]>(
+    KEYS.meals,
+    getAccountScopedSeed(SEED_MEALS, [])
+  );
   const [nutritionSettings, setNutritionSettings] = usePersistentState<NutritionSettings>(
     KEYS.nutritionSettings,
     DEFAULT_NUTRITION_SETTINGS
@@ -239,7 +317,7 @@ export function useProductivityStore(): ProductivityStore {
   const [savedRoadmaps, setSavedRoadmaps] = usePersistentState<SavedRoadmap[]>(KEYS.savedRoadmaps, []);
   const [ctgPeriodizedRoadmap, setCtgPeriodizedRoadmap] = usePersistentState<CtgPeriodizedRoadmap | null>(
     KEYS.ctgPeriodizedRoadmap,
-    SEED_CTG_PERIODIZED_ROADMAP
+    getAccountScopedSeed(SEED_CTG_PERIODIZED_ROADMAP, null)
   );
   const [savedCtgRoadmaps, setSavedCtgRoadmaps] = usePersistentState<CtgPeriodizedRoadmap[]>(
     KEYS.savedCtgRoadmaps,

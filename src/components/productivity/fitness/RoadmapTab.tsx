@@ -1,5 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import {
+  User,
+  Activity,
   Compass,
   CheckCircle2,
   ArrowRight,
@@ -222,6 +224,18 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
   const [bodyfatPct, setBodyfatPct] = useState(String(profile.targetBodyFatPct || 18));
   const [userGoal, setUserGoal] = useState<'auto' | Goal>('auto');
   const [appliedBanner, setAppliedBanner] = useState<string | null>(null);
+
+  // CTG 4-Step Periodization Wizard states
+  const [wizardStep, setWizardStep] = useState<number>(0);
+  const [wizardSteps, setWizardSteps] = useState<number>(profile.stepGoal || 8000);
+  const [wizardTrainDays, setWizardTrainDays] = useState<number>(4);
+  const [wizardTrainDuration, setWizardTrainDuration] = useState<number>(60);
+  const [wizardGoalMode, setWizardGoalMode] = useState<'both' | 'ffmi' | 'bf'>('both');
+  const [wizardTargetFfmi, setWizardTargetFfmi] = useState<number>(profile.sex === 'female' ? 19.5 : 22.0);
+  const [wizardTargetBfPct, setWizardTargetBfPct] = useState<number>(profile.sex === 'female' ? 19.0 : 12.0);
+  const [wizardSports, setWizardSports] = useState<Array<{ id: string; name: string; met: number; minutes: number; sessionsPerWeek: number }>>([]);
+  const [wizardSelectedSport, setWizardSelectedSport] = useState<string>('running');
+  const [wizardActiveBlockTab, setWizardActiveBlockTab] = useState<'all' | 'block1' | 'block2' | 'block3'>('all');
 
   const [isLiveTrackingCollapsed, setIsLiveTrackingCollapsed] = useState(false);
 
@@ -711,7 +725,7 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
   const handleCopyRoadmapSummary = async () => {
     if (!activeRoadmap) return;
     const lines = [
-      `🏋️ LỘ TRÌNH THỂ HÌNH CHU KỲ CHUẨN CTG: ${activeRoadmap.title}`,
+      `🏋️ LỘ TRÌNH THỂ HÌNH CHU KỲ (NTN): ${activeRoadmap.title}`,
       `• Mục tiêu: ${profile.goal === 'cut' ? 'Giảm mỡ' : profile.goal === 'bulk' ? 'Tăng cơ' : 'Duy trì'} · Tổng số giai đoạn: ${phases.length}`,
       `• Thể trạng ban đầu: Chiều cao ${profile.heightCm || 172}cm · Cân nặng ${currentWeight}kg · Mỡ ${currentBf}% (LBM: ${currentLbm}kg, FFMI: ${currentFfmi})`,
       '',
@@ -1077,37 +1091,23 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
       )}
 
       {/* Top View Mode Navigation Tabs */}
-      <div className="flex flex-wrap items-center gap-2 p-1.5 rounded-2xl bg-[#0b101b] border border-white/10 w-full sm:w-fit">
+      <div className="flex flex-wrap items-center gap-2 p-1.5 rounded-2xl bg-[#070205] border border-white/10 w-full sm:w-fit">
         <button
           type="button"
           onClick={() => setActiveViewMode('ctg_periodized')}
           className={`flex-1 sm:flex-initial px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-2 ${
             activeViewMode === 'ctg_periodized'
-              ? 'bg-[#2563EB] text-white shadow-md shadow-blue-500/20'
+              ? 'bg-rose-600 text-white shadow-md shadow-rose-600/30'
               : 'text-white/60 hover:text-white hover:bg-white/5'
           }`}
         >
           <Layers className="w-4 h-4" />
-          <span>Lộ Trình Chu Kỳ CTG</span>
-          <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-white/20 text-white font-mono">
-            {phases.length} Giai Đoạn
-          </span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveViewMode('saved_roadmaps')}
-          className={`flex-1 sm:flex-initial px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-2 ${
-            activeViewMode === 'saved_roadmaps'
-              ? 'bg-[#2563EB] text-white shadow-md shadow-blue-500/20'
-              : 'text-white/60 hover:text-white hover:bg-white/5'
-          }`}
-        >
-          <FolderOpen className="w-4 h-4" />
-          <span>Lộ Trình Đã Tạo</span>
-          <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-white/20 text-white font-mono">
-            {allSavedCtgRoadmaps.length}
-          </span>
+          <span>Tiến Độ Chu Kỳ Đang Áp Dụng</span>
+          {phases.length > 0 && (
+            <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-white/20 text-white font-mono">
+              {phases.length} Chặng
+            </span>
+          )}
         </button>
 
         <button
@@ -1115,134 +1115,64 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
           onClick={() => setActiveViewMode('single_analyzer')}
           className={`flex-1 sm:flex-initial px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-2 ${
             activeViewMode === 'single_analyzer'
-              ? 'bg-[#2563EB] text-white shadow-md shadow-blue-500/20'
+              ? 'bg-rose-600 text-white shadow-md shadow-rose-600/30'
               : 'text-white/60 hover:text-white hover:bg-white/5'
           }`}
         >
-          <Compass className="w-4 h-4" />
-          <span>Phân Tích AI VortexCal Đơn Lẻ</span>
+          <Sparkles className="w-4 h-4 text-rose-300" />
+          <span>Lập Lộ Trình Chu Kỳ (Wizard 4 Bước)</span>
         </button>
 
         <button
           type="button"
-          onClick={() => setActiveViewMode('saved_milestones')}
+          onClick={() => setActiveViewMode('saved_roadmaps')}
           className={`flex-1 sm:flex-initial px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-2 ${
-            activeViewMode === 'saved_milestones'
-              ? 'bg-[#2563EB] text-white shadow-md shadow-blue-500/20'
+            activeViewMode === 'saved_roadmaps'
+              ? 'bg-rose-600 text-white shadow-md shadow-rose-600/30'
               : 'text-white/60 hover:text-white hover:bg-white/5'
           }`}
         >
-          <BookmarkCheck className="w-4 h-4" />
-          <span>Mốc Đã Lưu ({savedRoadmaps.length})</span>
+          <FolderOpen className="w-4 h-4" />
+          <span>Thư Viện Bản Mẫu</span>
+          <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-white/20 text-white font-mono">
+            {allSavedCtgRoadmaps.length}
+          </span>
         </button>
       </div>
 
       {/* VIEW 1: CTG MASTER PERIODIZED ROADMAP */}
       {activeViewMode === 'ctg_periodized' && (!activeRoadmap || phases.length === 0) && (
-        <div className="bg-[#0b101b] rounded-3xl border border-white/10 p-8 sm:p-12 text-center shadow-xl space-y-6 animate-fadeIn">
-          <div className="w-16 h-16 rounded-3xl bg-blue-500/10 border border-blue-500/20 text-blue-400 mx-auto flex items-center justify-center">
+        <div className="bg-[#070205] rounded-3xl border border-white/10 p-8 sm:p-12 text-center shadow-xl space-y-6 animate-fadeIn">
+          <div className="w-16 h-16 rounded-3xl bg-rose-600/15 border border-rose-500/20 text-rose-500 mx-auto flex items-center justify-center">
             <Layers className="w-8 h-8" />
           </div>
           <div className="max-w-md mx-auto space-y-2">
-            <h3 className="text-xl font-bold text-white">Chưa Có Lộ Trình Nào Đang Kích Hoạt</h3>
-            <p className="text-xs text-white/50 leading-relaxed">
-              Bạn chưa có lộ trình chu kỳ nào hoặc vừa xóa bỏ lộ trình cũ. Hãy chọn một cách dưới đây để thiết lập hành trình chuyển hóa hình thể:
+            <h3 className="text-xl font-bold text-white">Chưa Có Lộ Trình Chu Kỳ Nào Đang Kích Hoạt</h3>
+            <p className="text-xs text-white/60 leading-relaxed">
+              Hệ thống chu kỳ sóng CTG (Hypertrophy Wave, Mini-cut, Diet break) phân chia giai đoạn khoa học giúp tối đa hóa xây dựng cơ bắp và bảo vệ trao đổi chất.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 max-w-3xl mx-auto pt-2 text-left">
-            {/* Option 1: Tạo tự động theo thể trạng */}
-            <div
-              onClick={() => {
-                setGenMode('auto');
-                setGenHeight(String(profile.heightCm || 172));
-                setGenWeight(String(currentWeight || 68));
-                setGenBodyFat(String(currentBf || 18));
-                setGenSex(profile.sex || 'male');
-                setShowGeneratorModal(true);
-              }}
-              className="p-5 rounded-2xl bg-linear-to-b from-blue-900/30 to-blue-950/20 border border-blue-500/30 hover:border-blue-500/60 transition-all cursor-pointer group flex flex-col justify-between"
+          <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+            <button
+              type="button"
+              onClick={() => setActiveViewMode('single_analyzer')}
+              className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition-all shadow-lg shadow-rose-600/30 cursor-pointer"
             >
-              <div className="space-y-2">
-                <div className="w-10 h-10 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center">
-                  <Wand2 className="w-5 h-5" />
-                </div>
-                <h4 className="font-bold text-sm text-white group-hover:text-blue-300 transition-colors">
-                  ⚡ Tự Động Theo Thể Trạng (AI)
-                </h4>
-                <p className="text-[11px] text-white/60 leading-relaxed">
-                  Thuật toán tự động tính toán chu kỳ Tăng cơ &amp; Mini-cut khoa học tối ưu riêng theo Chiều cao, Cân nặng và FFMI của bạn.
-                </p>
-              </div>
-              <div className="mt-4 pt-3 border-t border-white/5 flex items-center gap-1.5 text-xs text-blue-400 font-bold">
-                <span>Tạo tự động ngay</span>
-                <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-              </div>
-            </div>
-
-            {/* Option 2: Tạo lộ trình thủ công trống */}
-            <div
-              onClick={() => {
-                setGenMode('blank');
-                setBlankTitle('Lộ Trình Thể Hình Mới');
-                setShowGeneratorModal(true);
-              }}
-              className="p-5 rounded-2xl bg-white/5 border border-white/10 hover:border-white/20 transition-all cursor-pointer group flex flex-col justify-between"
-            >
-              <div className="space-y-2">
-                <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
-                  <PlusCircle className="w-5 h-5" />
-                </div>
-                <h4 className="font-bold text-sm text-white group-hover:text-emerald-300 transition-colors">
-                  📝 Tạo Thủ Công (Trống)
-                </h4>
-                <p className="text-[11px] text-white/60 leading-relaxed">
-                  Tạo lộ trình trắng từ con số 0 và tự do thêm từng giai đoạn theo kế hoạch riêng của bạn hoặc huấn luyện viên.
-                </p>
-              </div>
-              <div className="mt-4 pt-3 border-t border-white/5 flex items-center gap-1.5 text-xs text-emerald-400 font-bold">
-                <span>Tạo lộ trình trống</span>
-                <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-              </div>
-            </div>
-
-            {/* Option 3: Khôi phục mẫu 17 giai đoạn chuẩn */}
-            <div
-              onClick={handleResetToSeedRoadmap}
-              className="p-5 rounded-2xl bg-white/5 border border-white/10 hover:border-white/20 transition-all cursor-pointer group flex flex-col justify-between"
-            >
-              <div className="space-y-2">
-                <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center">
-                  <RefreshCw className="w-5 h-5" />
-                </div>
-                <h4 className="font-bold text-sm text-white group-hover:text-amber-300 transition-colors">
-                  ↺ Nạp Mẫu Chuẩn (17 Giai Đoạn)
-                </h4>
-                <p className="text-[11px] text-white/60 leading-relaxed">
-                  Lộ trình mẫu chuẩn CTG 17 giai đoạn (2026 – 2029) từ 63.55kg lên 81.23kg cực đại cơ bắp tự nhiên.
-                </p>
-              </div>
-              <div className="mt-4 pt-3 border-t border-white/5 flex items-center gap-1.5 text-xs text-amber-400 font-bold">
-                <span>Nạp mẫu chuẩn</span>
-                <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-              </div>
-            </div>
-          </div>
-
-          {/* Nếu có lộ trình đã lưu trong danh sách */}
-          {savedCtgRoadmaps.length > 0 && (
-            <div className="pt-4 border-t border-white/10 max-w-md mx-auto">
+              <Sparkles className="w-4 h-4" />
+              <span>⚡ Bắt Đầu Lập Lộ Trình (Wizard 4 Bước)</span>
+            </button>
+            {allSavedCtgRoadmaps.length > 0 && (
               <button
                 type="button"
                 onClick={() => setActiveViewMode('saved_roadmaps')}
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-bold transition-all cursor-pointer"
+                className="flex items-center gap-2 px-5 py-3 rounded-2xl border border-white/10 hover:bg-white/5 text-white/80 text-xs font-semibold cursor-pointer"
               >
-                <FolderOpen className="w-4 h-4 text-blue-400" />
-                <span>Xem danh sách các lộ trình đã lưu ({allSavedCtgRoadmaps.length})</span>
-                <ChevronRight className="w-3.5 h-3.5 text-white/40" />
+                <FolderOpen className="w-4 h-4" />
+                <span>Chọn từ thư viện ({allSavedCtgRoadmaps.length})</span>
               </button>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       )}
 
@@ -1250,14 +1180,14 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
       {activeViewMode === 'ctg_periodized' && activeRoadmap && phases.length > 0 && (
         <div className="space-y-5 animate-fadeIn">
           {/* 1. TỔNG QUAN HÀNH TRÌNH CHUYỂN HÓA & CÔNG CỤ */}
-          <div className="bg-[#0b101b] rounded-3xl border border-white/10 p-5 shadow-xl relative overflow-hidden">
+          <div className="bg-[#070205] rounded-3xl border border-white/10 p-5 shadow-xl relative overflow-hidden">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
               <div className="space-y-2.5">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="font-display font-extrabold text-xl tracking-tight text-white">
-                    {activeRoadmap.title || 'Lộ Trình Chu Kỳ CTG'}
+                    {activeRoadmap.title || 'Lộ Trình Chu Kỳ (NTN)'}
                   </span>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-blue-500/20 text-blue-400 border border-blue-500/30">
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-rose-500/20 text-rose-400 border border-rose-500/30">
                     {phases.length} Giai Đoạn · {firstPhase?.startDate} – {lastPhase?.endDate}
                   </span>
                   {activeRoadmap.heightCm && (
@@ -1274,11 +1204,11 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
                     <span className="text-white font-bold">{firstPhase?.startWeightKg}kg</span>
                     <span className="text-white/50">({firstPhase?.startBodyFatPct}%)</span>
                   </div>
-                  <ArrowRight className="w-3.5 h-3.5 text-blue-400 shrink-0" />
-                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-500/10 border border-blue-500/20 font-mono">
-                    <span className="text-blue-400 text-[10px] uppercase font-sans font-bold">Đích đến:</span>
-                    <span className="text-blue-300 font-bold">{lastPhase?.targetWeightKg}kg</span>
-                    <span className="text-blue-300/70">({lastPhase?.targetBodyFatPct}%)</span>
+                  <ArrowRight className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-500/10 border border-rose-500/20 font-mono">
+                    <span className="text-rose-400 text-[10px] uppercase font-sans font-bold">Đích đến:</span>
+                    <span className="text-rose-300 font-bold">{lastPhase?.targetWeightKg}kg</span>
+                    <span className="text-rose-300/70">({lastPhase?.targetBodyFatPct}%)</span>
                   </div>
                   <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 font-mono text-emerald-300 font-bold">
                     <span>+{totalLbmGain >= 0 ? totalLbmGain : 0}kg Cơ nạc</span>
@@ -1292,10 +1222,10 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
                 <button
                   type="button"
                   onClick={() => setActiveViewMode('saved_roadmaps')}
-                  className="px-3.5 py-2 rounded-xl border border-blue-500/30 bg-blue-500/10 hover:bg-blue-500/20 text-blue-300 text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1.5"
+                  className="px-3.5 py-2 rounded-xl border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1.5"
                   title="Xem danh sách tất cả các lộ trình đã tạo trong thư viện"
                 >
-                  <FolderOpen className="w-3.5 h-3.5 text-blue-400" />
+                  <FolderOpen className="w-3.5 h-3.5 text-rose-400" />
                   <span>📁 Lộ Trình Đã Tạo ({allSavedCtgRoadmaps.length})</span>
                 </button>
 
@@ -1307,9 +1237,9 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
                     setGenWeight(String(currentWeight || 68));
                     setGenBodyFat(String(currentBf || 18));
                     setGenSex(profile.sex || 'male');
-                    setShowGeneratorModal(true);
+                    setActiveViewMode('single_analyzer');
                   }}
-                  className="px-3.5 py-2 rounded-xl bg-linear-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold transition-all cursor-pointer shadow-md flex items-center gap-1.5"
+                  className="px-3.5 py-2 rounded-xl bg-linear-to-r from-rose-600 to-red-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold transition-all cursor-pointer shadow-md flex items-center gap-1.5"
                 >
                   <Wand2 className="w-3.5 h-3.5" />
                   <span>⚡ Tạo Lộ Trình Mới</span>
@@ -1347,7 +1277,7 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
                   className="px-3 py-2 rounded-xl border border-white/15 bg-white/5 hover:bg-white/10 text-white text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1.5"
                   title="Sao chép toàn bộ lộ trình ra văn bản tóm tắt để lưu trữ hoặc gửi huấn luyện viên"
                 >
-                  <Copy className="w-3.5 h-3.5 text-blue-400" />
+                  <Copy className="w-3.5 h-3.5 text-rose-400" />
                   <span>Sao Chép Tóm Tắt</span>
                 </button>
 
@@ -1366,15 +1296,15 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
 
           {/* 2. GIAI ĐOẠN ĐANG THEO DÕI (LIVE MILESTONE TRACKING) */}
           {activePhase && (
-            <div className="rounded-3xl border border-blue-500/40 bg-linear-to-b from-[#10192e] to-[#0b101b] p-5 sm:p-6 shadow-xl space-y-4">
+            <div className="rounded-3xl border border-rose-500/40 bg-linear-to-b from-[#14050a] via-[#0c0306] to-[#070205] p-5 sm:p-6 shadow-xl space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-2xl bg-blue-500/20 border border-blue-500/30 text-blue-400 flex items-center justify-center shrink-0">
+                  <div className="w-10 h-10 rounded-2xl bg-rose-500/20 border border-rose-500/30 text-rose-400 flex items-center justify-center shrink-0">
                     <PlayCircle className="w-5 h-5" />
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30">
+                      <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/30">
                         Giai Đoạn Đang Theo Dõi
                       </span>
                       <span className="text-xs text-white/50 font-mono">
@@ -1418,7 +1348,7 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
                     <div className="p-3.5 rounded-2xl bg-white/5 border border-white/5 space-y-2">
                       <div className="flex items-center justify-between text-xs">
                         <span className="text-white/40 uppercase font-bold text-[10px]">Cân Nặng Thực Tế</span>
-                        <span className="font-bold font-mono text-blue-400">
+                        <span className="font-bold font-mono text-rose-400">
                           {!isBulkPhase && currentWeight > startW
                             ? 'Chưa vào mốc đích'
                             : `${weightProgress}% mục tiêu`}
@@ -1432,7 +1362,7 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
                             isBulkPhase
                               ? currentWeight >= targetW
                                 ? 'text-emerald-400'
-                                : 'text-blue-400'
+                                : 'text-rose-400'
                               : currentWeight <= targetW
                                 ? 'text-emerald-400'
                                 : 'text-amber-400'
@@ -1449,7 +1379,7 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
                       </div>
                       <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
                         <div
-                          className="h-full bg-linear-to-r from-blue-500 to-indigo-500"
+                          className="h-full bg-linear-to-r from-rose-500 to-red-500"
                           style={{ width: `${weightProgress}%` }}
                         />
                       </div>
@@ -1512,11 +1442,11 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
           )}
 
           {/* 3. DÒNG THỜI GIAN LỘ TRÌNH (SEQUENTIAL PIPELINE TIMELINE - 1 CỘT TUẦN TỰ) */}
-          <div className="bg-[#0b101b] rounded-3xl border border-white/10 p-5 sm:p-6 shadow-xl space-y-4">
+          <div className="bg-[#070205] rounded-3xl border border-white/10 p-5 sm:p-6 shadow-xl space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-3">
               <div>
                 <h3 className="text-base font-bold text-white flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-blue-400" />
+                  <Calendar className="w-4 h-4 text-rose-400" />
                   Dòng Thời Gian Lộ Trình ({phases.length} Giai Đoạn)
                 </h3>
                 <p className="text-xs text-white/50 mt-0.5">
@@ -1554,7 +1484,7 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
             <div className="p-4 rounded-2xl bg-white/5 border border-white/5 space-y-3">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-blue-400 font-mono">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-rose-400 font-mono">
                     Tiến độ toàn chu kỳ:
                   </span>
                   <span className="font-bold text-white">
@@ -1562,7 +1492,7 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
                   </span>
                 </div>
                 <div className="text-[11px] font-mono text-white/50 flex items-center gap-2">
-                  <span className="text-blue-300 font-bold">{bulkPhasesCount} đợt Tăng cơ</span>
+                  <span className="text-rose-300 font-bold">{bulkPhasesCount} đợt Tăng cơ</span>
                   <span>·</span>
                   <span className="text-amber-300 font-bold">{cutPhasesCount} đợt Mini-cut / Giảm mỡ</span>
                 </div>
@@ -1636,8 +1566,8 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
                       isCurrent
                         ? 'bg-linear-to-b from-[#111c38] to-[#0c1326] border-blue-500/80 shadow-xl shadow-blue-500/10 ring-1 ring-blue-500/40'
                         : isCompleted
-                        ? 'bg-[#0b101b]/80 border-white/5 opacity-85 hover:opacity-100'
-                        : 'bg-[#0b101b] border-white/10 hover:border-white/20'
+                        ? 'bg-[#070205]/80 border-white/5 opacity-85 hover:opacity-100'
+                        : 'bg-[#070205] border-white/10 hover:border-white/20'
                     }`}
                   >
                     {/* Header: Phase Name, Date, Current Phase Badge & Actions */}
@@ -1658,7 +1588,7 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
                             <button
                               type="button"
                               onClick={() => handleSetCurrentPhase(phase.id)}
-                              className="px-3 py-0.5 rounded-full text-[11px] font-semibold text-white/60 hover:text-blue-300 bg-white/5 hover:bg-blue-500/20 border border-white/10 hover:border-blue-500/40 transition-all cursor-pointer"
+                              className="px-3 py-0.5 rounded-full text-[11px] font-semibold text-white/60 hover:text-rose-300 bg-white/5 hover:bg-rose-500/20 border border-white/10 hover:border-rose-500/40 transition-all cursor-pointer"
                             >
                               Đặt làm giai đoạn hiện tại
                             </button>
@@ -1774,7 +1704,7 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
               <div className="bg-[#101726] border border-white/20 w-full max-w-lg rounded-3xl shadow-2xl p-6 space-y-5 animate-scaleUp">
                 <div className="flex items-center justify-between border-b border-white/10 pb-3">
                   <div>
-                    <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30">
+                    <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/30">
                       {selectedPhase.name}
                     </span>
                     <h3 className="text-base font-bold text-white mt-1">
@@ -1862,8 +1792,8 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
                     <span>Sửa giai đoạn</span>
                   </button>
                   {activeRoadmap?.activePhaseId === selectedPhase.id ? (
-                    <span className="px-4 py-2.5 rounded-xl bg-blue-500/20 border border-blue-500/40 text-blue-300 text-xs font-bold flex items-center gap-1.5">
-                      <CheckCircle2 className="w-4 h-4 text-blue-400" />
+                    <span className="px-4 py-2.5 rounded-xl bg-rose-500/20 border border-rose-500/40 text-rose-300 text-xs font-bold flex items-center gap-1.5">
+                      <CheckCircle2 className="w-4 h-4 text-rose-400" />
                       <span>✓ Giai đoạn đang thực hiện</span>
                     </span>
                   ) : (
@@ -1890,16 +1820,16 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
       {activeViewMode === 'saved_roadmaps' && (
         <div className="space-y-5 animate-fadeIn">
           {/* Header Bar */}
-          <div className="bg-[#0b101b] rounded-3xl border border-white/10 p-5 sm:p-6 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="bg-[#070205] rounded-3xl border border-white/10 p-5 sm:p-6 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="space-y-1">
               <div className="flex items-center gap-2.5">
-                <div className="w-10 h-10 rounded-2xl bg-blue-500/20 border border-blue-500/30 text-blue-400 flex items-center justify-center shrink-0">
+                <div className="w-10 h-10 rounded-2xl bg-rose-500/20 border border-rose-500/30 text-rose-400 flex items-center justify-center shrink-0">
                   <FolderOpen className="w-5 h-5" />
                 </div>
                 <div>
                   <h3 className="text-lg font-black text-white tracking-tight flex items-center gap-2">
                     <span>Lộ Trình Đã Tạo</span>
-                    <span className="px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-blue-500/20 text-blue-400 border border-blue-500/30">
+                    <span className="px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-rose-500/20 text-rose-400 border border-rose-500/30">
                       {allSavedCtgRoadmaps.length} Lộ Trình
                     </span>
                   </h3>
@@ -1919,9 +1849,9 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
                   setGenWeight(String(currentWeight || 68));
                   setGenBodyFat(String(currentBf || 18));
                   setGenSex(profile.sex || 'male');
-                  setShowGeneratorModal(true);
+                  setActiveViewMode('single_analyzer');
                 }}
-                className="px-4 py-2.5 rounded-xl bg-linear-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold transition-all cursor-pointer shadow-md flex items-center gap-1.5"
+                className="px-4 py-2.5 rounded-xl bg-linear-to-r from-rose-600 to-red-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold transition-all cursor-pointer shadow-md flex items-center gap-1.5"
               >
                 <Wand2 className="w-3.5 h-3.5" />
                 <span>+ Tạo Lộ Trình Mới</span>
@@ -1941,7 +1871,7 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
 
           {/* Empty State */}
           {allSavedCtgRoadmaps.length === 0 ? (
-            <div className="bg-[#0b101b] rounded-3xl border border-white/10 p-12 text-center shadow-xl space-y-4">
+            <div className="bg-[#070205] rounded-3xl border border-white/10 p-12 text-center shadow-xl space-y-4">
               <div className="w-14 h-14 rounded-2xl bg-white/5 text-white/40 mx-auto flex items-center justify-center">
                 <FolderOpen className="w-7 h-7" />
               </div>
@@ -1955,7 +1885,7 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
                 type="button"
                 onClick={() => {
                   setGenMode('auto');
-                  setShowGeneratorModal(true);
+                  setActiveViewMode('single_analyzer');
                 }}
                 className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-colors cursor-pointer"
               >
@@ -1981,7 +1911,7 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
                     className={`rounded-3xl border transition-all p-5 sm:p-6 space-y-4 ${
                       isActive
                         ? 'bg-linear-to-b from-[#111c38] to-[#0c1326] border-blue-500/80 shadow-xl shadow-blue-500/10 ring-1 ring-blue-500/40'
-                        : 'bg-[#0b101b] border-white/10 hover:border-white/20'
+                        : 'bg-[#070205] border-white/10 hover:border-white/20'
                     }`}
                   >
                     {/* Header: Title, Active Badge, Date span, Actions */}
@@ -2001,7 +1931,7 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
                               Lộ Trình Đã Lưu
                             </span>
                           )}
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-blue-500/20 text-blue-400 border border-blue-500/30">
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-rose-500/20 text-rose-400 border border-rose-500/30">
                             {rmPhases.length} Giai Đoạn
                           </span>
                         </div>
@@ -2050,7 +1980,7 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
                           onClick={() => setExpandedRoadmapId(isExpanded ? null : rm.id)}
                           className="px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 hover:text-white text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1.5"
                         >
-                          <Layers className="w-3.5 h-3.5 text-blue-400" />
+                          <Layers className="w-3.5 h-3.5 text-rose-400" />
                           <span>{isExpanded ? 'Ẩn Giai Đoạn' : `Xem ${rmPhases.length} Giai Đoạn`}</span>
                           <ChevronDown
                             className={`w-3.5 h-3.5 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
@@ -2082,10 +2012,10 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
                         </div>
 
                         <div className="p-3.5 rounded-2xl bg-white/5 border border-white/5 space-y-1">
-                          <div className="text-[11px] text-blue-400/80 font-medium">Đích đến cuối</div>
-                          <div className="text-base font-bold font-mono text-blue-300">
+                          <div className="text-[11px] text-rose-400/80 font-medium">Đích đến cuối</div>
+                          <div className="text-base font-bold font-mono text-rose-300">
                             {lastP.targetWeightKg} kg
-                            <span className="text-xs text-blue-300/60 ml-1.5 font-normal">
+                            <span className="text-xs text-rose-300/60 ml-1.5 font-normal">
                               ({lastP.targetBodyFatPct}%)
                             </span>
                           </div>
@@ -2148,7 +2078,7 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
                                 </div>
                               </div>
                               <div className="flex items-center gap-2 font-mono text-[11px] shrink-0">
-                                <span className="px-2 py-1 rounded-lg bg-blue-500/10 text-blue-300 font-bold">
+                                <span className="px-2 py-1 rounded-lg bg-rose-500/10 text-rose-300 font-bold">
                                   {p.targetKcal} kcal
                                 </span>
                                 <span className="text-white/40">
@@ -2169,1132 +2099,973 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
       )}
 
       {/* VIEW 2: SINGLE SNAPSHOT ANALYZER (VORTEXCAL) */}
-      {activeViewMode === 'single_analyzer' && (
-        <div className="space-y-6 animate-fadeIn">
-      {/* VortexCal Header Banner */}
-      <div className="bg-[#0b101b] rounded-3xl border border-white/10 p-5 sm:p-6 shadow-xl relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-[#2563EB]/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="font-display font-extrabold text-2xl tracking-tight text-white">
-                VortexCal<span className="text-[#2563EB]">.</span>
-              </span>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-[#2563EB]/20 text-[#2563EB] border border-[#2563EB]/30">
-                AI Fitness Analyzer
-              </span>
-            </div>
-            <h2 className="text-lg sm:text-xl font-bold text-white mt-1">
-              Định Hướng Mục Tiêu Fitness Cá Nhân Hóa
-            </h2>
-            <p className="text-xs text-white/60 mt-1 max-w-xl leading-relaxed">
-              Dựa trên chiều cao, cân nặng và tỷ lệ mỡ thực tế, hệ thống tính toán chính xác chỉ số cơ nạc FFMI,
-              mỡ cơ thể và xây dựng chiến lược tập luyện — dinh dưỡng tối ưu cho thể trạng người Việt.
-            </p>
-          </div>
+      {activeViewMode === 'single_analyzer' && (() => {
+        const todayString = () => {
+          const d = new Date();
+          return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+        };
 
-          <div className="flex flex-wrap items-center gap-2 shrink-0">
-            <button
-              type="button"
-              onClick={handleApplyRoadmap}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-white/20 hover:bg-white/10 text-white text-xs font-semibold transition-all cursor-pointer"
-            >
-              <CheckCircle2 className="w-3.5 h-3.5 text-blue-400" />
-              <span>Lưu vào hồ sơ sức khỏe</span>
-            </button>
-            <button
-              type="button"
-              onClick={handleApplyRoadmapAndCreateSplit}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-orange-600 hover:bg-orange-500 text-white text-xs font-bold transition-all shadow-md cursor-pointer hover:shadow-orange-500/30"
-            >
-              <Zap className="w-4 h-4" />
-              <span>⚡ Tạo Lộ Trình & Giáo Án Từ Phân Tích</span>
-            </button>
-          </div>
-        </div>
-      </div>
+        // --- Derived Computations for CTG Wizard with Strict Clamping ---
+        const curW = Math.max(30, Math.min(250, Number(weightKg) || currentWeight || 68));
+        const curH = Math.max(120, Math.min(220, Number(heightCm) || profile.heightCm || 172));
+        const curBf = Math.max(4, Math.min(55, Number(bodyfatPct) || currentBf || 18));
+        const hMeter = curH / 100;
+        const hSq = hMeter * hMeter;
+        const isFemale = sex === 'female';
 
-      {/* Main Grid: Input Form on Left, Diagnostic Results on Right */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Form: 5 Columns */}
-        <div className="lg:col-span-5 space-y-4">
-          <div className="bg-[#131b2e] rounded-2xl border border-white/10 p-5 shadow-xs space-y-4">
-            <div className="flex items-center justify-between border-b border-white/10 pb-3">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-white flex items-center gap-2">
-                <Compass className="w-4 h-4 text-[#2563EB]" />
-                Thông Số Đầu Vào
-              </h3>
-              <span className="text-[10px] text-white/40">Bước 1: Điền số đo</span>
-            </div>
+        // LBM & Height-Normalized FFMI (Strictly Positive)
+        const curLbm = Math.max(15, Math.round(curW * (1 - curBf / 100) * 10) / 10);
+        const curFfmi = Math.round(((curLbm / hSq) + 6.1 * (1.8 - hMeter)) * 10) / 10;
+        const idealBf = isFemale ? 23 : 15;
 
-            <div className="space-y-3.5">
-              {/* Sex selection */}
-              <div>
-                <label className="text-[10px] font-semibold uppercase text-white/50 block mb-1">
-                  Giới tính sinh học
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setSex('male')}
-                    className={`py-2 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
-                      sex === 'male'
-                        ? 'bg-[#2563EB] text-white border-[#2563EB] shadow-xs'
-                        : 'bg-white/5 text-white/70 border-white/10 hover:bg-white/10'
-                    }`}
-                  >
-                    Nam
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSex('female')}
-                    className={`py-2 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
-                      sex === 'female'
-                        ? 'bg-[#2563EB] text-white border-[#2563EB] shadow-xs'
-                        : 'bg-white/5 text-white/70 border-white/10 hover:bg-white/10'
-                    }`}
-                  >
-                    Nữ
-                  </button>
-                </div>
-              </div>
+        // CTG Energy Breakdown (Gje)
+        const bmrKatch = Math.round(370 + 21.6 * curLbm);
+        const neatCal = Math.round(wizardSteps * 0.04);
+        const eatCal = Math.round((wizardTrainDays / 7) * wizardTrainDuration * (0.075 * curW));
+        const sportsCal = Math.round(wizardSports.reduce((acc, s) => acc + (s.sessionsPerWeek / 7) * s.minutes * (s.met * 3.5 * curW / 200), 0));
+        const tefCal = Math.round((bmrKatch + neatCal + eatCal + sportsCal) * 0.1);
+        const wizardTdee = bmrKatch + neatCal + eatCal + sportsCal + tefCal;
 
-              {/* Height & Weight */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-[10px] font-semibold uppercase text-white/50 block">
-                    Chiều cao (cm)
-                  </label>
-                  <input
-                    type="number"
-                    min="100"
-                    max="250"
-                    value={heightCm}
-                    onChange={(e) => setHeightCm(e.target.value)}
-                    className="mt-1 w-full text-xs font-bold px-3 py-2 rounded-xl border border-white/10 bg-[#0e0f11] text-white focus:border-[#2563EB] focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] font-semibold uppercase text-white/50 block">
-                    Cân nặng (kg)
-                  </label>
-                  <input
-                    type="number"
-                    min="25"
-                    max="400"
-                    step="0.1"
-                    value={weightKg}
-                    onChange={(e) => setWeightKg(e.target.value)}
-                    className="mt-1 w-full text-xs font-bold px-3 py-2 rounded-xl border border-white/10 bg-[#0e0f11] text-white focus:border-[#2563EB] focus:outline-none"
-                  />
-                </div>
-              </div>
+        // Target Calculations (Step 2)
+        const clampedTargetBf = Math.max(isFemale ? 12 : 6, Math.min(35, Number(wizardTargetBfPct) || (isFemale ? 19.0 : 12.0)));
+        const clampedTargetFfmi = Math.max(15, Math.min(isFemale ? 21.2 : 25.0, Number(wizardTargetFfmi) || (isFemale ? 19.5 : 22.0)));
+        const targetLbm = Math.round(Math.max(20, (clampedTargetFfmi - 6.1 * (1.8 - hMeter)) * hSq) * 10) / 10;
+        const targetW = Math.round((targetLbm / (1 - clampedTargetBf / 100)) * 10) / 10;
+        const lbmDiff = Math.round((targetLbm - curLbm) * 10) / 10;
+        const fatDiff = Math.round((curW * (curBf / 100) - targetW * (clampedTargetBf / 100)) * 10) / 10;
 
-              {/* Bodyfat % */}
-              <div>
-                <div className="flex items-center justify-between">
-                  <label className="text-[10px] font-semibold uppercase text-white/50 block">
-                    Tỷ lệ mỡ Bodyfat (%)
-                  </label>
-                  <span className="text-[9px] text-[#2563EB] font-bold">Ước tính / InBody</span>
-                </div>
-                <input
-                  type="number"
-                  min="3"
-                  max="70"
-                  step="0.1"
-                  value={bodyfatPct}
-                  onChange={(e) => setBodyfatPct(e.target.value)}
-                  className="mt-1 w-full text-xs font-bold px-3 py-2 rounded-xl border border-white/10 bg-[#0e0f11] text-white focus:border-[#2563EB] focus:outline-none"
-                />
-              </div>
+        // FFMI category text
+        const ffmiStatus = isFemale
+          ? curFfmi < 15 ? 'Còn khá thấp' : curFfmi < 17 ? 'Ở mức người mới tập' : curFfmi < 19 ? 'Ở mức trung bình' : 'Đã khá tốt'
+          : curFfmi < 18 ? 'Còn khá thấp' : curFfmi < 20 ? 'Ở mức người mới tập' : curFfmi < 22 ? 'Ở mức trung bình' : 'Đã khá tốt';
 
-              {/* Goal Choice */}
-              <div>
-                <label className="text-[10px] font-semibold uppercase text-white/50 block mb-1">
-                  Mục tiêu mong muốn
-                </label>
-                <div className="space-y-1.5">
-                  {[
-                    { id: 'auto', label: 'Chưa rõ định hướng (Hệ thống tự gợi ý theo AI)', hint: 'Khuyên dùng' },
-                    { id: 'cut', label: 'Cắt mỡ (Cut) — Giảm cân & Siết cơ', hint: '-15% kcal' },
-                    { id: 'bulk', label: 'Tăng cơ (Lean Bulk) — Tăng khối nạc', hint: '+10% kcal' },
-                    { id: 'maintain', label: 'Duy trì & Săn chắc (Recomposition)', hint: 'TDEE chuẩn' },
-                  ].map((g) => (
-                    <label
-                      key={g.id}
-                      className={`flex items-center justify-between p-2.5 rounded-xl border cursor-pointer transition-all ${
-                        userGoal === g.id
-                          ? 'border-[#2563EB] bg-[#2563EB]/10 text-white'
-                          : 'border-white/10 bg-white/5 text-white/70 hover:bg-white/8'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="radio"
-                          name="userGoal"
-                          value={g.id}
-                          checked={userGoal === g.id}
-                          onChange={() => setUserGoal(g.id as any)}
-                          className="accent-[#2563EB]"
-                        />
-                        <span className="text-xs font-semibold">{g.label}</span>
-                      </div>
-                      <span className="text-[10px] text-white/40 font-mono">{g.hint}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
+        // Bodyfat evaluation
+        const bfDiff = curBf - idealBf;
+        const bfStatus = bfDiff <= 0 ? 'Mức mỡ lý tưởng' : bfDiff <= 4 ? 'Hơi cao hơn lý tưởng' : 'Khá cao so với mức lý tưởng';
 
-          {/* Reference Table Accordions / Infocards */}
-          <div className="bg-[#131b2e] rounded-2xl border border-white/10 p-4 shadow-xs space-y-3">
-            <h4 className="text-[11px] font-bold uppercase tracking-wider text-white/70 flex items-center gap-1.5">
-              <Info className="w-3.5 h-3.5 text-[#2563EB]" />
-              Bảng Tham Chiếu Thể Hình Chuẩn ({sex === 'male' ? 'Nam' : 'Nữ'})
-            </h4>
+        // Generate full periodized preview roadmap
+        const simulatedRoadmap = generateCtgPeriodizedRoadmap({
+          sex,
+          heightCm: curH,
+          currentWeightKg: curW,
+          currentBodyFatPct: curBf,
+          targetFfmi: wizardTargetFfmi,
+          targetWeightKg: targetW,
+          targetBodyFatPct: clampedTargetBf,
+          steps: wizardSteps,
+          trainDays: wizardTrainDays,
+          trainDurationMin: wizardTrainDuration,
+          startDate: todayString(),
+        });
 
-            {/* Bodyfat Reference */}
-            <div className="p-2.5 rounded-xl bg-[#0e0f11] border border-white/5 text-xs">
-              <div className="font-semibold text-white/90 text-[11px] mb-1.5 flex justify-between">
-                <span>Ngưỡng Tỷ Lệ Mỡ (Bodyfat %)</span>
-                <span className="text-[10px] text-white/40">Khuyến nghị: 10-20%</span>
-              </div>
-              <div className="grid grid-cols-4 gap-1 text-center text-[10px]">
-                {BODYFAT_BANDS[sexKey].map((b) => (
-                  <div key={b.label} className="p-1 rounded-lg bg-white/5">
-                    <div className="font-bold" style={{ color: b.color }}>
-                      &lt;{b.max}%
-                    </div>
-                    <div className="text-[9px] text-white/60 truncate">{b.label}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
+        // Total weeks in simulated roadmap
+        const totalSimWeeks = simulatedRoadmap.totalWeeks || simulatedRoadmap.phases.reduce((sum, p) => sum + (p.weeks || 4), 0);
 
-            {/* FFMI Reference */}
-            <div className="p-2.5 rounded-xl bg-[#0e0f11] border border-white/5 text-xs">
-              <div className="font-semibold text-white/90 text-[11px] mb-1.5 flex justify-between">
-                <span>Chỉ Số Cơ Nạc FFMI</span>
-                <span className="text-[10px] text-white/40">Đỉnh tự nhiên: {VORTEXCAL_STANDARDS[sexKey].naturalFfmiLimit}</span>
-              </div>
-              <div className="space-y-1 text-[10px]">
-                {FFMI_BANDS[sexKey].map((b) => (
-                  <div key={b.label} className="flex items-center justify-between p-1 rounded-lg bg-white/5">
-                    <span className="font-semibold" style={{ color: b.color }}>
-                      {b.label}
-                    </span>
-                    <span className="font-mono text-white/70">&lt; {b.max}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
+        // Predefined sports list for easy selection
+        const COMMON_SPORTS = [
+          { id: 'running', name: 'Chạy bộ ngoài trời', met: 8.0 },
+          { id: 'swimming', name: 'Bơi lội tự do', met: 6.0 },
+          { id: 'football', name: 'Bóng đá sân cỏ', met: 7.0 },
+          { id: 'badminton', name: 'Cầu lông đối kháng', met: 5.5 },
+          { id: 'cycling', name: 'Đạp xe thể thao', met: 6.5 },
+          { id: 'walking', name: 'Đi bộ nhanh dốc', met: 3.8 },
+        ];
 
-        {/* Right Output: 7 Columns */}
-        <div className="lg:col-span-7 space-y-4">
-          {/* Diagnostic Key Numbers */}
-          <div className="bg-[#131b2e] rounded-2xl border border-white/10 p-5 shadow-xs space-y-4">
-            <div className="flex items-center justify-between border-b border-white/10 pb-3">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-white flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-[#2563EB]" />
-                Kết Quả Chẩn Đoán & Định Lượng Thể Trạng
-              </h3>
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#2563EB]/20 text-[#2563EB] font-bold">
-                VortexCal AI Verified
-              </span>
-            </div>
+        const handleAddSport = () => {
+          const found = COMMON_SPORTS.find((s) => s.id === wizardSelectedSport) || COMMON_SPORTS[0];
+          setWizardSports((prev) => [
+            ...prev,
+            { id: String(Date.now()), name: found.name, met: found.met, minutes: 45, sessionsPerWeek: 2 },
+          ]);
+        };
 
-            {/* 3 Large Stat Boxes */}
-            <div className="grid grid-cols-3 gap-2.5 sm:gap-3">
-              <div className="p-3.5 rounded-xl bg-[#0e0f11] border border-white/5 flex flex-col justify-between">
-                <span className="text-[10px] font-semibold uppercase text-white/40">Khối Nạc (LBM)</span>
-                <div className="mt-1">
-                  <span className="font-display text-xl sm:text-2xl font-extrabold text-white">
-                    {analysis.lbmKg}
-                  </span>
-                  <span className="text-[11px] text-white/50 ml-1">kg</span>
-                </div>
-                <span className="text-[10px] text-emerald-400 font-semibold mt-1">Cơ bắp & xương</span>
-              </div>
+        const handleRemoveSport = (id: string) => {
+          setWizardSports((prev) => prev.filter((s) => s.id !== id));
+        };
 
-              <div className="p-3.5 rounded-xl bg-[#0e0f11] border border-white/5 flex flex-col justify-between">
-                <span className="text-[10px] font-semibold uppercase text-white/40">Chỉ Số FFMI</span>
-                <div className="mt-1">
-                  <span className="font-display text-xl sm:text-2xl font-extrabold text-white">
-                    {analysis.ffmi}
-                  </span>
-                </div>
-                <span
-                  className="text-[10px] font-bold mt-1 truncate"
-                  style={{ color: analysis.ffmiBand.color }}
-                >
-                  {analysis.ffmiBand.label.split(' ')[0]}
-                </span>
-              </div>
+        const handleCommitWizardRoadmap = (asActive: boolean = true) => {
+          const newRoadmap: CtgPeriodizedRoadmap = {
+            ...simulatedRoadmap,
+            id: `ctg-rm-${Date.now()}`,
+            title: `Lộ trình NTN: ${curW}kg → ${targetW}kg (FFMI ${wizardTargetFfmi})`,
+            createdAt: Date.now(),
+            activePhaseId: simulatedRoadmap.phases[0]?.id || 'none',
+          };
 
-              <div className="p-3.5 rounded-xl bg-[#0e0f11] border border-white/5 flex flex-col justify-between">
-                <span className="text-[10px] font-semibold uppercase text-white/40">Tỷ Lệ Mỡ (BF)</span>
-                <div className="mt-1">
-                  <span className="font-display text-xl sm:text-2xl font-extrabold text-white">
-                    {bfNum}%
-                  </span>
-                </div>
-                <span
-                  className="text-[10px] font-bold mt-1"
-                  style={{ color: analysis.bfBand.color }}
-                >
-                  {analysis.bfBand.label}
-                </span>
-              </div>
-            </div>
+          if (onSaveCtgRoadmap) {
+            onSaveCtgRoadmap(newRoadmap);
+          }
+          if (asActive && onUpdateCtgPeriodizedRoadmap) {
+            onUpdateCtgPeriodizedRoadmap(newRoadmap);
+            if (onSetActiveRoadmapPhase && newRoadmap.phases[0]) {
+              onSetActiveRoadmapPhase(newRoadmap.phases[0].id);
+            }
+          }
 
-            {/* Extra Row: Fat Mass & Lean Mass */}
-            <div className="grid grid-cols-2 gap-3 text-xs pt-1">
-              <div className="p-2.5 rounded-xl bg-white/5 border border-white/5 flex items-center justify-between">
-                <span className="text-white/60 text-[11px]">Tổng lượng mỡ (BFM):</span>
-                <span className="font-mono font-bold text-orange-400">{analysis.bfmKg} kg</span>
-              </div>
-              <div className="p-2.5 rounded-xl bg-white/5 border border-white/5 flex items-center justify-between">
-                <span className="text-white/60 text-[11px]">Khối lượng cơ nạc (LBM):</span>
-                <span className="font-mono font-bold text-emerald-400">{analysis.lbmKg} kg</span>
-              </div>
-            </div>
-          </div>
+          // Sync nutrition
+          if (simulatedRoadmap.phases[0]) {
+            const firstP = simulatedRoadmap.phases[0];
+            const goalKey: Goal = firstP.phaseType === 'bulk' ? 'bulk' : firstP.phaseType === 'maintain' ? 'maintain' : 'cut';
+            if (onUpdateNutritionSettings) {
+              onUpdateNutritionSettings({
+                overrides: {
+                  ...(nutritionSettings?.overrides || {}),
+                  [goalKey]: {
+                    kcal: firstP.targetKcal,
+                    protein: firstP.macros.protein,
+                    carbs: firstP.macros.carbs,
+                    fat: firstP.macros.fat,
+                  },
+                },
+              });
+            }
+          }
 
-          {/* Strategic Roadmap Recommendation Box */}
-          <div className="bg-[#131b2e] rounded-2xl border border-white/10 p-5 shadow-xs space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Award className="w-5 h-5 text-[#2563EB]" />
-                <h3 className="text-sm font-bold text-white">
-                  Định Hướng Chiến Lược: {analysis.planLabelVi}
-                </h3>
-              </div>
-              <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-[#2563EB] text-white">
-                Khuyến Nghị AI
-              </span>
-            </div>
+          // Sync profile
+          onUpdateProfile({
+            sex,
+            heightCm: curH,
+            targetWeightKg: targetW,
+            targetBodyFatPct: wizardTargetBfPct,
+            stepGoal: wizardSteps,
+            goal: simulatedRoadmap.phases[0]?.phaseType === 'bulk' ? 'bulk' : 'cut',
+          });
 
-            {/* Scientific Rationale text */}
-            <p className="text-xs text-white/80 leading-relaxed bg-[#0e0f11] p-3.5 rounded-xl border border-white/5">
-              {analysis.rationaleVi}
-            </p>
+          notifySuccess(
+            asActive
+              ? `⚡ Đã kích hoạt Đại Lộ Trình CTG (${simulatedRoadmap.phases.length} giai đoạn) vào hệ thống!`
+              : `📁 Đã lưu lộ trình vào thư viện bản mẫu!`
+          );
 
-            {/* Target Projections */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              <div className="p-3 rounded-xl bg-white/5 border border-white/5">
-                <div className="text-[10px] uppercase font-semibold text-white/40">Cân nặng mục tiêu</div>
-                <div className="text-base font-extrabold text-[#2563EB] font-mono mt-0.5">
-                  {analysis.projectedWeightKg} kg
-                </div>
-                <div className="text-[10px] text-white/40">
-                  {analysis.projectedWeightKg !== wNum
-                    ? `${analysis.projectedWeightKg > wNum ? '+' : ''}${(analysis.projectedWeightKg - wNum).toFixed(1)} kg`
-                    : 'Duy trì mốc'}
-                </div>
-              </div>
+          if (asActive) {
+            setActiveViewMode('ctg_periodized');
+          }
+        };
 
-              <div className="p-3 rounded-xl bg-white/5 border border-white/5">
-                <div className="text-[10px] uppercase font-semibold text-white/40">% Mỡ đích đến</div>
-                <div className="text-base font-extrabold text-emerald-400 font-mono mt-0.5">
-                  {analysis.projectedBodyfatPct}%
-                </div>
-                <div className="text-[10px] text-white/40">Ngưỡng chuẩn VortexCal</div>
-              </div>
-
-              <div className="p-3 rounded-xl bg-white/5 border border-white/5 col-span-2 sm:col-span-1">
-                <div className="text-[10px] uppercase font-semibold text-white/40">Mục tiêu Calo/ngày</div>
-                <div className="text-base font-extrabold text-indigo-400 font-mono mt-0.5">
-                  {analysis.targetKcal} kcal
-                </div>
-                <div className="text-[10px] text-white/40">Theo TDEE hiện tại</div>
-              </div>
-            </div>
-
-            {/* Advanced Macro Studio Customizer */}
-            <div className="p-4 rounded-2xl bg-[#0e0f11] border border-white/5 space-y-3">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/5 pb-2.5">
+        return (
+          <div className="space-y-6 animate-fadeIn pb-12">
+            {/* Header Banner */}
+            <div className="bg-[#050102] rounded-3xl border border-white/10 p-5 sm:p-6 shadow-xl relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-80 h-80 bg-rose-600/10 rounded-full blur-3xl pointer-events-none" />
+              <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                   <div className="flex items-center gap-2">
-                    <Utensils className="w-4 h-4 text-[#2563EB]" />
-                    <span className="font-bold text-white text-xs">Căn Chỉnh Tỉ Lệ Đa Lượng Macro</span>
+                    <span className="font-display font-extrabold text-2xl tracking-tight text-white">
+                      NTN<span className="text-rose-500">.</span>Roadmap
+                    </span>
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-rose-600/20 text-rose-300 border border-rose-500/30">
+                      Chuẩn Khoa Học Cao Tấn Giàu
+                    </span>
                   </div>
-                  <p className="text-[10px] text-white/40 mt-0.5">
-                    Tùy biến theo thể trạng, phương pháp ăn hoặc chọn nhanh cấu hình chuẩn
+                  <h2 className="text-lg sm:text-xl font-bold text-white mt-1">
+                    Định Hướng Mục Tiêu & Lập Lộ Trình Chu Kỳ 4 Bước
+                  </h2>
+                  <p className="text-xs text-white/60 mt-1 max-w-2xl leading-relaxed">
+                    Khảo sát toàn diện BMR, NEAT bước chân, EAT kháng lực, FFMI mục tiêu và sinh tự động các khối chu kỳ
+                    sóng Tăng Cơ (Hypertrophy Waves), Mini-cut và Siết Mỡ Hoàn Thiện chuẩn Y học thể thao.
                   </p>
                 </div>
 
-                {/* Energy balance check */}
-                <div className="flex items-center gap-1.5 self-start sm:self-auto">
-                  <span className="text-[10px] text-white/50">Năng lượng:</span>
-                  <span className="text-xs font-mono font-bold text-white">{customMacroKcal} kcal</span>
-                  <span className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-full ${
-                    Math.abs(customMacroKcal - analysis.targetKcal) <= 50
-                      ? 'bg-emerald-500/20 text-emerald-400'
-                      : customMacroKcal > analysis.targetKcal
-                      ? 'bg-rose-500/20 text-rose-400'
-                      : 'bg-amber-500/20 text-amber-400'
-                  }`}>
-                    {customMacroKcal >= analysis.targetKcal ? `+${customMacroKcal - analysis.targetKcal}` : `${customMacroKcal - analysis.targetKcal}`}
-                  </span>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setWizardStep(0)}
+                    className="px-3 py-2 rounded-xl border border-white/10 hover:bg-white/5 text-white/70 text-xs font-semibold transition-all cursor-pointer"
+                  >
+                    Làm lại từ đầu
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveViewMode('ctg_periodized')}
+                    className="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-bold transition-all cursor-pointer"
+                  >
+                    Xem lộ trình hiện tại
+                  </button>
                 </div>
               </div>
+            </div>
 
-              {/* Macro Presets Selector */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 text-xs">
+            {/* CTG Authentic 4-Step Stepper Bar (matching dRe in CTG Web) */}
+            <div className="bg-[#070205] p-3 rounded-2xl border border-white/10 shadow-xs">
+              <ol className="relative grid grid-cols-4 gap-2 list-none p-0 m-0">
                 {[
-                  { id: 'viet_balanced' as const, label: 'Chuẩn Việt (30/45/25)', desc: 'Cơm canh thịt cá' },
-                  { id: 'high_protein' as const, label: 'Tăng Cơ (2.2g/kg)', desc: 'Tối đa cơ nạc' },
-                  { id: 'cutting' as const, label: 'Siết Mỡ (2.4g/kg)', desc: 'Thâm hụt giữ cơ' },
-                  { id: 'low_carb' as const, label: 'Low Carb (25/10/65)', desc: 'Ít tinh bột' },
-                ].map((p) => (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={() => handleSelectMacroPreset(p.id)}
-                    className={`p-2 rounded-xl text-left border transition-all cursor-pointer ${
-                      macroPreset === p.id
-                        ? 'bg-[#2563EB]/15 border-[#2563EB] text-white'
-                        : 'bg-white/5 border-white/5 text-white/70 hover:bg-white/10'
-                    }`}
-                  >
-                    <div className="text-[11px] font-bold">{p.label}</div>
-                    <div className="text-[9px] text-white/40">{p.desc}</div>
-                  </button>
-                ))}
-              </div>
-
-              {/* 3 Interactive Macro Cards & Sliders */}
-              <div className="grid grid-cols-3 gap-2.5 text-center pt-1">
-                {/* Protein */}
-                <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 space-y-1.5">
-                  <span className="text-[10px] uppercase font-bold text-rose-400 block">Đạm (Protein)</span>
-                  <div className="flex items-center justify-center gap-1">
-                    <input
-                      type="number"
-                      min="40"
-                      max="350"
-                      value={currentActiveMacros.protein}
-                      onChange={(e) => {
-                        setIsCustomMacroActive(true);
-                        setMacroPreset('custom');
-                        setCustomProtein(Number(e.target.value) || 0);
-                      }}
-                      className="w-16 text-center text-sm font-bold text-white bg-slate-100 dark:bg-slate-800/60 border border-rose-500/30 rounded-lg py-0.5 font-mono"
-                    />
-                    <span className="text-xs text-white/60">g</span>
-                  </div>
-                  <span className="text-[10px] text-rose-300/80 block font-mono">
-                    ~{(currentActiveMacros.protein / wNum).toFixed(1)}g/kg ({currentActiveMacros.protein * 4} kcal)
-                  </span>
-                  <input
-                    type="range"
-                    min="50"
-                    max="280"
-                    step="5"
-                    value={currentActiveMacros.protein}
-                    onChange={(e) => {
-                      setIsCustomMacroActive(true);
-                      setMacroPreset('custom');
-                      setCustomProtein(Number(e.target.value));
-                    }}
-                    className="w-full h-1.5 bg-rose-950/60 rounded-lg appearance-none cursor-pointer accent-rose-500"
-                  />
-                </div>
-
-                {/* Carbs */}
-                <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 space-y-1.5">
-                  <span className="text-[10px] uppercase font-bold text-amber-400 block">Tinh Bột (Carbs)</span>
-                  <div className="flex items-center justify-center gap-1">
-                    <input
-                      type="number"
-                      min="10"
-                      max="500"
-                      value={currentActiveMacros.carbs}
-                      onChange={(e) => {
-                        setIsCustomMacroActive(true);
-                        setMacroPreset('custom');
-                        setCustomCarbs(Number(e.target.value) || 0);
-                      }}
-                      className="w-16 text-center text-sm font-bold text-white bg-slate-100 dark:bg-slate-800/60 border border-amber-500/30 rounded-lg py-0.5 font-mono"
-                    />
-                    <span className="text-xs text-white/60">g</span>
-                  </div>
-                  <span className="text-[10px] text-amber-300/80 block font-mono">
-                    {Math.round(((currentActiveMacros.carbs * 4) / customMacroKcal) * 100) || 0}% calo ({currentActiveMacros.carbs * 4} kcal)
-                  </span>
-                  <input
-                    type="range"
-                    min="20"
-                    max="450"
-                    step="5"
-                    value={currentActiveMacros.carbs}
-                    onChange={(e) => {
-                      setIsCustomMacroActive(true);
-                      setMacroPreset('custom');
-                      setCustomCarbs(Number(e.target.value));
-                    }}
-                    className="w-full h-1.5 bg-amber-950/60 rounded-lg appearance-none cursor-pointer accent-amber-500"
-                  />
-                </div>
-
-                {/* Fat */}
-                <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 space-y-1.5">
-                  <span className="text-[10px] uppercase font-bold text-emerald-400 block">Chất Béo (Fat)</span>
-                  <div className="flex items-center justify-center gap-1">
-                    <input
-                      type="number"
-                      min="15"
-                      max="200"
-                      value={currentActiveMacros.fat}
-                      onChange={(e) => {
-                        setIsCustomMacroActive(true);
-                        setMacroPreset('custom');
-                        setCustomFat(Number(e.target.value) || 0);
-                      }}
-                      className="w-16 text-center text-sm font-bold text-white bg-slate-100 dark:bg-slate-800/60 border border-emerald-500/30 rounded-lg py-0.5 font-mono"
-                    />
-                    <span className="text-xs text-white/60">g</span>
-                  </div>
-                  <span className="text-[10px] text-emerald-300/80 block font-mono">
-                    {Math.round(((currentActiveMacros.fat * 9) / customMacroKcal) * 100) || 0}% calo ({currentActiveMacros.fat * 9} kcal)
-                  </span>
-                  <input
-                    type="range"
-                    min="20"
-                    max="150"
-                    step="2"
-                    value={currentActiveMacros.fat}
-                    onChange={(e) => {
-                      setIsCustomMacroActive(true);
-                      setMacroPreset('custom');
-                      setCustomFat(Number(e.target.value));
-                    }}
-                    className="w-full h-1.5 bg-emerald-950/60 rounded-lg appearance-none cursor-pointer accent-emerald-500"
-                  />
-                </div>
-              </div>
-
-              {/* Sync Macro Button */}
-              <div className="flex items-center justify-between pt-1">
-                <span className="text-[10px] text-white/40">
-                  Tự động chia thành mục tiêu từng bữa ăn (Sáng, Trưa, Tối, Phụ)
-                </span>
-                <button
-                  type="button"
-                  onClick={handleApplyMacroToNutrition}
-                  className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-[11px] font-semibold transition-colors cursor-pointer flex items-center gap-1.5"
-                >
-                  <Utensils className="w-3.5 h-3.5 text-[#2563EB]" />
-                  <span>Đồng bộ Macro vào Dinh Dưỡng</span>
-                </button>
-              </div>
+                  { step: 0, title: 'Thông tin cơ bản', short: 'Thông tin' },
+                  { step: 1, title: 'Tập luyện & Hoạt động', short: 'Hoạt động & TDEE' },
+                  { step: 2, title: 'Mục tiêu hình thể CTG', short: 'Mục tiêu' },
+                  { step: 3, title: 'Báo cáo & Lộ trình', short: 'Báo cáo & Lộ trình' },
+                ].map((s) => {
+                  const isCurrent = wizardStep === s.step;
+                  const isDone = wizardStep > s.step;
+                  return (
+                    <li
+                      key={s.step}
+                      onClick={() => setWizardStep(s.step)}
+                      className={`relative flex flex-col items-center gap-1.5 p-2 rounded-xl text-center cursor-pointer transition-all ${
+                        isCurrent
+                          ? 'bg-rose-600/15 border border-rose-500/40 text-white'
+                          : isDone
+                          ? 'text-white/80 hover:bg-white/5'
+                          : 'text-white/40 hover:bg-white/5'
+                      }`}
+                    >
+                      <div
+                        className={`size-8 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
+                          isCurrent
+                            ? 'bg-rose-600 text-white shadow-md shadow-rose-600/40'
+                            : isDone
+                            ? 'bg-emerald-950 text-emerald-400 border border-emerald-800'
+                            : 'bg-white/5 text-white/50 border border-white/10'
+                        }`}
+                      >
+                        {isDone ? <Check className="size-4 text-emerald-400" /> : s.step + 1}
+                      </div>
+                      <span className={`text-[11px] truncate max-w-full font-medium ${isCurrent ? 'font-bold text-rose-300' : ''}`}>
+                        {s.short}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ol>
             </div>
 
-            {/* Apply & Action Buttons */}
-            <div className="flex flex-wrap items-center justify-end gap-2.5 pt-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setSaveTitle(`Lộ trình ${analysis.planLabelVi} (${analysis.projectedWeightKg}kg / ${analysis.projectedBodyfatPct}% mỡ)`);
-                  setSaveNote(`Mục tiêu Calo: ${analysis.targetKcal} kcal. Macro: ${currentActiveMacros.protein}P / ${currentActiveMacros.carbs}C / ${currentActiveMacros.fat}F.`);
-                  setShowSaveModal(true);
-                }}
-                className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-white/20 hover:bg-white/10 text-white text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-2"
-              >
-                <Bookmark className="w-4 h-4 text-amber-400" />
-                <span>Lưu Mốc Định Hướng Này</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={handleApplyRoadmap}
-                className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-white/20 hover:bg-white/10 text-white text-xs font-semibold transition-all cursor-pointer flex items-center justify-center gap-2"
-              >
-                <CheckCircle2 className="w-4 h-4 text-blue-400" />
-                <span>Chỉ Lưu Hồ Sơ</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={handleApplyRoadmapAndCreateSplit}
-                className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-orange-600 hover:bg-orange-500 text-white text-xs font-bold transition-all shadow-md cursor-pointer flex items-center justify-center gap-2"
-              >
-                <Zap className="w-4 h-4" />
-                <span>⚡ Kích Hoạt Lộ Trình & Khởi Tạo Giáo Án</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* 4-Phase Mesocycle Periodization Roadmap */}
-      <div className="bg-[#0b101b] rounded-3xl border border-white/10 p-5 sm:p-6 shadow-xl space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/10 pb-3">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-orange-500/20 text-orange-400 flex items-center justify-center shrink-0">
-              <Layers className="w-4 h-4" />
-            </div>
-            <div>
-              <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                Chu Kỳ Phân Kỳ Huấn Luyện 12 Tuần (Mesocycle Periodization)
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-orange-500/20 text-orange-400 border border-orange-500/30">
-                  Chuẩn Khoa Học
-                </span>
-              </h3>
-              <p className="text-xs text-white/50 mt-0.5">
-                Quy luật tăng tải luân phiên giúp cơ bắp phá vỡ ngưỡng chững (Plateau) và liên tục phát triển bền vững
-              </p>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={handleApplyRoadmapAndCreateSplit}
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-orange-400 text-xs font-bold transition-colors cursor-pointer border border-orange-500/30"
-          >
-            <Zap className="w-3.5 h-3.5" />
-            <span>Đồng bộ ngay vào lịch tập</span>
-          </button>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3.5 pt-1">
-          {MESOCYCLE_PHASES.map((p) => (
-            <div
-              key={p.phase}
-              className="p-4 rounded-2xl border border-white/10 bg-[#131b2e]/80 flex flex-col justify-between space-y-3 hover:border-orange-500/40 transition-colors"
-            >
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <span
-                    className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full font-mono"
-                    style={{ backgroundColor: `${p.color}22`, color: p.color }}
-                  >
-                    {p.durationWeeks}
-                  </span>
-                  <span className="text-[10px] font-bold text-white/40">GĐ {p.phase}</span>
-                </div>
-
-                <h4 className="text-xs font-bold text-white leading-snug">{p.nameVi}</h4>
-                <p className="text-[11px] text-white/60 mt-1 leading-relaxed">{p.descriptionVi}</p>
-              </div>
-
-              <div className="space-y-1.5 pt-2 border-t border-white/5 text-[10px]">
-                <div className="flex items-center justify-between text-white/70">
-                  <span>Cường độ:</span>
-                  <span className="font-bold font-mono text-white" style={{ color: p.color }}>
-                    {p.intensityRpe}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between text-white/70">
-                  <span>Khối lượng/tuần:</span>
-                  <span className="font-semibold text-white/90">{p.volumeTarget}</span>
-                </div>
-                <div className="flex items-center justify-between text-white/70">
-                  <span>Khoảng Reps:</span>
-                  <span className="font-mono text-amber-400">{p.repsRange}</span>
-                </div>
-                <div className="mt-1 p-2 rounded-lg bg-black/30 text-white/60 text-[10px] italic">
-                  💡 {p.nutritionTipVi}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-        </div>
-      )}
-
-      {/* VIEW 3: SAVED ROADMAPS MILESTONE LEDGER */}
-      {activeViewMode === 'saved_milestones' && (
-      <div className="bg-[#0b101b] rounded-3xl border border-white/10 p-5 sm:p-6 shadow-xl space-y-4">
-        <div className="flex items-center justify-between border-b border-white/10 pb-3">
-          <div className="flex items-center gap-2.5">
-            <BookmarkCheck className="w-5 h-5 text-amber-400" />
-            <div>
-              <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                Thư Viện Định Hướng &amp; Mốc Mục Tiêu Đã Lưu
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30">
-                  {savedRoadmaps.length} mốc
-                </span>
-              </h3>
-              <p className="text-xs text-white/50 mt-0.5">
-                Lưu giữ các bản kế hoạch chiến lược để đối chiếu và tái kích hoạt bất kỳ lúc nào
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {savedRoadmaps.length === 0 ? (
-          <div className="py-8 px-4 rounded-2xl border border-dashed border-white/10 text-center flex flex-col items-center justify-center space-y-2">
-            <Bookmark className="w-8 h-8 text-white/30" />
-            <h4 className="text-xs font-bold text-white/80">Chưa có mốc định hướng nào được lưu</h4>
-            <p className="text-[11px] text-white/40 max-w-md leading-relaxed">
-              Bấm nút &quot;Lưu Mốc Định Hướng Này&quot; ở trên sau khi phân tích để lưu lại kế hoạch siết mỡ hoặc tăng cơ, giúp bạn theo dõi quá trình chuyển hóa cơ thể qua từng giai đoạn.
-            </p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
-            {savedRoadmaps.map((rm) => (
-              <div
-                key={rm.id}
-                className="p-4 rounded-2xl bg-[#131b2e] border border-white/10 space-y-3 flex flex-col justify-between hover:border-white/20 transition-all shadow-xs"
-              >
-                <div className="space-y-2">
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <span className="text-[10px] font-mono text-white/40 block">{rm.date}</span>
-                      <h4 className="text-xs font-bold text-white leading-tight mt-0.5">{rm.title}</h4>
-                    </div>
-                    <span className={`text-[10px] px-2 py-0.5 rounded-md font-bold uppercase shrink-0 ${
-                      rm.goal === 'cut'
-                        ? 'bg-rose-500/20 text-rose-400'
-                        : rm.goal === 'bulk'
-                        ? 'bg-blue-500/20 text-blue-400'
-                        : 'bg-emerald-500/20 text-emerald-400'
-                    }`}>
-                      {rm.goal === 'cut' ? 'Cắt mỡ' : rm.goal === 'bulk' ? 'Tăng cơ' : 'Duy trì'}
-                    </span>
-                  </div>
-
-                  {/* Metrics preview */}
-                  <div className="grid grid-cols-3 gap-1.5 p-2 rounded-xl bg-slate-100 dark:bg-slate-800/60 text-center font-mono">
-                    <div>
-                      <span className="text-[9px] text-white/40 block">Cân nặng</span>
-                      <span className="text-xs font-bold text-white">{rm.weightKg} &rarr; {rm.targetWeightKg}kg</span>
-                    </div>
-                    <div>
-                      <span className="text-[9px] text-white/40 block">% Mỡ</span>
-                      <span className="text-xs font-bold text-emerald-400">{rm.bodyfatPct}% &rarr; {rm.targetBodyfatPct}%</span>
-                    </div>
-                    <div>
-                      <span className="text-[9px] text-white/40 block">Calo/ngày</span>
-                      <span className="text-xs font-bold text-indigo-400">{rm.targetKcal} kcal</span>
-                    </div>
-                  </div>
-
-                  {/* Macro preview */}
-                  <div className="flex items-center justify-between text-[10px] text-white/60 bg-white/5 px-2.5 py-1.5 rounded-lg">
-                    <span>Macro:</span>
-                    <span className="font-mono text-white/90">
-                      <b className="text-rose-400">{rm.macros.protein}g P</b> · <b className="text-amber-400">{rm.macros.carbs}g C</b> · <b className="text-emerald-400">{rm.macros.fat}g F</b>
-                    </span>
-                  </div>
-
-                  {rm.note && (
-                    <p className="text-[11px] text-white/50 italic line-clamp-2 leading-relaxed">
-                      {rm.note}
+            {/* STEP 0: THÔNG TIN CƠ BẢN (zPe) */}
+            {wizardStep === 0 && (
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 animate-fadeIn">
+                <div className="lg:col-span-6 bg-[#070205] p-5 rounded-2xl border border-white/10 shadow-xs space-y-4">
+                  <div className="border-b border-white/10 pb-3">
+                    <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                      <User className="w-4 h-4 text-rose-500" />
+                      Bước 1: Số Đo & Sinh Trắc Học Khởi Đầu
+                    </h3>
+                    <p className="text-xs text-white/50 mt-0.5">
+                      Cơ sở để hệ thống xác định điểm xuất phát, tính toán khối nạc LBM và phân loại độ nhạy insulin.
                     </p>
-                  )}
+                  </div>
+
+                  <div className="space-y-4">
+                    {/* Sex */}
+                    <div>
+                      <label className="text-[10px] font-semibold uppercase text-white/50 block mb-1.5">
+                        Giới tính sinh học
+                      </label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setSex('male')}
+                          className={`py-2.5 px-3 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                            sex === 'male'
+                              ? 'bg-rose-600 text-white border-rose-500 shadow-md shadow-rose-600/20'
+                              : 'bg-white/5 text-white/70 border-white/10 hover:bg-white/10'
+                          }`}
+                        >
+                          Nam (Lý tưởng 15% mỡ)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setSex('female')}
+                          className={`py-2.5 px-3 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                            sex === 'female'
+                              ? 'bg-rose-600 text-white border-rose-500 shadow-md shadow-rose-600/20'
+                              : 'bg-white/5 text-white/70 border-white/10 hover:bg-white/10'
+                          }`}
+                        >
+                          Nữ (Lý tưởng 23% mỡ)
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Height & Weight */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-[10px] font-semibold uppercase text-white/50 block">Chiều cao (cm)</label>
+                        <input
+                          type="number"
+                          min="120"
+                          max="220"
+                          value={heightCm}
+                          onChange={(e) => setHeightCm(e.target.value)}
+                          className="mt-1 w-full text-xs font-bold px-3 py-2.5 rounded-xl border border-white/10 bg-[#0e0f11] text-white focus:border-rose-500 focus:outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-semibold uppercase text-white/50 block">Cân nặng (kg)</label>
+                        <input
+                          type="number"
+                          min="30"
+                          max="250"
+                          step="0.1"
+                          value={weightKg}
+                          onChange={(e) => setWeightKg(e.target.value)}
+                          className="mt-1 w-full text-xs font-bold px-3 py-2.5 rounded-xl border border-white/10 bg-[#0e0f11] text-white focus:border-rose-500 focus:outline-none"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Bodyfat % */}
+                    <div>
+                      <div className="flex items-center justify-between">
+                        <label className="text-[10px] font-semibold uppercase text-white/50 block">
+                          Tỷ lệ mỡ hiện tại (% Bodyfat)
+                        </label>
+                        <span className="text-[10px] text-rose-400 font-bold">InBody hoặc ước lượng ảnh</span>
+                      </div>
+                      <input
+                        type="number"
+                        min="4"
+                        max="60"
+                        step="0.5"
+                        value={bodyfatPct}
+                        onChange={(e) => setBodyfatPct(e.target.value)}
+                        className="mt-1 w-full text-xs font-bold px-3 py-2.5 rounded-xl border border-white/10 bg-[#0e0f11] text-white focus:border-rose-500 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end pt-3 border-t border-white/10">
+                    <button
+                      type="button"
+                      onClick={() => setWizardStep(1)}
+                      className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold shadow-md cursor-pointer transition-all"
+                    >
+                      <span>Tiếp tục: Hoạt động & TDEE</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
 
-                {/* Card Actions */}
-                <div className="flex items-center justify-between pt-2 border-t border-white/5">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (window.confirm(`Xóa mốc định hướng "${rm.title}"?`)) {
-                        onDeleteSavedRoadmap?.(rm.id);
-                      }
-                    }}
-                    className="p-1.5 rounded-lg text-white/40 hover:text-rose-400 hover:bg-white/5 cursor-pointer transition-colors"
-                    title="Xóa mốc định hướng"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+                {/* Right Biometrics Analysis Card */}
+                <div className="lg:col-span-6 bg-[#070205] p-5 rounded-2xl border border-white/10 shadow-xs space-y-4">
+                  <div className="border-b border-white/10 pb-3">
+                    <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                      <Scale className="w-4 h-4 text-emerald-400" />
+                      Chẩn Đoán Thể Trạng Khởi Đầu Chuẩn CTG
+                    </h3>
+                    <p className="text-xs text-white/50 mt-0.5">
+                      Chỉ số FFMI chuẩn hóa và tỷ lệ cơ nạc ban đầu theo công thức Katch-McArdle.
+                    </p>
+                  </div>
 
-                  <button
-                    type="button"
-                    onClick={() => handleLoadSavedRoadmap(rm)}
-                    className="px-3 py-1.5 rounded-lg bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-[11px] font-bold cursor-pointer transition-colors flex items-center gap-1.5"
-                  >
-                    <Check className="w-3.5 h-3.5" />
-                    <span>Kích Hoạt Lại</span>
-                  </button>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="p-3.5 rounded-xl bg-white/5 border border-white/5">
+                      <div className="text-[10px] text-white/40 uppercase font-semibold">Khối cơ nạc LBM</div>
+                      <div className="text-xl font-bold font-display text-emerald-400 mt-1">{curLbm} kg</div>
+                      <div className="text-[10px] text-white/50 mt-0.5">Khối mỡ: {fatMassKg(curW, curBf)} kg</div>
+                    </div>
+
+                    <div className="p-3.5 rounded-xl bg-white/5 border border-white/5">
+                      <div className="text-[10px] text-white/40 uppercase font-semibold">Chỉ số FFMI chuẩn hóa</div>
+                      <div className="text-xl font-bold font-display text-sky-400 mt-1">{curFfmi} pts</div>
+                      <div className="text-[10px] text-white/50 mt-0.5">Xếp hạng: {ffmiStatus}</div>
+                    </div>
+
+                    <div className="p-3.5 rounded-xl bg-white/5 border border-white/5">
+                      <div className="text-[10px] text-white/40 uppercase font-semibold">Đánh giá lượng mỡ</div>
+                      <div className="text-sm font-bold text-rose-400 mt-1 truncate">{bfStatus}</div>
+                      <div className="text-[10px] text-white/50 mt-0.5">Lý tưởng {isFemale ? 'nữ' : 'nam'}: {idealBf}%</div>
+                    </div>
+
+                    <div className="p-3.5 rounded-xl bg-white/5 border border-white/5">
+                      <div className="text-[10px] text-white/40 uppercase font-semibold">BMR Trao đổi chất</div>
+                      <div className="text-xl font-bold font-display text-amber-400 mt-1">{bmrKatch} kcal</div>
+                      <div className="text-[10px] text-white/50 mt-0.5">Katch-McArdle LBM</div>
+                    </div>
+                  </div>
+
+                  <div className="p-4 rounded-xl bg-white/5 border border-white/5 space-y-1.5 text-xs text-white/70 leading-relaxed">
+                    <div className="font-bold text-white flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-rose-400" />
+                      <span>Nhận định y khoa thể thao CTG:</span>
+                    </div>
+                    <p>
+                      {bfDiff > 4
+                        ? `Tỷ lệ mỡ của bạn (${curBf}%) đang cao hơn mức lý tưởng (${idealBf}%). Lộ trình CTG sẽ ưu tiên giai đoạn Giảm mỡ ban đầu (Initial Cut) để khôi phục độ nhạy insulin, giúp cơ thể dễ dàng hấp thụ dưỡng chất vào tế bào cơ thay vì tích trữ mỡ thừa.`
+                        : bfDiff > 0
+                        ? `Tỷ lệ mỡ của bạn (${curBf}%) chỉ hơi cao hơn mức lý tưởng (${idealBf}%). Giai đoạn giảm mỡ đầu sẽ ngắn, phần lớn lộ trình sẽ tập trung vào các đợt sóng tăng cơ phì đại (Hypertrophy Waves).`
+                        : `Tỷ lệ mỡ của bạn (${curBf}%) đang ở mức lý tưởng (${idealBf}%). Cơ thể đang ở trạng thái nhạy insulin đỉnh cao, có thể bỏ qua giai đoạn cut đầu để tiến thẳng vào chu kỳ tăng cơ nạc.`}
+                    </p>
+                  </div>
                 </div>
               </div>
-            ))}
-          </div>
-        )}
-      </div>
-      )}
+            )}
 
-      {/* Save Roadmap Modal */}
-      {showSaveModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-[#131b2e] rounded-3xl border border-white/10 max-w-md w-full p-5 sm:p-6 space-y-4 shadow-2xl text-white">
-            <div className="flex items-center justify-between border-b border-white/10 pb-3">
-              <div className="flex items-center gap-2">
-                <Bookmark className="w-5 h-5 text-amber-400" />
-                <h3 className="text-sm font-bold">Lưu Bản Định Hướng Chiến Lược</h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowSaveModal(false)}
-                className="text-white/40 hover:text-white cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+            {/* STEP 1: HOẠT ĐỘNG & TDEE (WPe) */}
+            {wizardStep === 1 && (
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 animate-fadeIn">
+                <div className="lg:col-span-7 bg-[#070205] p-5 rounded-2xl border border-white/10 shadow-xs space-y-4">
+                  <div className="border-b border-white/10 pb-3">
+                    <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                      <Activity className="w-4 h-4 text-rose-500" />
+                      Bước 2: Mức Độ Vận Động & Tiêu Hao Năng Lượng
+                    </h3>
+                    <p className="text-xs text-white/50 mt-0.5">
+                      Đo lường chính xác các thành phần NEAT, EAT kháng lực và thể thao bổ trợ.
+                    </p>
+                  </div>
 
-            <form onSubmit={handleSaveRoadmapSubmit} className="space-y-3.5">
-              <div>
-                <label className="block text-[11px] font-semibold uppercase text-white/50 mb-1">
-                  Tiêu đề mốc định hướng
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={saveTitle}
-                  onChange={(e) => setSaveTitle(e.target.value)}
-                  placeholder="Ví dụ: Siết Mỡ 6 Tuần Đón Tết..."
-                  className="w-full text-xs px-3 py-2.5 rounded-xl border border-white/15 bg-slate-100 dark:bg-slate-800/60 text-white focus:outline-none focus:border-[#2563EB]"
-                />
-              </div>
+                  <div className="space-y-4">
+                    {/* Steps NEAT */}
+                    <div>
+                      <div className="flex items-center justify-between">
+                        <label className="text-[10px] font-semibold uppercase text-white/50">
+                          Bước chân sinh hoạt trung bình / ngày (NEAT)
+                        </label>
+                        <span className="font-mono font-bold text-xs text-rose-400">{wizardSteps.toLocaleString()} bước (~{neatCal} kcal)</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="2000"
+                        max="30000"
+                        step="500"
+                        value={wizardSteps}
+                        onChange={(e) => setWizardSteps(Number(e.target.value))}
+                        className="w-full mt-2 accent-rose-600 cursor-pointer"
+                      />
+                      <div className="flex justify-between text-[10px] text-white/40 mt-1">
+                        <span>2.000 bước</span>
+                        <span>8.000 (Khuyến nghị)</span>
+                        <span>20.000+ bước</span>
+                      </div>
+                    </div>
 
-              {/* Snapshot summary pill */}
-              <div className="p-3 rounded-xl bg-slate-100 dark:bg-slate-800/60 border border-white/5 space-y-1.5 text-xs">
-                <div className="flex justify-between text-white/70">
-                  <span>Mục tiêu:</span>
-                  <span className="font-bold text-[#2563EB]">{analysis.planLabelVi}</span>
+                    {/* Resistance Training Days & Duration */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-[10px] font-semibold uppercase text-white/50 block">
+                          Số buổi tập gym/tuần
+                        </label>
+                        <select
+                          value={wizardTrainDays}
+                          onChange={(e) => setWizardTrainDays(Number(e.target.value))}
+                          className="mt-1 w-full text-xs font-bold px-3 py-2.5 rounded-xl border border-white/10 bg-[#0e0f11] text-white focus:border-rose-500 focus:outline-none"
+                        >
+                          <option value="1">1 buổi / tuần</option>
+                          <option value="2">2 buổi / tuần</option>
+                          <option value="3">3 buổi / tuần (Full Body)</option>
+                          <option value="4">4 buổi / tuần (Upper/Lower)</option>
+                          <option value="5">5 buổi / tuần (Push/Pull/Legs)</option>
+                          <option value="6">6 buổi / tuần</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-semibold uppercase text-white/50 block">
+                          Thời lượng mỗi buổi (phút)
+                        </label>
+                        <input
+                          type="number"
+                          min="30"
+                          max="180"
+                          step="5"
+                          value={wizardTrainDuration}
+                          onChange={(e) => setWizardTrainDuration(Number(e.target.value))}
+                          className="mt-1 w-full text-xs font-bold px-3 py-2.5 rounded-xl border border-white/10 bg-[#0e0f11] text-white focus:border-rose-500 focus:outline-none"
+                        />
+                      </div>
+                    </div>
+
+                    <p className="text-xs text-white/50 italic bg-white/5 p-3 rounded-xl border border-white/5">
+                      💡 <strong>Nguyên lý CTG:</strong> Số buổi và thời lượng ở trên dành cho tập kháng lực. Không tập kháng lực thì mô hình không dự báo tăng khối nạc LBM.
+                    </p>
+
+                    {/* Sports Section */}
+                    <div className="space-y-2 pt-2 border-t border-white/10">
+                      <div className="flex items-center justify-between">
+                        <label className="text-[10px] font-semibold uppercase text-white/50">
+                          Môn thể thao bổ trợ khác ({wizardSports.length})
+                        </label>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <select
+                          value={wizardSelectedSport}
+                          onChange={(e) => setWizardSelectedSport(e.target.value)}
+                          className="flex-1 text-xs font-semibold px-3 py-2 rounded-xl border border-white/10 bg-[#0e0f11] text-white"
+                        >
+                          {COMMON_SPORTS.map((s) => (
+                            <option key={s.id} value={s.id}>
+                              {s.name} (MET {s.met})
+                            </option>
+                          ))}
+                        </select>
+                        <button
+                          type="button"
+                          onClick={handleAddSport}
+                          className="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-bold cursor-pointer transition-all shrink-0"
+                        >
+                          + Thêm môn
+                        </button>
+                      </div>
+
+                      {wizardSports.length > 0 && (
+                        <div className="space-y-1.5 pt-1">
+                          {wizardSports.map((s) => (
+                            <div key={s.id} className="flex items-center justify-between p-2 rounded-xl bg-white/5 border border-white/5 text-xs text-white">
+                              <span className="font-semibold">{s.name}</span>
+                              <div className="flex items-center gap-2">
+                                <span className="text-[11px] text-white/60">{s.sessionsPerWeek} buổi/tuần • {s.minutes} phút</span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveSport(s.id)}
+                                  className="text-white/40 hover:text-rose-400 p-1 cursor-pointer"
+                                >
+                                  ✕
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex justify-between pt-3 border-t border-white/10">
+                    <button
+                      type="button"
+                      onClick={() => setWizardStep(0)}
+                      className="px-4 py-2.5 rounded-xl border border-white/10 text-white/70 hover:bg-white/5 text-xs font-semibold cursor-pointer"
+                    >
+                      ‹ Quay lại
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setWizardStep(2)}
+                      className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold shadow-md cursor-pointer transition-all"
+                    >
+                      <span>Tiếp tục: Chọn Mục Tiêu CTG</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
-                <div className="flex justify-between text-white/70">
-                  <span>Cân nặng &amp; % Mỡ:</span>
-                  <span className="font-mono text-white">{wNum}kg ({bfNum}%) &rarr; {analysis.projectedWeightKg}kg ({analysis.projectedBodyfatPct}%)</span>
-                </div>
-                <div className="flex justify-between text-white/70">
-                  <span>Năng lượng &amp; Macro:</span>
-                  <span className="font-mono text-white">{analysis.targetKcal} kcal ({currentActiveMacros.protein}P/{currentActiveMacros.carbs}C/{currentActiveMacros.fat}F)</span>
+
+                {/* Right Energy Breakdown (TDEE Parts) */}
+                <div className="lg:col-span-5 bg-[#070205] p-5 rounded-2xl border border-white/10 shadow-xs space-y-4">
+                  <div className="border-b border-white/10 pb-3">
+                    <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                      <Flame className="w-4 h-4 text-amber-500" />
+                      Phân Bổ Năng Lượng TDEE Chuẩn CTG
+                    </h3>
+                    <p className="text-xs text-white/50 mt-0.5">
+                      Tổng lượng calo đốt cháy mỗi ngày dựa trên 4 thành phần trao đổi chất.
+                    </p>
+                  </div>
+
+                  <div className="p-4 rounded-2xl bg-gradient-to-br from-rose-950/30 to-[#0c0408] border border-rose-500/30 text-center">
+                    <div className="text-[10px] text-white/50 uppercase font-bold tracking-wider">Tổng Tiêu Hao Năng Lượng (TDEE)</div>
+                    <div className="text-3xl font-extrabold font-display text-white mt-1">
+                      {wizardTdee.toLocaleString()} <span className="text-sm font-normal text-white/60">kcal/ngày</span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div className="p-3 rounded-xl bg-white/5 border border-white/5 flex items-center justify-between text-xs">
+                      <div>
+                        <div className="font-bold text-amber-400">BMR (Chuyển Hóa Cơ Bản)</div>
+                        <div className="text-[10px] text-white/40">Nuôi dưỡng tế bào & duy trì sự sống</div>
+                      </div>
+                      <span className="font-mono font-bold text-white text-sm">{bmrKatch} kcal</span>
+                    </div>
+
+                    <div className="p-3 rounded-xl bg-white/5 border border-white/5 flex items-center justify-between text-xs">
+                      <div>
+                        <div className="font-bold text-sky-400">NEAT (Bước Chân Sinh Hoạt)</div>
+                        <div className="text-[10px] text-white/40">{wizardSteps.toLocaleString()} bước / ngày</div>
+                      </div>
+                      <span className="font-mono font-bold text-white text-sm">+{neatCal} kcal</span>
+                    </div>
+
+                    <div className="p-3 rounded-xl bg-white/5 border border-white/5 flex items-center justify-between text-xs">
+                      <div>
+                        <div className="font-bold text-rose-400">EAT (Tập Gym Kháng Lực)</div>
+                        <div className="text-[10px] text-white/40">{wizardTrainDays} buổi/tuần • {wizardTrainDuration}p</div>
+                      </div>
+                      <span className="font-mono font-bold text-white text-sm">+{eatCal} kcal</span>
+                    </div>
+
+                    {sportsCal > 0 && (
+                      <div className="p-3 rounded-xl bg-white/5 border border-white/5 flex items-center justify-between text-xs">
+                        <div>
+                          <div className="font-bold text-purple-400">Thể Thao Bổ Trợ</div>
+                          <div className="text-[10px] text-white/40">{wizardSports.length} môn thể thao</div>
+                        </div>
+                        <span className="font-mono font-bold text-white text-sm">+{sportsCal} kcal</span>
+                      </div>
+                    )}
+
+                    <div className="p-3 rounded-xl bg-white/5 border border-white/5 flex items-center justify-between text-xs">
+                      <div>
+                        <div className="font-bold text-emerald-400">TEF (Hiệu Ứng Nhiệt Thức Ăn)</div>
+                        <div className="text-[10px] text-white/40">10% calo tiêu hóa protein & dinh dưỡng</div>
+                      </div>
+                      <span className="font-mono font-bold text-white text-sm">+{tefCal} kcal</span>
+                    </div>
+                  </div>
                 </div>
               </div>
+            )}
 
-              <div>
-                <label className="block text-[11px] font-semibold uppercase text-white/50 mb-1">
-                  Ghi chú &amp; Chiến lược cá nhân
-                </label>
-                <textarea
-                  rows={2}
-                  value={saveNote}
-                  onChange={(e) => setSaveNote(e.target.value)}
-                  placeholder="Ví dụ: Giữ cardio 3 buổi/tuần, cắt calo chủ yếu từ bữa tối..."
-                  className="w-full text-xs px-3 py-2 rounded-xl border border-white/15 bg-slate-100 dark:bg-slate-800/60 text-white focus:outline-none focus:border-[#2563EB]"
-                />
-              </div>
+            {/* STEP 2: MỤC TIÊU HÌNH THỂ CTG (eRe) */}
+            {wizardStep === 2 && (
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 animate-fadeIn">
+                <div className="lg:col-span-7 bg-[#070205] p-5 rounded-2xl border border-white/10 shadow-xs space-y-4">
+                  <div className="border-b border-white/10 pb-3">
+                    <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                      <Target className="w-4 h-4 text-rose-500" />
+                      Bước 3: Lựa Chọn Mục Tiêu Thể Hình & Tỷ Lệ Cơ Nạc
+                    </h3>
+                    <p className="text-xs text-white/50 mt-0.5">
+                      Đặt mục tiêu FFMI và % mỡ, hệ thống sẽ tự tính toán cân nặng đích và số kg cơ/mỡ cần chuyển dịch.
+                    </p>
+                  </div>
 
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-white/10">
-                <button
-                  type="button"
-                  onClick={() => setShowSaveModal(false)}
-                  className="px-4 py-2 rounded-xl border border-white/20 text-xs font-semibold text-white/70 hover:bg-white/5 cursor-pointer"
-                >
-                  Hủy
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-xs font-bold cursor-pointer transition-colors shadow-sm flex items-center gap-1.5"
-                >
-                  <Save className="w-3.5 h-3.5" />
-                  <span>Lưu Định Hướng</span>
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+                  <div className="space-y-4">
+                    {/* Goal Mode */}
+                    <div>
+                      <label className="text-[10px] font-semibold uppercase text-white/50 block mb-1.5">
+                        Chế độ ưu tiên đạt đích
+                      </label>
+                      <div className="grid grid-cols-3 gap-2">
+                        {[
+                          { id: 'both', label: 'Cả hai (Khuyên Dùng)', desc: 'Cân đối tăng cơ & siết mỡ' },
+                          { id: 'ffmi', label: 'Ưu tiên FFMI', desc: 'Tập trung tối đa hóa cơ' },
+                          { id: 'bf', label: 'Ưu tiên % Mỡ', desc: 'Siết mỡ khô săn chắc trước' },
+                        ].map((m) => (
+                          <button
+                            key={m.id}
+                            type="button"
+                            onClick={() => setWizardGoalMode(m.id as any)}
+                            className={`p-3 rounded-xl text-left border transition-all cursor-pointer ${
+                              wizardGoalMode === m.id
+                                ? 'bg-rose-600/15 border-rose-500 text-white shadow-xs'
+                                : 'bg-white/5 border-white/10 text-white/70 hover:bg-white/10'
+                            }`}
+                          >
+                            <div className="font-bold text-xs">{m.label}</div>
+                            <div className="text-[10px] text-white/50 mt-0.5 leading-tight">{m.desc}</div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
 
-      {/* GENERATOR MODAL: TẠO ĐẠI LỘ TRÌNH CHU KỲ MỚI THEO SỐ ĐO (TỰ ĐỘNG HOẶC THỦ CÔNG) */}
-      {showGeneratorModal && (
-        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn overflow-y-auto">
-          <div className="bg-[#101726] border border-white/20 rounded-3xl max-w-lg w-full p-5 sm:p-6 space-y-4 shadow-2xl text-white my-8">
-            <div className="flex items-center justify-between border-b border-white/10 pb-3">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center">
-                  {genMode === 'auto' ? <Wand2 className="w-4 h-4" /> : <PlusCircle className="w-4 h-4 text-emerald-400" />}
+                    {/* Target FFMI Slider */}
+                    <div>
+                      <div className="flex items-center justify-between">
+                        <label className="text-[10px] font-semibold uppercase text-white/50">
+                          FFMI mục tiêu (Khối nạc chuẩn hóa chiều cao)
+                        </label>
+                        <span className="font-mono font-bold text-sm text-sky-400">
+                          {wizardTargetFfmi.toFixed(1)} pts
+                        </span>
+                      </div>
+                      <input
+                        type="range"
+                        min="16.0"
+                        max="24.5"
+                        step="0.1"
+                        value={wizardTargetFfmi}
+                        onChange={(e) => setWizardTargetFfmi(Number(e.target.value))}
+                        className="w-full mt-2 accent-sky-500 cursor-pointer"
+                      />
+                      <div className="flex justify-between text-[10px] text-white/40 mt-1">
+                        <span>18.0 (Người mới)</span>
+                        <span>20.0 (Tập 1-2 năm)</span>
+                        <span>22.0 (Vận động viên)</span>
+                        <span>24.0+ (Đỉnh cao)</span>
+                      </div>
+                    </div>
+
+                    {/* Target Bodyfat Slider */}
+                    <div>
+                      <div className="flex items-center justify-between">
+                        <label className="text-[10px] font-semibold uppercase text-white/50">
+                          Tỷ lệ mỡ mục tiêu (% Bodyfat)
+                        </label>
+                        <span className="font-mono font-bold text-sm text-rose-400">
+                          {wizardTargetBfPct.toFixed(1)}%
+                        </span>
+                      </div>
+                      <input
+                        type="range"
+                        min="8.0"
+                        max="28.0"
+                        step="0.5"
+                        value={wizardTargetBfPct}
+                        onChange={(e) => setWizardTargetBfPct(Number(e.target.value))}
+                        className="w-full mt-2 accent-rose-600 cursor-pointer"
+                      />
+                      <div className="flex justify-between text-[10px] text-white/40 mt-1">
+                        <span>10% (Siết nét 6 múi)</span>
+                        <span>14-15% (Lý tưởng nam)</span>
+                        <span>20% (Khỏe mạnh)</span>
+                        <span>24%+ (Nữ thể thao)</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-between pt-3 border-t border-white/10">
+                    <button
+                      type="button"
+                      onClick={() => setWizardStep(1)}
+                      className="px-4 py-2.5 rounded-xl border border-white/10 text-white/70 hover:bg-white/5 text-xs font-semibold cursor-pointer"
+                    >
+                      ‹ Quay lại
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setWizardStep(3)}
+                      className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold shadow-md cursor-pointer transition-all"
+                    >
+                      <span>Xem Báo Cáo & Lộ Trình</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-base font-bold">
-                    {genMode === 'auto' ? 'Tạo Đại Lộ Trình Chu Kỳ Tự Động' : 'Tạo Lộ Trình Thể Hình Thủ Công (Trống)'}
-                  </h3>
-                  <p className="text-[11px] text-white/50">
-                    {genMode === 'auto'
-                      ? 'Tự động tính chu kỳ Tăng Cơ & Mini-cut theo số đo cá nhân'
-                      : 'Tạo lộ trình trắng từ con số 0 và thêm các giai đoạn tùy biến'}
+
+                {/* Right Target Output Summary */}
+                <div className="lg:col-span-5 bg-[#070205] p-5 rounded-2xl border border-white/10 shadow-xs space-y-4">
+                  <div className="border-b border-white/10 pb-3">
+                    <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-emerald-400" />
+                      Dự Báo Thay Đổi Thể Hình
+                    </h3>
+                    <p className="text-xs text-white/50 mt-0.5">
+                      Số kg cơ nạc cần tăng và lượng mỡ cần giảm để đạt được hình thể mong muốn.
+                    </p>
+                  </div>
+
+                  <div className="p-4 rounded-2xl bg-gradient-to-br from-rose-950/30 to-[#080205] border border-rose-500/30 text-center">
+                    <div className="text-[10px] text-white/50 uppercase font-bold tracking-wider">Cân Nặng Đích Cuối Cùng</div>
+                    <div className="text-3xl font-extrabold font-display text-white mt-1">
+                      {targetW} <span className="text-sm font-normal text-white/60">kg</span>
+                    </div>
+                    <div className="text-xs text-white/60 mt-1">
+                      Hiện tại: <strong className="text-white">{curW} kg</strong> ({curW > targetW ? `Giảm ${(curW - targetW).toFixed(1)}kg` : `Tăng ${(targetW - curW).toFixed(1)}kg`})
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="p-3.5 rounded-xl bg-white/5 border border-white/5">
+                      <div className="text-[10px] text-white/40 uppercase font-semibold">Cơ nạc LBM cần tăng</div>
+                      <div className="text-xl font-bold font-display text-emerald-400 mt-1">
+                        +{lbmDiff > 0 ? lbmDiff : 0} kg
+                      </div>
+                      <div className="text-[10px] text-white/50 mt-0.5">
+                        Từ {curLbm}kg → {targetLbm}kg
+                      </div>
+                    </div>
+
+                    <div className="p-3.5 rounded-xl bg-white/5 border border-white/5">
+                      <div className="text-[10px] text-white/40 uppercase font-semibold">Mỡ thừa cần đốt</div>
+                      <div className="text-xl font-bold font-display text-rose-400 mt-1">
+                        -{fatDiff > 0 ? fatDiff : 0} kg
+                      </div>
+                      <div className="text-[10px] text-white/50 mt-0.5">
+                        Từ {curBf}% → {wizardTargetBfPct}%
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="p-3.5 rounded-xl bg-white/5 border border-white/5 text-xs text-white/70 space-y-1">
+                    <div className="font-bold text-white">Chế độ đã chọn: {wizardGoalMode === 'both' ? 'Cả hai' : wizardGoalMode === 'ffmi' ? 'Ưu tiên FFMI' : 'Ưu tiên % Mỡ'}</div>
+                    <p className="text-[11px] text-white/60">
+                      {wizardGoalMode === 'both'
+                        ? 'Lộ trình tối ưu hóa song song, cắt mỡ trước nếu cần để đưa cơ thể về trạng thái đồng hóa (anabolic) tốt nhất.'
+                        : wizardGoalMode === 'ffmi'
+                        ? 'Tập trung calo thặng dư để đưa khối nạc LBM lên ngưỡng cao nhất có thể.'
+                        : 'Liên tục duy trì thâm hụt calo với các nhịp Diet Break chống sụt giảm trao đổi chất.'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* STEP 3: BÁO CÁO & LỘ TRÌNH CHU KỲ CTG (aRe) */}
+            {wizardStep === 3 && (
+              <div className="space-y-6 animate-fadeIn">
+                {/* Scientific Diagnostic Assessment Panel (Xje) */}
+                <div className="bg-[#070205] p-5 rounded-2xl border border-rose-500/30 shadow-lg space-y-3">
+                  <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="w-5 h-5 text-rose-500" />
+                      <h3 className="text-base font-bold text-white">
+                        Chẩn Đoán Khoa Học & Thứ Tự Chặng CTG
+                      </h3>
+                    </div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-rose-600/20 text-rose-300 border border-rose-500/30">
+                      Y Học Thể Thao
+                    </span>
+                  </div>
+
+                  <p className="text-xs sm:text-sm text-white/80 leading-relaxed font-sans">
+                    Hiện tại bạn có <strong>% mỡ {curBf}% ({bfStatus.toLowerCase()})</strong> và <strong>FFMI {curFfmi} ({ffmiStatus.toLowerCase()})</strong>.
+                    {' '}
+                    {wizardGoalMode === 'ffmi' ? (
+                      `Vì bạn chọn ưu tiên FFMI, lộ trình sẽ đưa %mỡ về mức lý tưởng ${idealBf}% trước (nếu cần) rồi tập trung toàn lực ăn dư để tăng cơ tới FFMI ${wizardTargetFfmi}, bảo toàn khối nạc ở mức cao nhất.`
+                    ) : wizardGoalMode === 'bf' ? (
+                      `Vì bạn chọn ưu tiên %mỡ, lộ trình sẽ thâm hụt calo liên tục (xen kẽ Diet Break để tránh chững trao đổi chất) cho tới khi đạt %mỡ ${wizardTargetBfPct}%, không quan tâm lượng cơ tăng thêm bao nhiêu.`
+                    ) : bfDiff > 4 ? (
+                      `Do %mỡ đang cao hơn khá nhiều so với mức lý tưởng (${idealBf}%), lộ trình ưu tiên giảm mỡ trước (Initial Cut thâm hụt 20%) để cơ thể nhạy insulin hơn, sau đó mới chuyển sang ăn dư xây cơ tới FFMI ${wizardTargetFfmi}, và điều chỉnh mỡ lần cuối về đúng ${wizardTargetBfPct}%.`
+                    ) : bfDiff > 0 ? (
+                      `%mỡ hiện tại chỉ hơi cao hơn mức lý tưởng nên giai đoạn giảm mỡ đầu sẽ ngắn, phần lớn thời gian lộ trình sẽ dành cho các đợt sóng tăng cơ tới FFMI ${wizardTargetFfmi}.`
+                    ) : (
+                      `%mỡ hiện tại đã ở mức lý tưởng nên lộ trình bỏ qua giai đoạn giảm mỡ đầu, đi thẳng vào tăng cơ tới FFMI ${wizardTargetFfmi} rồi điều chỉnh mỡ lần cuối về ${wizardTargetBfPct}%.`
+                    )}
                   </p>
                 </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowGeneratorModal(false)}
-                className="text-white/40 hover:text-white cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
 
-            {/* Mode Switcher Tabs */}
-            <div className="flex items-center gap-2 p-1 rounded-2xl bg-white/5 border border-white/10">
-              <button
-                type="button"
-                onClick={() => setGenMode('auto')}
-                className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                  genMode === 'auto'
-                    ? 'bg-blue-600 text-white shadow-xs'
-                    : 'text-white/60 hover:text-white hover:bg-white/5'
-                }`}
-              >
-                <Wand2 className="w-3.5 h-3.5" />
-                <span>⚡ Tự Động Theo Thể Trạng (AI)</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setGenMode('blank')}
-                className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                  genMode === 'blank'
-                    ? 'bg-emerald-600 text-white shadow-xs'
-                    : 'text-white/60 hover:text-white hover:bg-white/5'
-                }`}
-              >
-                <PlusCircle className="w-3.5 h-3.5" />
-                <span>📝 Tạo Thủ Công (Trống)</span>
-              </button>
-            </div>
+                {/* Transition Summary Table */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div className="p-4 rounded-xl bg-[#070205] border border-white/10 shadow-xs">
+                    <div className="text-[10px] text-white/40 uppercase font-semibold">Cân nặng chuyển dịch</div>
+                    <div className="text-lg font-bold font-display text-white mt-1">
+                      {curW}kg → <span className="text-rose-400">{targetW}kg</span>
+                    </div>
+                  </div>
 
-            {/* TAB 1: TỰ ĐỘNG THEO THỂ TRẠNG */}
-            {genMode === 'auto' ? (
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  handleGenerateNewRoadmap();
-                }}
-                className="space-y-4 text-xs"
-              >
-                {/* Giới tính */}
-                <div>
-                  <label className="block text-[11px] font-semibold uppercase text-white/50 mb-1.5">Giới tính</label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setGenSex('male');
-                        setGenTargetFfmi('22.0');
-                      }}
-                      className={`py-2 rounded-xl font-bold border transition-colors cursor-pointer text-center ${
-                        genSex === 'male'
-                          ? 'bg-blue-600 border-blue-500 text-white'
-                          : 'bg-white/5 border-white/10 text-white/60 hover:text-white'
-                      }`}
-                    >
-                      Nam (Male)
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setGenSex('female');
-                        setGenTargetFfmi('19.5');
-                      }}
-                      className={`py-2 rounded-xl font-bold border transition-colors cursor-pointer text-center ${
-                        genSex === 'female'
-                          ? 'bg-rose-600 border-rose-500 text-white'
-                          : 'bg-white/5 border-white/10 text-white/60 hover:text-white'
-                      }`}
-                    >
-                      Nữ (Female)
-                    </button>
+                  <div className="p-4 rounded-xl bg-[#070205] border border-white/10 shadow-xs">
+                    <div className="text-[10px] text-white/40 uppercase font-semibold">Tỷ lệ mỡ Bodyfat</div>
+                    <div className="text-lg font-bold font-display text-white mt-1">
+                      {curBf}% → <span className="text-emerald-400">{wizardTargetBfPct}%</span>
+                    </div>
+                  </div>
+
+                  <div className="p-4 rounded-xl bg-[#070205] border border-white/10 shadow-xs">
+                    <div className="text-[10px] text-white/40 uppercase font-semibold">Khối nạc LBM</div>
+                    <div className="text-lg font-bold font-display text-white mt-1">
+                      {curLbm}kg → <span className="text-sky-400">{targetLbm}kg</span>
+                    </div>
+                  </div>
+
+                  <div className="p-4 rounded-xl bg-[#070205] border border-white/10 shadow-xs">
+                    <div className="text-[10px] text-white/40 uppercase font-semibold">Dự kiến tổng thời gian</div>
+                    <div className="text-lg font-bold font-display text-amber-400 mt-1">
+                      {totalSimWeeks} tuần <span className="text-xs text-white/50 font-normal">(~{Math.round(totalSimWeeks / 4.3)} tháng)</span>
+                    </div>
                   </div>
                 </div>
 
-                {/* Chiều cao, cân nặng, % mỡ */}
-                <div className="grid grid-cols-3 gap-2.5">
-                  <div>
-                    <label className="block text-[10px] font-semibold uppercase text-white/50 mb-1">Chiều cao (cm)</label>
-                    <input
-                      type="number"
-                      required
-                      min={120}
-                      max={230}
-                      value={genHeight}
-                      onChange={(e) => setGenHeight(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/15 text-white font-mono focus:outline-none focus:border-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-semibold uppercase text-white/50 mb-1">Cân nặng (kg)</label>
-                    <input
-                      type="number"
-                      step="0.1"
-                      required
-                      min={30}
-                      max={200}
-                      value={genWeight}
-                      onChange={(e) => setGenWeight(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/15 text-white font-mono focus:outline-none focus:border-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-semibold uppercase text-white/50 mb-1">% Mỡ cơ thể</label>
-                    <input
-                      type="number"
-                      step="0.1"
-                      required
-                      min={5}
-                      max={50}
-                      value={genBodyFat}
-                      onChange={(e) => setGenBodyFat(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/15 text-white font-mono focus:outline-none focus:border-blue-500"
-                    />
-                  </div>
-                </div>
-
-                {/* Mục tiêu FFMI & Ngày bắt đầu */}
-                <div className="grid grid-cols-2 gap-2.5">
-                  <div>
-                    <label className="block text-[10px] font-semibold uppercase text-white/50 mb-1">Mục tiêu FFMI</label>
-                    <select
-                      value={genTargetFfmi}
-                      onChange={(e) => setGenTargetFfmi(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl bg-[#1a233a] border border-white/15 text-white font-mono focus:outline-none focus:border-blue-500 cursor-pointer"
-                    >
-                      {genSex === 'male' ? (
-                        <>
-                          <option value="20.0">20.0 - Săn chắc Thể thao</option>
-                          <option value="21.0">21.0 - Cơ bắp Lực lưỡng</option>
-                          <option value="22.0">22.0 - Đỉnh cao Tự nhiên (Khuyên dùng)</option>
-                          <option value="23.0">23.0 - Đỉnh cao Vận động viên</option>
-                        </>
-                      ) : (
-                        <>
-                          <option value="17.5">17.5 - Thon gọn Săn chắc</option>
-                          <option value="18.5">18.5 - Thể thao Athletic</option>
-                          <option value="19.5">19.5 - Fitness Đỉnh cao (Khuyên dùng)</option>
-                          <option value="20.5">20.5 - Vận động viên Nữ</option>
-                        </>
-                      )}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-semibold uppercase text-white/50 mb-1">Ngày bắt đầu</label>
-                    <input
-                      type="text"
-                      value={genStartDate}
-                      onChange={(e) => setGenStartDate(e.target.value)}
-                      placeholder="DD/MM/YYYY"
-                      className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/15 text-white font-mono focus:outline-none focus:border-blue-500"
-                    />
-                  </div>
-                </div>
-
-                {/* Dự phóng nhanh */}
-                {(() => {
-                  const hM = (Number(genHeight) || 172) / 100;
-                  const hSq = hM * hM;
-                  const w = Number(genWeight) || 68;
-                  const bf = Number(genBodyFat) || 18;
-                  const curLbm = Math.round(w * (1 - bf / 100) * 10) / 10;
-                  const curFfmi = Math.round((curLbm / hSq) * 10) / 10;
-                  const targetF = Number(genTargetFfmi) || 22.0;
-                  const targetL = Math.round(targetF * hSq * 10) / 10;
-                  const netLbm = Math.round((targetL - curLbm) * 10) / 10;
-                  const finalBf = genSex === 'female' ? 20 : 16;
-                  const finalW = Math.round((targetL / (1 - finalBf / 100)) * 10) / 10;
-
-                  return (
-                    <div className="p-3.5 rounded-2xl bg-blue-500/10 border border-blue-500/20 space-y-1.5">
-                      <div className="text-[10px] font-bold uppercase tracking-wider text-blue-300">
-                        Dự Phóng Phân Kỳ Chu Kỳ Khoa Học
-                      </div>
-                      <div className="grid grid-cols-2 gap-2 text-white/80 pt-1">
-                        <div>
-                          Hiện tại: <span className="font-mono text-white font-bold">{curLbm}kg LBM</span> (FFMI {curFfmi})
-                        </div>
-                        <div>
-                          Đích đến: <span className="font-mono text-emerald-400 font-bold">{finalW}kg</span> ({finalBf}% mỡ)
-                        </div>
-                        <div>
-                          Cơ nạc tích lũy: <span className="font-mono text-indigo-300 font-bold">+{netLbm > 0 ? netLbm : 0}kg LBM</span>
-                        </div>
-                        <div>
-                          FFMI cực đại: <span className="font-mono text-amber-300 font-bold">{targetF}</span>
-                        </div>
-                      </div>
-                      <p className="text-[10px] text-white/50 pt-1 leading-relaxed border-t border-white/5 mt-1">
-                        Thuật toán sẽ tự động phân giải thành chuỗi chu kỳ sóng Tăng Cơ (~12 tuần) xen kẽ các đợt Mini-cut (2–4 tuần) siết mỡ sâu để bảo toàn độ nhạy insulin và phát triển tối đa cơ nạc.
+                {/* Generated Periodized Phases (Block 1, Block 2, Block 3) */}
+                <div className="bg-[#070205] p-5 rounded-2xl border border-white/10 shadow-xs space-y-4">
+                  <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                    <div>
+                      <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                        <Layers className="w-4 h-4 text-rose-500" />
+                        Các Khối Chu Kỳ Sóng Được Tạo ({simulatedRoadmap.phases.length} Chặng)
+                      </h3>
+                      <p className="text-xs text-white/50 mt-0.5">
+                        Chu kỳ xen kẽ Hypertrophy Wave, Mini-cut và Diet Break ngăn ngừa hiện tượng chững trao đổi chất.
                       </p>
                     </div>
-                  );
-                })()}
+                  </div>
 
-                <div className="flex items-center justify-end gap-2 pt-2 border-t border-white/10">
+                  <div className="space-y-3">
+                    {simulatedRoadmap.phases.map((phase, idx) => {
+                      const isBulk = phase.phaseType === 'bulk';
+                      const isMini = phase.phaseType === 'minicut';
+                      const isCut = phase.phaseType === 'cut' || phase.phaseType === 'final_cut';
+                      const s = parseVnDate(phase.startDate);
+                      const e = parseVnDate(phase.endDate);
+                      const phaseWeeks = !isNaN(s.getTime()) && !isNaN(e.getTime()) ? Math.max(1, Math.round((e.getTime() - s.getTime()) / (7 * 864e5))) : 4;
+
+                      return (
+                        <div
+                          key={phase.id}
+                          className={`p-4 rounded-xl border transition-all ${
+                            idx === 0
+                              ? 'bg-rose-950/20 border-rose-500/40 text-white'
+                              : 'bg-white/5 border-white/10 text-white/80'
+                          }`}
+                        >
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                            <div className="flex items-center gap-2.5">
+                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                                isBulk
+                                  ? 'bg-rose-600/30 text-rose-300 border border-rose-500/40'
+                                  : isMini
+                                  ? 'bg-amber-600/30 text-amber-300 border border-amber-500/40'
+                                  : 'bg-sky-600/30 text-sky-300 border border-sky-500/40'
+                              }`}>
+                                Chặng {idx + 1}: {phase.name}
+                              </span>
+                              {idx === 0 && (
+                                <span className="text-[10px] font-bold text-rose-400 bg-rose-950/40 px-2 py-0.5 rounded-md border border-rose-800/40">
+                                  Khởi động đầu tiên
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-xs font-mono text-white/60">
+                              {phase.startDate} – {phase.endDate} ({phaseWeeks} tuần)
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mt-3 pt-3 border-t border-white/10 text-xs">
+                            <div>
+                              <div className="text-[10px] text-white/40">Calo mục tiêu</div>
+                              <div className="font-bold text-white font-mono">{phase.targetKcal} kcal</div>
+                            </div>
+                            <div>
+                              <div className="text-[10px] text-white/40">Protein</div>
+                              <div className="font-bold text-rose-400 font-mono">{phase.macros.protein}g</div>
+                            </div>
+                            <div>
+                              <div className="text-[10px] text-white/40">Carbs</div>
+                              <div className="font-bold text-sky-400 font-mono">{phase.macros.carbs}g</div>
+                            </div>
+                            <div>
+                              <div className="text-[10px] text-white/40">Fat</div>
+                              <div className="font-bold text-amber-400 font-mono">{phase.macros.fat}g</div>
+                            </div>
+                            <div>
+                              <div className="text-[10px] text-white/40">Cân nặng chặng</div>
+                              <div className="font-bold text-emerald-400 font-mono">{phase.startWeightKg}kg → {phase.targetWeightKg}kg</div>
+                            </div>
+                          </div>
+
+                          {phase.note && (
+                            <p className="text-[11px] text-white/50 mt-2 leading-relaxed italic">
+                              {phase.note}
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Final 1-Click Action Buttons */}
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-5 rounded-2xl bg-[#070205] border border-white/10 shadow-xl">
                   <button
                     type="button"
-                    onClick={() => setShowGeneratorModal(false)}
-                    className="px-4 py-2 rounded-xl border border-white/20 text-white/70 hover:bg-white/5 cursor-pointer font-semibold"
+                    onClick={() => setWizardStep(2)}
+                    className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-white/10 text-white/70 hover:bg-white/5 text-xs font-semibold cursor-pointer"
                   >
-                    Hủy
+                    ‹ Quay lại chỉnh sửa mục tiêu
                   </button>
-                  <button
-                    type="submit"
-                    className="px-5 py-2 rounded-xl bg-linear-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold cursor-pointer transition-all shadow-md flex items-center gap-1.5"
-                  >
-                    <Wand2 className="w-4 h-4" />
-                    <span>⚡ Tạo Đại Lộ Trình Ngay</span>
-                  </button>
-                </div>
-              </form>
-            ) : (
-              /* TAB 2: TẠO THỦ CÔNG TRỐNG */
-              <form onSubmit={handleCreateBlankRoadmap} className="space-y-4 text-xs">
-                <div>
-                  <label className="block text-[11px] font-semibold uppercase text-white/50 mb-1">
-                    Tên lộ trình
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={blankTitle}
-                    onChange={(e) => setBlankTitle(e.target.value)}
-                    placeholder="Ví dụ: Lộ Trình Cá Nhân Hóa 2026..."
-                    className="w-full px-3 py-2.5 rounded-xl bg-white/5 border border-white/15 text-white font-semibold focus:outline-none focus:border-emerald-500"
-                  />
-                </div>
 
-                <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 space-y-2 text-white/80">
-                  <div className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">
-                    Số đo khởi điểm của bạn
-                  </div>
-                  <div className="grid grid-cols-3 gap-2 font-mono text-xs pt-1">
-                    <div>Chiều cao: <strong className="text-white">{profile.heightCm || 172} cm</strong></div>
-                    <div>Cân nặng: <strong className="text-white">{currentWeight} kg</strong></div>
-                    <div>% Mỡ: <strong className="text-white">{currentBf}%</strong></div>
-                  </div>
-                  <p className="text-[11px] text-white/60 leading-relaxed pt-2 border-t border-white/5">
-                    Lộ trình mới sẽ được khởi tạo ở trạng thái trống. Ngay sau khi tạo, cửa sổ thêm giai đoạn sẽ mở ra để bạn tự do điền mốc ngày, cân nặng mục tiêu, calo và đạm tùy thích.
-                  </p>
-                </div>
+                  <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end">
+                    <button
+                      type="button"
+                      onClick={() => handleCommitWizardRoadmap(false)}
+                      className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-semibold border border-white/10 shadow-xs cursor-pointer transition-all"
+                    >
+                      <FolderOpen className="w-4 h-4 text-white/70" />
+                      <span>Lưu bản mẫu trong thư viện</span>
+                    </button>
 
-                <div className="flex items-center justify-end gap-2 pt-2 border-t border-white/10">
-                  <button
-                    type="button"
-                    onClick={() => setShowGeneratorModal(false)}
-                    className="px-4 py-2 rounded-xl border border-white/20 text-white/70 hover:bg-white/5 cursor-pointer font-semibold"
-                  >
-                    Hủy
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold cursor-pointer transition-all shadow-md flex items-center gap-1.5"
-                  >
-                    <PlusCircle className="w-4 h-4" />
-                    <span>📝 Tạo Lộ Trình &amp; Thêm Giai Đoạn</span>
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => handleCommitWizardRoadmap(true)}
+                      className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold shadow-lg shadow-rose-600/30 cursor-pointer transition-all"
+                    >
+                      <Zap className="w-4 h-4" />
+                      <span>⚡ Kích Hoạt Lộ Trình Này Vào Hệ Thống</span>
+                    </button>
+                  </div>
                 </div>
-              </form>
+              </div>
             )}
           </div>
-        </div>
-      )}
+        );
+      })()}
+
 
       {/* ROADMAP MANAGER MODAL: QUẢN LÝ / CHUYỂN ĐỔI CÁC LỘ TRÌNH ĐÃ LƯU */}
       {showRoadmapManagerModal && (
@@ -3302,7 +3073,7 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
           <div className="bg-[#101726] border border-white/20 rounded-3xl max-w-xl w-full p-5 sm:p-6 space-y-4 shadow-2xl text-white my-8">
             <div className="flex items-center justify-between border-b border-white/10 pb-3">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center">
+                <div className="w-8 h-8 rounded-xl bg-rose-500/20 text-rose-400 flex items-center justify-center">
                   <FolderOpen className="w-4 h-4" />
                 </div>
                 <div>
@@ -3427,7 +3198,7 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
                 onClick={() => {
                   setShowRoadmapManagerModal(false);
                   setGenMode('auto');
-                  setShowGeneratorModal(true);
+                  setActiveViewMode('single_analyzer');
                 }}
                 className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5"
               >
@@ -3458,7 +3229,7 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
             <div className="text-center space-y-1.5">
               <h3 className="text-lg font-bold text-white">Xóa Bỏ Lộ Trình Này?</h3>
               <p className="text-xs text-white/60 leading-relaxed">
-                Bạn có chắc chắn muốn xóa lộ trình <strong className="text-white">"{activeRoadmap?.title || 'Lộ Trình Chu Kỳ CTG'}"</strong> gồm <strong className="text-rose-400">{phases.length} giai đoạn</strong> không?
+                Bạn có chắc chắn muốn xóa lộ trình <strong className="text-white">"{activeRoadmap?.title || 'Lộ Trình Chu Kỳ (NTN)'}"</strong> gồm <strong className="text-rose-400">{phases.length} giai đoạn</strong> không?
               </p>
               <p className="text-[11px] text-white/40">
                 Sau khi xóa, bạn có thể tạo lại lộ trình mới hoặc khôi phục lại mẫu chuẩn bất cứ lúc nào.
@@ -3631,7 +3402,7 @@ export const RoadmapTab: React.FC<RoadmapTabProps> = ({
                       setNewCarbs(String(nut.carbs));
                       setNewFat(String(nut.fat));
                     }}
-                    className="text-[10px] text-blue-400 hover:text-blue-300 font-bold cursor-pointer underline flex items-center gap-1"
+                    className="text-[10px] text-rose-400 hover:text-rose-300 font-bold cursor-pointer underline flex items-center gap-1"
                   >
                     <Sparkles className="w-3 h-3" />
                     <span>⚡ Tự tính theo số đo</span>

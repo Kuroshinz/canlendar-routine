@@ -52,7 +52,7 @@ export const GoalsTracker: React.FC<GoalsTrackerProps> = ({ categoryBreakdown, l
     <div className="bg-white dark:bg-[#1a1e24] p-5 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <Target className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+          <Target className="w-5 h-5 text-rose-500 dark:text-rose-400" />
           <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100">
             {lang === 'vi' ? 'Mục tiêu Thời gian Hàng tuần' : 'Weekly Time Goals'}
           </h3>
@@ -60,7 +60,7 @@ export const GoalsTracker: React.FC<GoalsTrackerProps> = ({ categoryBreakdown, l
 
         <button
           onClick={() => setIsAdding(!isAdding)}
-          className="flex items-center gap-1 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 px-2.5 py-1 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-950/40 transition-colors"
+          className="flex items-center gap-1 text-xs font-semibold text-rose-500 dark:text-rose-400 hover:text-indigo-700 px-2.5 py-1 rounded-lg hover:bg-rose-950/30 dark:hover:bg-indigo-950/40 transition-colors"
         >
           <Plus className="w-3.5 h-3.5" />
           <span>{lang === 'vi' ? 'Thêm mục tiêu' : 'Add Goal'}</span>
@@ -74,7 +74,7 @@ export const GoalsTracker: React.FC<GoalsTrackerProps> = ({ categoryBreakdown, l
             placeholder={lang === 'vi' ? 'Tên danh mục (vd: Thể thao, Học tập)' : 'Category name'}
             value={newCat}
             onChange={(e) => setNewCat(e.target.value)}
-            className="flex-1 px-2.5 py-1.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
+            className="flex-1 px-2.5 py-1.5 rounded-lg border border-gray-300 dark:border-white/[0.1] bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
             required
           />
           <input
@@ -83,7 +83,7 @@ export const GoalsTracker: React.FC<GoalsTrackerProps> = ({ categoryBreakdown, l
             max="80"
             value={newHours}
             onChange={(e) => setNewHours(e.target.value)}
-            className="w-16 px-2 py-1.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-mono text-center"
+            className="w-16 px-2 py-1.5 rounded-lg border border-gray-300 dark:border-white/[0.1] bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-mono text-center"
           />
           <span className="text-gray-500 font-medium">h</span>
           <button
@@ -114,7 +114,7 @@ export const GoalsTracker: React.FC<GoalsTrackerProps> = ({ categoryBreakdown, l
                   {isCompleted ? (
                     <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
                   ) : (
-                    <div className="w-2 h-2 rounded-full bg-indigo-500 shrink-0" />
+                    <div className="w-2 h-2 rounded-full bg-rose-950/300 shrink-0" />
                   )}
                   <span className="text-xs font-semibold text-gray-800 dark:text-gray-200 capitalize">
                     {g.category}

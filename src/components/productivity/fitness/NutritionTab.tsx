@@ -10,6 +10,8 @@ import {
   Info,
   Calendar,
   CheckCircle2,
+  Loader2,
+  Volume2,
   Sliders,
   Droplets,
   X,
@@ -22,6 +24,17 @@ import {
   Zap,
   Compass,
   ArrowRight,
+  Dumbbell,
+  Apple,
+  Activity,
+  TrendingUp,
+  TrendingDown,
+  ShieldCheck,
+  Award,
+  AlertCircle,
+  Copy,
+  Layers,
+  Heart,
 } from 'lucide-react';
 import {
   CtgPeriodizedRoadmap,
@@ -29,11 +42,13 @@ import {
   CtgRoadmapPhase,
   FoodItem,
   GOAL_LABEL,
+  Goal,
   HealthDayLog,
   MEAL_LABEL,
   MealLog,
   MealSlot,
   NutritionSettings,
+  BodyPoint,
 } from '../../../types/productivity';
 import {
   BALANCED_MEAL_COMBOS,
@@ -49,11 +64,19 @@ import {
   parseFoodText,
   tdee,
   todayString,
+  calculateAdaptiveTDEE,
+  calculateTrendWeights,
+  calculateProteinDistribution,
+  calculateMicronutrientSummary,
+  calculateCarbCyclingTargets,
+  calculateCronometerNutrientScores,
+  formatDateString,
 } from '../../../utils/fitnessMetrics';
 import { Donut, ProgressBar, StackedBar } from '../../charts/SimpleCharts';
 import { GeminiMacroModal } from './GeminiMacroModal';
 import { GeminiMacroItem } from '../../../services/geminiSync';
-import { notifySuccess } from '../../../utils/notify';
+import { notifySuccess, notifyInfo } from '../../../utils/notify';
+import { playSuccessSound } from '../../../utils/sound';
 
 interface NutritionTabProps {
   meals: MealLog[];
@@ -68,9 +91,11 @@ interface NutritionTabProps {
   healthLogs?: HealthDayLog[];
   onUpsertHealthLog?: (log: HealthDayLog) => void;
   ctgPeriodizedRoadmap?: CtgPeriodizedRoadmap | null;
+  bodyPoints?: BodyPoint[];
+  onUpdateProfile?: (patch: Partial<CtgProfile>) => void;
 }
 
-const MEAL_SLOTS: MealSlot[] = ['breakfast', 'lunch', 'dinner', 'snack'];
+const MEAL_SLOTS: MealSlot[] = ['breakfast', 'lunch', 'pre_workout', 'post_workout', 'dinner', 'snack'];
 
 export const NutritionTab: React.FC<NutritionTabProps> = ({
   meals,
@@ -85,6 +110,8 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
   healthLogs,
   onUpsertHealthLog,
   ctgPeriodizedRoadmap,
+  bodyPoints,
+  onUpdateProfile,
 }) => {
   const [selectedDate, setSelectedDate] = useState(() => todayString());
   const [selectedSlot, setSelectedSlot] = useState<MealSlot>('lunch');
@@ -155,6 +182,10 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
   const [catalogMultiplier, setCatalogMultiplier] = useState(1);
   const [catalogTargetSlot, setCatalogTargetSlot] = useState<MealSlot>('lunch');
   const [comboToast, setComboToast] = useState<string | null>(null);
+  const [isSyncingCtg, setIsSyncingCtg] = useState(false);
+  const [justSyncedCtg, setJustSyncedCtg] = useState(false);
+  const [isApplyingAdaptive, setIsApplyingAdaptive] = useState(false);
+  const [justAppliedAdaptive, setJustAppliedAdaptive] = useState(false);
   const [showGeminiModal, setShowGeminiModal] = useState(false);
 
   const handleApplyGeminiMacros = (geminiItems: GeminiMacroItem[]) => {
@@ -243,27 +274,11 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
     notifySuccess('Đã nạp combo món ăn!', `Combo "${combo.name}" đã được ghi nhận vào ${MEAL_LABEL[combo.slot]}!`);
   };
 
-  // Targets
-  const [isRefeedMode, setIsRefeedMode] = useState(false);
-  const userTdee = tdee(profile, userWeightKg);
-  const targetKcal = calorieTarget(userTdee, profile.goal, nutritionSettings.tdeeOffset);
-  const baseTargets = macroTargets(targetKcal, userWeightKg, profile.goal, nutritionSettings);
-
-  const targets = useMemo(() => {
-    if (!isRefeedMode) return baseTargets;
-    // Chế độ Ngày Refeed nạp Carb phục hồi:
-    // Tăng carb lên mức maintenance (+75g carb, ~300 kcal), giữ Protein cao bảo vệ cơ, giữ Fat vừa phải
-    const refeedKcal = baseTargets.kcal + 300;
-    const refeedProtein = baseTargets.protein;
-    const refeedCarbs = baseTargets.carbs + 75;
-    const refeedFat = Math.max(30, baseTargets.fat);
-    return {
-      kcal: refeedKcal,
-      protein: refeedProtein,
-      carbs: refeedCarbs,
-      fat: refeedFat,
-    };
-  }, [isRefeedMode, baseTargets]);
+  // Day meals parsed early for analytics
+  const dayMeals = useMemo(
+    () => meals.filter((m) => m.date === selectedDate),
+    [meals, selectedDate]
+  );
 
   // CTG Active Phase from Periodized Roadmap
   const ctgActivePhase = useMemo(() => {
@@ -276,15 +291,149 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
     return current || ctgPeriodizedRoadmap.phases[0] || null;
   }, [ctgPeriodizedRoadmap]);
 
+  const activeGoal: Goal = useMemo(() => {
+    if (!ctgActivePhase) return profile.goal;
+    if (ctgActivePhase.phaseType === 'bulk') return 'bulk';
+    if (ctgActivePhase.phaseType === 'cut' || ctgActivePhase.phaseType === 'minicut' || ctgActivePhase.phaseType === 'final_cut') return 'cut';
+    return 'maintain';
+  }, [ctgActivePhase, profile.goal]);
+
+  // Carb Cycling Strategy Mode (Chuẩn CTG)
+  const [carbCyclingMode, setCarbCyclingMode] = useState<'training' | 'rest' | 'refeed'>('training');
+  const userTdee = tdee(profile, userWeightKg);
+  const targetKcal = calorieTarget(userTdee, profile.goal, nutritionSettings.tdeeOffset);
+  const baseTargets = macroTargets(targetKcal, userWeightKg, profile.goal, nutritionSettings);
+
+  const cyclingTargets = useMemo(
+    () => calculateCarbCyclingTargets(baseTargets.kcal, baseTargets.protein, baseTargets.carbs, baseTargets.fat),
+    [baseTargets]
+  );
+
+  const targets = useMemo(() => {
+    if (carbCyclingMode === 'training') return cyclingTargets.trainingDay;
+    if (carbCyclingMode === 'rest') return cyclingTargets.restDay;
+    return cyclingTargets.refeedDay;
+  }, [carbCyclingMode, cyclingTargets]);
+  const isRefeedMode = carbCyclingMode === 'refeed';
+
+  // Adaptive Metabolic Expenditure & Trend Weight (Tracked.gg / MacroFactor signature)
+  const trendWeights = useMemo(() => calculateTrendWeights(bodyPoints || []), [bodyPoints]);
+  const latestTrend = trendWeights.trendPoints.length > 0 ? trendWeights.trendPoints[trendWeights.trendPoints.length - 1] : null;
+
+  const adaptiveExpenditure = useMemo(
+    () => calculateAdaptiveTDEE(meals, bodyPoints || [], userTdee, activeGoal, ctgActivePhase?.targetKcal),
+    [meals, bodyPoints, userTdee, activeGoal, ctgActivePhase]
+  );
+
+  // Protein Distribution & Leucine / MPS Threshold (CTG Web)
+  const proteinDist = useMemo(() => {
+    const lbmKg = (userWeightKg * (100 - (profile.targetBodyFatPct || 15))) / 100;
+    return calculateProteinDistribution(dayMeals, targets.protein, lbmKg);
+  }, [dayMeals, targets.protein, userWeightKg, profile.targetBodyFatPct]);
+
+  // Micronutrients Breakdown (Tracked.gg)
+  const currentDayLog = useMemo(
+    () => healthLogs?.find((l) => l.date === selectedDate),
+    [healthLogs, selectedDate]
+  );
+  const currentWaterMl = currentDayLog?.waterMl || 0;
+  const targetWaterMl = 2500;
+
+  const microSummary = useMemo(
+    () => calculateMicronutrientSummary(dayMeals, currentWaterMl),
+    [dayMeals, currentWaterMl]
+  );
+
+  // Cronometer Advanced Micronutrients & Scores
+  const [showCronometerDrawer, setShowCronometerDrawer] = useState(false);
+  const cronoScores = useMemo(
+    () => calculateCronometerNutrientScores(dayMeals, currentWaterMl, targets.protein),
+    [dayMeals, currentWaterMl, targets.protein]
+  );
+
+  const handleCopyYesterdayMeals = () => {
+    const yesterdayDate = formatDateString(new Date(new Date(selectedDate).getTime() - 86400000));
+    const yesterdayMeals = meals.filter((m) => m.date === yesterdayDate);
+    if (yesterdayMeals.length === 0) {
+      notifyInfo('Không có dữ liệu hôm qua', `Ngày ${yesterdayDate} chưa có bữa ăn nào để sao chép.`);
+      return;
+    }
+    for (const m of yesterdayMeals) {
+      onAddMealLog({
+        date: selectedDate,
+        slot: m.slot,
+        description: m.description,
+        items: m.items,
+      });
+    }
+    notifySuccess(
+      'Đã sao chép thực đơn hôm qua!',
+      `Đã nạp ${yesterdayMeals.length} bữa ăn từ ngày ${yesterdayDate} vào ngày ${selectedDate}.`
+    );
+  };
+
+  const handleApplyAdaptiveTDEE = () => {
+    playSuccessSound();
+    setIsApplyingAdaptive(true);
+
+    const recKcal = adaptiveExpenditure.recommendedCaloTarget;
+    const calcCarbs = Math.max(50, Math.round((recKcal - targets.protein * 4 - targets.fat * 9) / 4));
+
+    onUpdateNutritionSettings({
+      overrides: {
+        ...(nutritionSettings.overrides || {}),
+        [profile.goal]: {
+          kcal: recKcal,
+          protein: targets.protein,
+          carbs: calcCarbs,
+          fat: targets.fat,
+        },
+      },
+    });
+    setOverrideKcal(String(recKcal));
+    setOverrideProtein(String(targets.protein));
+    setOverrideCarbs(String(calcCarbs));
+    setOverrideFat(String(targets.fat));
+
+    setTimeout(() => {
+      setIsApplyingAdaptive(false);
+      setJustAppliedAdaptive(true);
+      setComboToast(`✓ Đã kích hoạt Calo Thích Ứng (${recKcal.toLocaleString('vi-VN')} kcal) từ Tiêu Hao Chuyển Hóa!`);
+      setTimeout(() => setComboToast(null), 4000);
+      notifySuccess(
+        'Đã áp dụng TDEE Thích Ứng thành công!',
+        `Mục tiêu calo đã chuyển sang ${recKcal.toLocaleString('vi-VN')} kcal (TDEE Trao Đổi Chất Thực Tế: ${adaptiveExpenditure.adaptiveTdee.toLocaleString('vi-VN')} kcal).`
+      );
+      setTimeout(() => setJustAppliedAdaptive(false), 3500);
+    }, 200);
+  };
+
+
+
   const isSyncedWithCtgPhase = useMemo(() => {
     if (!ctgActivePhase) return true;
-    const diffKcal = Math.abs(targets.kcal - ctgActivePhase.targetKcal);
-    const diffProtein = Math.abs(targets.protein - ctgActivePhase.macros.protein);
+    const currentOverride = nutritionSettings.overrides?.[profile.goal];
+    if (currentOverride && currentOverride.kcal) {
+      const diffKcal = Math.abs(currentOverride.kcal - ctgActivePhase.targetKcal);
+      const diffProtein = Math.abs((currentOverride.protein || 0) - ctgActivePhase.macros.protein);
+      return diffKcal <= 10 && diffProtein <= 2;
+    }
+    const diffKcal = Math.abs(baseTargets.kcal - ctgActivePhase.targetKcal);
+    const diffProtein = Math.abs(baseTargets.protein - ctgActivePhase.macros.protein);
     return diffKcal <= 10 && diffProtein <= 2;
-  }, [ctgActivePhase, targets]);
+  }, [ctgActivePhase, nutritionSettings.overrides, profile.goal, baseTargets]);
+
+  const isAdaptiveApplied = useMemo(() => {
+    const currentOverride = nutritionSettings.overrides?.[profile.goal];
+    if (!currentOverride || !currentOverride.kcal) return false;
+    return Math.abs(currentOverride.kcal - adaptiveExpenditure.recommendedCaloTarget) <= 5;
+  }, [nutritionSettings.overrides, profile.goal, adaptiveExpenditure.recommendedCaloTarget]);
 
   const handleSyncWithCtgPhase = () => {
     if (!ctgActivePhase) return;
+    playSuccessSound();
+    setIsSyncingCtg(true);
+
     onUpdateNutritionSettings({
       overrides: {
         ...(nutritionSettings.overrides || {}),
@@ -300,9 +449,18 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
     setOverrideProtein(String(ctgActivePhase.macros.protein));
     setOverrideCarbs(String(ctgActivePhase.macros.carbs));
     setOverrideFat(String(ctgActivePhase.macros.fat));
-    setComboToast(`Đã đồng bộ chuẩn dinh dưỡng theo Giai đoạn "${ctgActivePhase.name}" (${ctgActivePhase.targetKcal} kcal)!`);
-    setTimeout(() => setComboToast(null), 4000);
-    notifySuccess('Đã đồng bộ chuẩn CTG!', `Mục tiêu cập nhật theo Giai đoạn "${ctgActivePhase.name}" (${ctgActivePhase.targetKcal} kcal)!`);
+
+    setTimeout(() => {
+      setIsSyncingCtg(false);
+      setJustSyncedCtg(true);
+      setComboToast(`✓ Đã đồng bộ chuẩn dinh dưỡng theo Giai đoạn "${ctgActivePhase.name}" (${ctgActivePhase.targetKcal} kcal)!`);
+      setTimeout(() => setComboToast(null), 4000);
+      notifySuccess(
+        'Đã đồng bộ chuẩn CTG thành công!',
+        `Mục tiêu calo đã chuyển sang ${ctgActivePhase.targetKcal.toLocaleString('vi-VN')} kcal theo Giai đoạn "${ctgActivePhase.name}" (${ctgActivePhase.macros.protein}g Đạm / ${ctgActivePhase.macros.carbs}g Carb / ${ctgActivePhase.macros.fat}g Fat).`
+      );
+      setTimeout(() => setJustSyncedCtg(false), 3500);
+    }, 200);
   };
 
   // Macro override form state
@@ -315,13 +473,7 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
   // Day totals
   const currentTotals = useMemo(() => dayTotals(meals, selectedDate), [meals, selectedDate]);
 
-  // Water tracking for the day
-  const currentDayLog = useMemo(
-    () => healthLogs?.find((l) => l.date === selectedDate),
-    [healthLogs, selectedDate]
-  );
-  const currentWaterMl = currentDayLog?.waterMl || 0;
-  const targetWaterMl = 2500;
+  // Water tracking handled in unified state above
 
   const handleAddWater = (delta: number) => {
     if (!onUpsertHealthLog) return;
@@ -407,10 +559,7 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
     }
   };
 
-  const dayMeals = useMemo(
-    () => meals.filter((m) => m.date === selectedDate),
-    [meals, selectedDate]
-  );
+
 
   const remainingKcal = targets.kcal - currentTotals.kcal;
   const remainingProtein = targets.protein - currentTotals.protein;
@@ -421,14 +570,14 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
     <div className="space-y-5">
       {/* CTG Active Phase Sync Card */}
       {ctgActivePhase && (
-        <div className="bg-gradient-to-r from-blue-900/40 via-indigo-950/30 to-[#0b101b] border border-blue-500/40 rounded-2xl p-4 shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-white">
+        <div className="bg-gradient-to-r from-rose-950/40 via-red-950/30 to-[#070204] border border-rose-500/40 rounded-2xl p-4 shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-white">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-500/20 border border-blue-500/30 text-blue-400 flex items-center justify-center shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-rose-500/20 border border-rose-500/30 text-rose-400 flex items-center justify-center shrink-0">
               <Compass className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30">
                   Giai Đoạn CTG Hiện Tại
                 </span>
                 <span className="text-xs text-white/50 font-mono">
@@ -437,7 +586,7 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
               </div>
               <div className="text-sm font-bold text-white mt-0.5 flex flex-wrap items-center gap-2">
                 <span>{ctgActivePhase.name}:</span>
-                <span className="text-blue-300 font-mono font-extrabold">{ctgActivePhase.targetKcal.toLocaleString('vi-VN')} kcal</span>
+                <span className="text-rose-400 font-mono font-extrabold">{ctgActivePhase.targetKcal.toLocaleString('vi-VN')} kcal</span>
                 <span className="text-xs text-white/60 font-mono">
                   ({ctgActivePhase.macros.protein}g Đạm / {ctgActivePhase.macros.carbs}g Carb / {ctgActivePhase.macros.fat}g Fat)
                 </span>
@@ -446,54 +595,382 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
           </div>
 
           <div className="flex flex-wrap items-center gap-2 shrink-0 self-end sm:self-center">
-            {/* Nút bật/tắt Ngày Refeed nạp Carb */}
-            <button
-              type="button"
-              onClick={() => setIsRefeedMode((prev) => !prev)}
-              className={`px-3 py-1.5 rounded-xl font-bold text-xs cursor-pointer shadow-xs transition-all flex items-center gap-1.5 ${
-                isRefeedMode
-                  ? 'bg-amber-500 text-black shadow-amber-500/30 ring-2 ring-amber-300 font-extrabold'
-                  : 'bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30'
-              }`}
-              title="Kích hoạt ngày Refeed nạp carb phục hồi glycogen cơ bắp và leptin"
-            >
-              <Flame className="w-3.5 h-3.5" />
-              <span>{isRefeedMode ? '⚡ Đang Bật Refeed (+300 kcal)' : 'Ngày Refeed'}</span>
-            </button>
-
-            {!isSyncedWithCtgPhase ? (
+            {isSyncingCtg ? (
+              <button
+                type="button"
+                disabled
+                className="px-3.5 py-1.5 rounded-xl bg-rose-700/80 text-white font-bold text-xs flex items-center gap-2 cursor-wait shadow-inner"
+              >
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
+                <span>Đang đồng bộ...</span>
+              </button>
+            ) : justSyncedCtg ? (
               <button
                 type="button"
                 onClick={handleSyncWithCtgPhase}
-                className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs cursor-pointer shadow-xs transition-colors flex items-center gap-1.5"
+                className="px-4 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 text-white font-extrabold text-xs flex items-center gap-2 btn-success-glow border border-emerald-300 transform scale-105 transition-all cursor-pointer"
               >
-                <Zap className="w-3.5 h-3.5" />
-                <span>⚡ Đồng Bộ Chuẩn CTG</span>
+                <CheckCircle2 className="w-4 h-4 text-emerald-200 animate-bounce" />
+                <span>✓ ĐÃ ĐỒNG BỘ THÀNH CÔNG!</span>
               </button>
+            ) : isSyncedWithCtgPhase ? (
+              <div className="flex items-center gap-2">
+                <span className="px-3 py-1.5 rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-xs font-bold flex items-center gap-1.5 shadow-[0_0_12px_rgba(16,185,129,0.2)]">
+                  <Check className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>✓ Đang khớp chuẩn CTG ({ctgActivePhase.targetKcal} kcal)</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={handleSyncWithCtgPhase}
+                  className="px-2.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 hover:text-white text-xs font-semibold transition-colors cursor-pointer border border-white/10 flex items-center gap-1"
+                  title="Bấm để đồng bộ lại"
+                >
+                  <Zap className="w-3 h-3 text-rose-400" />
+                  <span>Đồng bộ lại</span>
+                </button>
+              </div>
             ) : (
-              <span className="px-3 py-1 rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-semibold flex items-center gap-1.5">
-                <span>✓ Đang khớp chuẩn CTG</span>
-              </span>
+              <button
+                type="button"
+                onClick={handleSyncWithCtgPhase}
+                className="px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 active:scale-95 text-white font-bold text-xs cursor-pointer shadow-md hover:shadow-rose-600/30 transition-all flex items-center gap-1.5"
+              >
+                <Zap className="w-3.5 h-3.5 text-rose-200" />
+                <span>Đồng Bộ Chuẩn CTG</span>
+              </button>
             )}
           </div>
         </div>
       )}
 
-      {/* Refeed Mode Info Alert */}
-      {isRefeedMode && (
-        <div className="p-3.5 rounded-2xl bg-amber-500/15 border border-amber-500/30 flex items-start gap-2.5 text-xs text-amber-200 animate-fadeIn">
-          <Flame className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-          <div>
-            <div className="font-bold text-white flex items-center gap-2">
-              <span>Hôm nay là Ngày Refeed (Nạp Carb Phục Hồi Glycogen)</span>
-              <span className="px-2 py-0.2 rounded-full text-[10px] bg-amber-500/30 text-amber-300 font-mono font-bold">+75g Carb (~300 kcal)</span>
+      {/* Tracked.gg Adaptive Metabolic Expenditure & Smoothed Trend Weight Engine */}
+      <div className="bg-gradient-to-r from-rose-950/50 via-[#0a0306] to-[#050102] border border-rose-500/30 rounded-2xl p-4 md:p-5 shadow-lg space-y-4 text-white">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-white/[0.08] pb-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-rose-600/20 border border-rose-500/40 text-rose-400 flex items-center justify-center shrink-0">
+              <Activity className="w-5 h-5 animate-pulse" />
             </div>
-            <p className="text-[11px] text-amber-200/80 mt-1 leading-relaxed">
-              Chiến thuật chuẩn CTG: Nạp tăng carbohydrate tinh khiết (cơm trắng, khoai lang, yến mạch, bánh mì) trước và sau buổi tập nặng. Mục tiêu là nạp đầy kho dự trữ Glycogen cơ bắp, kích hoạt lại hormone Leptin và duy trì tốc độ trao đổi chất mà không tích mỡ thừa!
-            </p>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-rose-600/30 text-rose-300 border border-rose-500/40">
+                  Tracked.gg Engine
+                </span>
+                <span className="text-xs text-rose-400/90 font-semibold">
+                  TDEE Thích Ứng & Cân Nặng Xu Hướng
+                </span>
+              </div>
+              <p className="text-[11px] text-white/60 mt-0.5">
+                Tính toán tiêu hao trao đổi chất thực tế dựa trên delta cân nặng xu hướng (EMA) và lượng calo nạp 14 ngày.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {isApplyingAdaptive ? (
+              <button
+                type="button"
+                disabled
+                className="px-3.5 py-1.5 rounded-xl bg-rose-700/80 text-white font-bold text-xs flex items-center gap-2 cursor-wait shadow-inner"
+              >
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
+                <span>Đang áp dụng...</span>
+              </button>
+            ) : justAppliedAdaptive ? (
+              <button
+                type="button"
+                onClick={handleApplyAdaptiveTDEE}
+                className="px-4 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 text-white font-extrabold text-xs flex items-center gap-2 btn-success-glow border border-emerald-300 transform scale-105 transition-all cursor-pointer"
+              >
+                <CheckCircle2 className="w-4 h-4 text-emerald-200 animate-bounce" />
+                <span>✓ ĐÃ ÁP DỤNG {adaptiveExpenditure.recommendedCaloTarget} KCAL!</span>
+              </button>
+            ) : isAdaptiveApplied ? (
+              <div className="flex items-center gap-2">
+                <span className="px-3 py-1.5 rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-xs font-bold flex items-center gap-1.5 shadow-[0_0_12px_rgba(16,185,129,0.2)]">
+                  <Check className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>✓ Đang áp dụng TDEE ({adaptiveExpenditure.recommendedCaloTarget} kcal)</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={handleApplyAdaptiveTDEE}
+                  className="px-2.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 hover:text-white text-xs font-semibold transition-colors cursor-pointer border border-white/10 flex items-center gap-1"
+                  title="Bấm để cập nhật lại"
+                >
+                  <Zap className="w-3 h-3 text-rose-400" />
+                  <span>Cập nhật lại</span>
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={handleApplyAdaptiveTDEE}
+                className="px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 active:scale-95 text-white font-bold text-xs cursor-pointer shadow-md hover:shadow-rose-600/30 transition-all flex items-center gap-1.5"
+                title="Cập nhật mục tiêu dinh dưỡng theo mức chuyển hóa thực tế của cơ thể"
+              >
+                <Zap className="w-3.5 h-3.5 text-rose-200" />
+                <span>Áp dụng TDEE Thích Ứng ({adaptiveExpenditure.recommendedCaloTarget} kcal)</span>
+              </button>
+            )}
           </div>
         </div>
-      )}
+
+        {/* 4 Metric Cards */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          {/* Card 1: Adaptive TDEE */}
+          <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.08]">
+            <div className="text-[10px] uppercase font-bold text-rose-400 flex items-center justify-between">
+              <span>TDEE Thích Ứng Thực Tế</span>
+              <Activity className="w-3 h-3 text-rose-400" />
+            </div>
+            <div className="text-lg font-black font-mono text-white mt-1">
+              {adaptiveExpenditure.adaptiveTdee.toLocaleString('vi-VN')} <span className="text-xs font-normal text-white/50">kcal</span>
+            </div>
+            <div className="text-[11px] text-rose-300/80 mt-0.5 font-mono">
+              {adaptiveExpenditure.differenceKcal !== 0
+                ? `${adaptiveExpenditure.differenceKcal > 0 ? '+' : ''}${adaptiveExpenditure.differenceKcal} kcal vs Cơ sở`
+                : 'Chuẩn chuyển hóa theo mục tiêu'}
+            </div>
+          </div>
+
+          {/* Card 2: Recommended Target */}
+          <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.08]">
+            <div className="text-[10px] uppercase font-bold text-amber-400 flex items-center justify-between">
+              <span>Calo Đề Xuất ({ctgActivePhase ? ctgActivePhase.name : GOAL_LABEL[profile.goal]})</span>
+              <Target className="w-3 h-3 text-amber-400" />
+            </div>
+            <div className="text-lg font-black font-mono text-amber-300 mt-1">
+              {adaptiveExpenditure.recommendedCaloTarget.toLocaleString('vi-VN')} <span className="text-xs font-normal text-white/50">kcal</span>
+            </div>
+            <div className="text-[11px] text-white/50 mt-0.5">
+              {ctgActivePhase ? 'Khớp lộ trình Giai đoạn CTG' : 'Tối ưu cho mục tiêu cá nhân'}
+            </div>
+          </div>
+
+          {/* Card 3: Trend Weight */}
+          <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.08]">
+            <div className="text-[10px] uppercase font-bold text-cyan-400 flex items-center justify-between">
+              <span>Cân Nặng Xu Hướng (EMA)</span>
+              {trendWeights.weeklyRateKg <= 0 ? <TrendingDown className="w-3 h-3 text-cyan-400" /> : <TrendingUp className="w-3 h-3 text-amber-400" />}
+            </div>
+            <div className="text-lg font-black font-mono text-cyan-300 mt-1">
+              {latestTrend ? latestTrend.trendWeight : userWeightKg} <span className="text-xs font-normal text-white/50">kg</span>
+            </div>
+            <div className="text-[11px] text-cyan-200/80 mt-0.5 font-mono">
+              {trendWeights.weeklyRateKg > 0 ? '+' : ''}{trendWeights.weeklyRateKg} kg/tuần
+            </div>
+          </div>
+
+          {/* Card 4: Confidence Score */}
+          <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.08]">
+            <div className="text-[10px] uppercase font-bold text-emerald-400 flex items-center justify-between">
+              <span>Độ Tin Cậy Dữ Liệu</span>
+              <ShieldCheck className="w-3 h-3 text-emerald-400" />
+            </div>
+            <div className="text-lg font-black font-mono text-emerald-300 mt-1">
+              {adaptiveExpenditure.confidenceScore}%
+            </div>
+            <div className="text-[11px] text-emerald-200/80 mt-0.5">
+              {adaptiveExpenditure.loggedDaysCount} ngày nhật ký hợp lệ
+            </div>
+          </div>
+        </div>
+
+        {/* Biological Adaptation Feedback */}
+        <div className="p-3 rounded-xl bg-rose-950/30 border border-rose-500/20 text-xs text-rose-200/90 flex items-start gap-2.5">
+          <ShieldCheck className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+          <div className="leading-relaxed">
+            <span className="font-bold text-white mr-1.5">Nhận định chuyển hóa:</span>
+            {adaptiveExpenditure.analysisMessage}
+          </div>
+        </div>
+      </div>
+
+      {/* CTG Carb Cycling Day Strategy Selector */}
+      <div className="bg-white dark:bg-white/[0.03] backdrop-blur-xl border border-slate-200 dark:border-white/[0.08] rounded-2xl p-4 md:p-5 shadow-xs space-y-3.5">
+        <div className="flex items-center justify-between border-b border-gray-100 dark:border-white/[0.08] pb-2.5">
+          <div>
+            <h3 className="text-xs font-bold text-gray-900 dark:text-gray-100 uppercase tracking-wider flex items-center gap-2">
+              <Flame className="w-4 h-4 text-amber-500" />
+              Chiến Lược Carb Cycling (Chuẩn CTG Web)
+            </h3>
+            <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
+              Luân phiên tinh bột theo ngày tập và ngày nghỉ để tối đa hóa hiệu suất nâng tạ mà không bị tích mỡ thừa.
+            </p>
+          </div>
+
+          <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+            {carbCyclingMode === 'training' ? '🏋️ Ngày Tập Luyện' : carbCyclingMode === 'rest' ? '🛌 Ngày Nghỉ Phục Hồi' : '⚡ Ngày Refeed'}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          {/* Option 1: Training Day */}
+          <button
+            type="button"
+            onClick={() => setCarbCyclingMode('training')}
+            className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-2 ${
+              carbCyclingMode === 'training'
+                ? 'bg-rose-500/15 border-rose-500/60 ring-2 ring-rose-500/40 text-rose-300'
+                : 'bg-gray-50/50 dark:bg-white/[0.02] border-slate-200 dark:border-white/[0.08] hover:border-rose-400/40 text-gray-400'
+            }`}
+          >
+            <div>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
+                  <Dumbbell className="w-3.5 h-3.5 text-rose-500" />
+                  Ngày Tập Luyện (High Carb)
+                </span>
+                {carbCyclingMode === 'training' && (
+                  <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase bg-rose-600 text-white">
+                    Đang chọn
+                  </span>
+                )}
+              </div>
+              <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
+                Tăng tinh bột nạp trước & sau buổi tập để nạp đầy kho glycogen cơ bắp và tối đa hóa sức mạnh phát lực.
+              </p>
+            </div>
+            <div className="pt-2 border-t border-gray-100 dark:border-white/[0.08] font-mono text-[11px] text-gray-700 dark:text-gray-300">
+              <span className="font-bold text-rose-600 dark:text-rose-400">{cyclingTargets.trainingDay.kcal} kcal</span> · P: {cyclingTargets.trainingDay.protein}g · C: {cyclingTargets.trainingDay.carbs}g · F: {cyclingTargets.trainingDay.fat}g
+            </div>
+          </button>
+
+          {/* Option 2: Rest Day */}
+          <button
+            type="button"
+            onClick={() => setCarbCyclingMode('rest')}
+            className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-2 ${
+              carbCyclingMode === 'rest'
+                ? 'bg-cyan-500/15 border-cyan-500/60 ring-2 ring-cyan-500/40 text-cyan-300'
+                : 'bg-gray-50/50 dark:bg-white/[0.02] border-slate-200 dark:border-white/[0.08] hover:border-cyan-400/40 text-gray-400'
+            }`}
+          >
+            <div>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
+                  <Coffee className="w-3.5 h-3.5 text-cyan-500" />
+                  Ngày Nghỉ Phục Hồi (Low Carb)
+                </span>
+                {carbCyclingMode === 'rest' && (
+                  <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase bg-cyan-600 text-white">
+                    Đang chọn
+                  </span>
+                )}
+              </div>
+              <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
+                Hạ lượng carb xuống, tăng chất béo tốt (omega-3, dầu olive) để phục hồi hệ thần kinh và khớp.
+              </p>
+            </div>
+            <div className="pt-2 border-t border-gray-100 dark:border-white/[0.08] font-mono text-[11px] text-gray-700 dark:text-gray-300">
+              <span className="font-bold text-cyan-600 dark:text-cyan-400">{cyclingTargets.restDay.kcal} kcal</span> · P: {cyclingTargets.restDay.protein}g · C: {cyclingTargets.restDay.carbs}g · F: {cyclingTargets.restDay.fat}g
+            </div>
+          </button>
+
+          {/* Option 3: Refeed Day */}
+          <button
+            type="button"
+            onClick={() => setCarbCyclingMode('refeed')}
+            className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-2 ${
+              carbCyclingMode === 'refeed'
+                ? 'bg-amber-500/15 border-amber-500/60 ring-2 ring-amber-500/40 text-amber-300'
+                : 'bg-gray-50/50 dark:bg-white/[0.02] border-slate-200 dark:border-white/[0.08] hover:border-amber-400/40 text-gray-400'
+            }`}
+          >
+            <div>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
+                  <Flame className="w-3.5 h-3.5 text-amber-500" />
+                  Ngày Refeed (Leptin Reset)
+                </span>
+                {carbCyclingMode === 'refeed' && (
+                  <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase bg-amber-500 text-black">
+                    Đang chọn
+                  </span>
+                )}
+              </div>
+              <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
+                Siêu nạp carbohydrate tinh khiết, ép Fat &lt; 30g để kích thích reset hormone Leptin và tăng trao đổi chất.
+              </p>
+            </div>
+            <div className="pt-2 border-t border-gray-100 dark:border-white/[0.08] font-mono text-[11px] text-gray-700 dark:text-gray-300">
+              <span className="font-bold text-amber-600 dark:text-amber-400">{cyclingTargets.refeedDay.kcal} kcal</span> · P: {cyclingTargets.refeedDay.protein}g · C: {cyclingTargets.refeedDay.carbs}g · F: {cyclingTargets.refeedDay.fat}g
+            </div>
+          </button>
+        </div>
+      </div>
+
+      {/* Protein Distribution & Leucine / MPS Threshold Tracker (CTG & Tracked.gg) */}
+      <div className="bg-white dark:bg-white/[0.03] backdrop-blur-xl border border-slate-200 dark:border-white/[0.08] rounded-2xl p-4 md:p-5 shadow-xs space-y-3.5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-100 dark:border-white/[0.08] pb-2.5">
+          <div>
+            <h3 className="text-xs font-bold text-gray-900 dark:text-gray-100 uppercase tracking-wider flex items-center gap-2">
+              <Award className="w-4 h-4 text-rose-500" />
+              Tổng Hợp Protein Cơ Bắp (MPS & Ngưỡng Leucine)
+            </h3>
+            <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
+              Cơ bắp chỉ kích hoạt đồng hóa phát triển khi đạt ngưỡng Leucine (~25g - 40g đạm) trong mỗi cữ ăn.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold font-mono px-2.5 py-1 rounded-full bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30">
+              {proteinDist.successfulMpsTriggers} / {proteinDist.optimalFeedingWindowsCount} Cửa Sổ MPS Đạt Chuẩn
+            </span>
+          </div>
+        </div>
+
+        {/* Feeding Windows Grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
+          {MEAL_SLOTS.map((slot) => {
+            const slotMealList = dayMeals.filter((m) => m.slot === slot);
+            const slotProt = slotMealList.reduce((sum, m) => sum + mealTotals(m).protein, 0);
+            const slotKcal = slotMealList.reduce((sum, m) => sum + mealTotals(m).kcal, 0);
+            const isHit = slotProt >= 25;
+
+            return (
+              <div
+                key={slot}
+                className={`p-3 rounded-xl border flex flex-col justify-between transition-all ${
+                  slotProt === 0
+                    ? 'border-dashed border-gray-200 dark:border-white/[0.08] bg-gray-50/40 dark:bg-white/[0.01]'
+                    : isHit
+                    ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300'
+                    : 'border-amber-500/40 bg-amber-500/10 text-amber-300'
+                }`}
+              >
+                <div>
+                  <div className="text-[10px] uppercase font-bold text-gray-500 dark:text-gray-400 truncate">
+                    {MEAL_LABEL[slot]}
+                  </div>
+                  <div className="text-sm font-black font-mono mt-1 text-gray-900 dark:text-white">
+                    {Math.round(slotProt)}g <span className="text-[10px] font-normal text-gray-400">đạm</span>
+                  </div>
+                </div>
+
+                <div className="mt-2 pt-1.5 border-t border-gray-100 dark:border-white/[0.08]">
+                  {slotProt === 0 ? (
+                    <span className="text-[10px] text-gray-400">Chưa nạp</span>
+                  ) : isHit ? (
+                    <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                      <Check className="w-3 h-3" /> MPS Kích Hoạt
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-400">
+                      &lt; 25g (Thiếu leucine)
+                    </span>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* MPS Coach Feedback */}
+        <div className="p-3 rounded-xl bg-gray-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/[0.08] text-xs text-gray-600 dark:text-gray-300 flex items-center gap-2">
+          <Info className="w-4 h-4 text-rose-500 shrink-0" />
+          <span>{proteinDist.feedback}</span>
+        </div>
+      </div>
 
       {/* Top Banner */}
       <div className="bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-transparent dark:from-emerald-950/30 dark:via-teal-950/20 rounded-2xl border border-emerald-200 dark:border-emerald-900/50 p-4 md:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -514,16 +991,35 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
           </p>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
           <input
             type="date"
             value={selectedDate}
             onChange={(e) => setSelectedDate(e.target.value)}
-            className="text-xs px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
+            className="text-xs px-3 py-2 rounded-xl border border-gray-300 dark:border-white/[0.1] bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
           />
           <button
+            type="button"
+            onClick={handleCopyYesterdayMeals}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 text-xs font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer shadow-2xs transition-all"
+            title="Tự động sao chép toàn bộ các bữa ăn của ngày hôm qua sang hôm nay"
+          >
+            <Copy className="w-3.5 h-3.5 text-rose-500" />
+            <span>Sao Chép Hôm Qua</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowCronometerDrawer(true)}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white text-xs font-bold shadow-xs cursor-pointer transition-all"
+            title="Mở bảng vi chất & 3 thang điểm dinh dưỡng chuyên sâu chuẩn Cronometer"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-amber-200" />
+            <span>Vi Chất Cronometer (95+)</span>
+          </button>
+          <button
+            type="button"
             onClick={() => setShowOverrideModal(true)}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 text-xs font-semibold hover:bg-gray-50 cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-300 dark:border-white/[0.1] bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 text-xs font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
           >
             <Sliders className="w-4 h-4 text-emerald-600" />
             <span>Tùy chỉnh Macro</span>
@@ -534,7 +1030,7 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
       {/* Quick Remaining Macro Pills (Chuẩn CTG Web) */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
         <div className={`p-3 rounded-2xl border transition-all ${
-          remainingKcal >= 0 ? 'bg-white dark:bg-[#131b2e] border-slate-200 dark:border-slate-800' : 'bg-rose-500/10 border-rose-500/30'
+          remainingKcal >= 0 ? 'bg-white dark:bg-white/[0.03] backdrop-blur-xl border-slate-200 dark:border-white/[0.08]' : 'bg-rose-500/10 border-rose-500/30'
         }`}>
           <div className="text-[10px] uppercase font-bold text-gray-400">Calo Còn Lại</div>
           <div className={`text-base sm:text-lg font-black font-mono mt-0.5 ${
@@ -575,7 +1071,7 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
       {/* Headline Macro Cards with Iconic Donut Chart */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Macro Donut Ring Chart */}
-        <div className="bg-white dark:bg-[#131b2e] p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex items-center justify-between gap-4">
+        <div className="bg-white dark:bg-white/[0.03] backdrop-blur-xl p-4 rounded-2xl border border-slate-200 dark:border-white/[0.08] shadow-xs flex items-center justify-between gap-4">
           <div className="flex-1">
             <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
               Năng Lượng Ngày ({selectedDate})
@@ -610,8 +1106,8 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
         </div>
 
         {/* 3 Macro Target Progress Cards */}
-        <div className="bg-white dark:bg-[#131b2e] p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-3 lg:col-span-2 flex flex-col justify-between">
-          <div className="flex items-center justify-between border-b border-gray-100 dark:border-slate-800 pb-2">
+        <div className="bg-white dark:bg-white/[0.03] backdrop-blur-xl p-4 rounded-2xl border border-slate-200 dark:border-white/[0.08] shadow-xs space-y-3 lg:col-span-2 flex flex-col justify-between">
+          <div className="flex items-center justify-between border-b border-gray-100 dark:border-white/[0.08] pb-2">
             <h3 className="text-xs font-bold text-gray-900 dark:text-gray-100">
               Tiến Độ Đa Lượng (Macros Breakdown)
             </h3>
@@ -684,109 +1180,152 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
         </div>
       </div>
 
-      {/* Quick Water Tracker & TDEE Offset Adjuster */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Quick Water Tracker */}
-        <div className="bg-white dark:bg-[#131b2e] p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-xs font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-              <Droplets className="w-4 h-4 text-cyan-500" />
-              Nạp Nước Trong Ngày ({selectedDate})
-            </h3>
-            <span className="text-xs font-bold text-cyan-600 dark:text-cyan-400 font-mono">
-              {currentWaterMl} / {targetWaterMl} ml
-            </span>
+      {/* Tracked.gg Micronutrients & Hydration Dashboard */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+        {/* Metric 1: Fiber */}
+        <div className="bg-white dark:bg-white/[0.03] backdrop-blur-xl p-3.5 rounded-2xl border border-slate-200 dark:border-white/[0.08] shadow-xs flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between text-xs font-bold text-gray-900 dark:text-gray-100 mb-1">
+              <span className="flex items-center gap-1.5">
+                <Apple className="w-4 h-4 text-emerald-500" />
+                Chất Xơ (Fiber)
+              </span>
+              <span className="font-mono text-emerald-600 dark:text-emerald-400">
+                {microSummary.fiberGrams} / {microSummary.fiberTargetGrams}g
+              </span>
+            </div>
+            <p className="text-[10px] text-gray-400">
+              Kiểm soát đường huyết, hỗ trợ vi sinh & no lâu khi siết
+            </p>
           </div>
+          <div className="mt-3">
+            <ProgressBar
+              percent={microSummary.fiberScorePct}
+              color="#10B981"
+              height={6}
+            />
+          </div>
+        </div>
 
-          <ProgressBar
-            percent={Math.min(100, Math.round((currentWaterMl / targetWaterMl) * 100))}
-            color="#06B6D4"
-            height={7}
-            className="mb-3"
-          />
+        {/* Metric 2: Sugar Limit */}
+        <div className="bg-white dark:bg-white/[0.03] backdrop-blur-xl p-3.5 rounded-2xl border border-slate-200 dark:border-white/[0.08] shadow-xs flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between text-xs font-bold text-gray-900 dark:text-gray-100 mb-1">
+              <span className="flex items-center gap-1.5">
+                <AlertCircle className="w-4 h-4 text-amber-500" />
+                Đường (Sugar Max)
+              </span>
+              <span className={`font-mono ${microSummary.sugarGrams > microSummary.sugarLimitGrams ? 'text-rose-500' : 'text-amber-500'}`}>
+                {microSummary.sugarGrams} / {microSummary.sugarLimitGrams}g
+              </span>
+            </div>
+            <p className="text-[10px] text-gray-400">
+              Ngưỡng tối đa bảo vệ gan & hạn chế tích mỡ nội tạng
+            </p>
+          </div>
+          <div className="mt-3">
+            <ProgressBar
+              percent={Math.min(100, Math.round((microSummary.sugarGrams / microSummary.sugarLimitGrams) * 100))}
+              color={microSummary.sugarGrams > microSummary.sugarLimitGrams ? '#F43F5E' : '#F59E0B'}
+              height={6}
+            />
+          </div>
+        </div>
 
-          <div className="flex items-center gap-2">
+        {/* Metric 3: Sodium Reference */}
+        <div className="bg-white dark:bg-white/[0.03] backdrop-blur-xl p-3.5 rounded-2xl border border-slate-200 dark:border-white/[0.08] shadow-xs flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between text-xs font-bold text-gray-900 dark:text-gray-100 mb-1">
+              <span className="flex items-center gap-1.5">
+                <ShieldCheck className="w-4 h-4 text-purple-500" />
+                Natri (Sodium)
+              </span>
+              <span className="font-mono text-purple-600 dark:text-purple-400">
+                {microSummary.sodiumMg} / {microSummary.sodiumTargetMg}mg
+              </span>
+            </div>
+            <p className="text-[10px] text-gray-400">
+              Cân bằng điện giải, bơm cơ & điều hòa tích nước
+            </p>
+          </div>
+          <div className="mt-3">
+            <ProgressBar
+              percent={Math.min(100, Math.round((microSummary.sodiumMg / microSummary.sodiumTargetMg) * 100))}
+              color="#A855F7"
+              height={6}
+            />
+          </div>
+        </div>
+
+        {/* Metric 4: Water Hydration with Quick Add */}
+        <div className="bg-white dark:bg-white/[0.03] backdrop-blur-xl p-3.5 rounded-2xl border border-slate-200 dark:border-white/[0.08] shadow-xs flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between text-xs font-bold text-gray-900 dark:text-gray-100 mb-1">
+              <span className="flex items-center gap-1.5">
+                <Droplets className="w-4 h-4 text-cyan-500" />
+                Nước (Hydration)
+              </span>
+              <span className="font-mono text-cyan-600 dark:text-cyan-400 font-bold">
+                {currentWaterMl} / {targetWaterMl}ml
+              </span>
+            </div>
+            <ProgressBar
+              percent={Math.min(100, Math.round((currentWaterMl / targetWaterMl) * 100))}
+              color="#06B6D4"
+              height={6}
+              className="mt-1"
+            />
+          </div>
+          <div className="flex items-center gap-1 mt-2.5">
             <button
               type="button"
               onClick={() => handleAddWater(250)}
-              className="flex-1 py-2 px-2.5 rounded-xl bg-cyan-50 hover:bg-cyan-100 dark:bg-cyan-950/40 dark:hover:bg-cyan-900/40 text-cyan-700 dark:text-cyan-300 text-xs font-semibold transition-colors cursor-pointer text-center"
+              className="flex-1 py-1 px-1.5 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-600 dark:text-cyan-300 text-[10px] font-bold cursor-pointer text-center"
             >
-              +250ml Cốc
+              +250ml
             </button>
             <button
               type="button"
               onClick={() => handleAddWater(500)}
-              className="flex-1 py-2 px-2.5 rounded-xl bg-cyan-50 hover:bg-cyan-100 dark:bg-cyan-950/40 dark:hover:bg-cyan-900/40 text-cyan-700 dark:text-cyan-300 text-xs font-semibold transition-colors cursor-pointer text-center"
+              className="flex-1 py-1 px-1.5 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-600 dark:text-cyan-300 text-[10px] font-bold cursor-pointer text-center"
             >
-              +500ml Chai
+              +500ml
             </button>
             <button
               type="button"
               onClick={() => handleAddWater(1000)}
-              className="flex-1 py-2 px-2.5 rounded-xl bg-cyan-50 hover:bg-cyan-100 dark:bg-cyan-950/40 dark:hover:bg-cyan-900/40 text-cyan-700 dark:text-cyan-300 text-xs font-semibold transition-colors cursor-pointer text-center"
+              className="flex-1 py-1 px-1.5 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-600 dark:text-cyan-300 text-[10px] font-bold cursor-pointer text-center"
             >
-              +1L Bình
+              +1L
             </button>
             {currentWaterMl > 0 && (
               <button
                 type="button"
                 onClick={() => handleAddWater(-250)}
-                className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 text-gray-600 dark:text-gray-300 text-xs transition-colors cursor-pointer"
+                className="p-1 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 text-gray-500 text-[10px] cursor-pointer"
                 title="Giảm 250ml"
               >
-                <Minus className="w-3.5 h-3.5" />
+                <Minus className="w-3 h-3" />
               </button>
             )}
           </div>
         </div>
-
-        {/* Quick TDEE Offset */}
-        <div className="bg-white dark:bg-[#131b2e] p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-xs font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-              <Sliders className="w-4 h-4 text-emerald-500" />
-              Hiệu Chỉnh Mục Tiêu Thâm Hụt / Dư Thừa (TDEE Offset)
-            </h3>
-            <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 font-mono">
-              {nutritionSettings.tdeeOffset >= 0 ? `+${nutritionSettings.tdeeOffset}` : nutritionSettings.tdeeOffset} kcal
-            </span>
-          </div>
-
-          <p className="text-[11px] text-gray-400 mb-3">
-            Tăng giảm mức calo nạp hàng ngày so với mức tính toán lý thuyết để phù hợp với tốc độ siết hoặc xả thực tế.
-          </p>
-
-          <div className="grid grid-cols-5 gap-1.5">
-            {[-200, -100, 0, 100, 200].map((offset) => (
-              <button
-                key={offset}
-                type="button"
-                onClick={() => onUpdateNutritionSettings({ tdeeOffset: offset })}
-                className={`py-1.5 px-1 rounded-xl text-xs font-semibold transition-colors cursor-pointer text-center ${
-                  nutritionSettings.tdeeOffset === offset
-                    ? 'bg-[#2563EB] text-white font-bold'
-                    : 'bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300'
-                }`}
-              >
-                {offset > 0 ? `+${offset}` : offset}
-              </button>
-            ))}
-          </div>
-        </div>
       </div>
 
-      {/* Toast Notification Banner */}
+      {/* Toast Notification Banner - Centered, Vibrant & Animated */}
       {comboToast && (
-        <div className="fixed top-20 right-6 z-50 bg-emerald-600 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-lg flex items-center gap-2 animate-in fade-in slide-in-from-top-2 duration-200">
-          <CheckCircle2 className="w-4 h-4 text-emerald-200" />
-          <span>{comboToast}</span>
+        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[999999] pointer-events-auto bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 text-white text-xs font-bold px-5 py-3 rounded-2xl shadow-[0_10px_35px_rgba(0,0,0,0.5),0_0_25px_rgba(16,185,129,0.5)] border border-emerald-300 flex items-center gap-3 toast-card-enter">
+          <div className="p-1 rounded-lg bg-white/20">
+            <CheckCircle2 className="w-4 h-4 text-white animate-bounce" />
+          </div>
+          <span className="tracking-wide">{comboToast}</span>
         </div>
       )}
 
       {/* Balanced Meal Combos Section */}
       {showCombosSection && (
-        <div className="bg-white dark:bg-[#131b2e] p-4 md:p-5 rounded-2xl border border-orange-200 dark:border-orange-900/50 shadow-xs space-y-3">
-          <div className="flex items-center justify-between border-b border-gray-100 dark:border-slate-800 pb-2.5">
+        <div className="bg-white dark:bg-white/[0.03] backdrop-blur-xl p-4 md:p-5 rounded-2xl border border-orange-200 dark:border-orange-900/50 shadow-xs space-y-3">
+          <div className="flex items-center justify-between border-b border-gray-100 dark:border-white/[0.08] pb-2.5">
             <div>
               <h3 className="text-xs font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
                 <Flame className="w-4 h-4 text-orange-500" />
@@ -809,7 +1348,7 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
             {BALANCED_MEAL_COMBOS.map((combo) => (
               <div
                 key={combo.id}
-                className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-gray-50/50 dark:bg-gray-900/30 flex flex-col justify-between gap-3 hover:border-orange-300 dark:hover:border-orange-800 transition-colors"
+                className="p-3.5 rounded-xl border border-slate-200 dark:border-white/[0.08] bg-gray-50/50 dark:bg-gray-900/30 flex flex-col justify-between gap-3 hover:border-orange-300 dark:hover:border-orange-800 transition-colors"
               >
                 <div>
                   <div className="flex items-start justify-between gap-2">
@@ -827,7 +1366,7 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
                     {combo.items.map((it, idx) => (
                       <span
                         key={idx}
-                        className="text-[10px] px-2 py-0.5 rounded-md bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 text-gray-700 dark:text-gray-300"
+                        className="text-[10px] px-2 py-0.5 rounded-md bg-white dark:bg-gray-800 border border-slate-200 dark:border-white/[0.1] text-gray-700 dark:text-gray-300"
                       >
                         {it.name} ({it.amount}{it.unit})
                       </span>
@@ -835,7 +1374,7 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-slate-800/60">
+                <div className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-white/[0.08]/60">
                   <div className="text-[11px] font-mono text-gray-600 dark:text-gray-300">
                     <span className="font-bold text-orange-600 dark:text-orange-400">{combo.totalKcal} kcal</span> · P:{' '}
                     {combo.totalProtein}g · C: {combo.totalCarbs}g · F: {combo.totalFat}g
@@ -843,7 +1382,7 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
                   <button
                     type="button"
                     onClick={() => handleApplyCombo(combo)}
-                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-[11px] font-bold cursor-pointer transition-colors shadow-2xs"
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-[11px] font-bold cursor-pointer transition-colors shadow-2xs"
                   >
                     <Plus className="w-3.5 h-3.5" />
                     <span>Nạp Combo</span>
@@ -856,8 +1395,8 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
       )}
 
       {/* Food Input Box: Tabs for NLP vs Manual Input */}
-      <div className="bg-white dark:bg-[#131b2e] p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-3.5">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-100 dark:border-slate-800 pb-3">
+      <div className="bg-white dark:bg-white/[0.03] backdrop-blur-xl p-4 rounded-2xl border border-slate-200 dark:border-white/[0.08] shadow-xs space-y-3.5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-100 dark:border-white/[0.08] pb-3">
           <div className="flex items-center gap-2">
             <h3 className="text-xs font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-emerald-500" />
@@ -935,20 +1474,36 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
 
         {/* Meal Slot Picker */}
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
-          {MEAL_SLOTS.map((slot) => (
-            <button
-              key={slot}
-              type="button"
-              onClick={() => setSelectedSlot(slot)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-semibold cursor-pointer transition-colors ${
-                selectedSlot === slot
-                  ? 'bg-[#2563EB] text-white shadow-xs'
-                  : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200'
-              }`}
-            >
-              {MEAL_LABEL[slot]}
-            </button>
-          ))}
+          {MEAL_SLOTS.map((slot) => {
+            const Icon =
+              slot === 'breakfast'
+                ? Coffee
+                : slot === 'lunch'
+                ? Utensils
+                : slot === 'pre_workout'
+                ? Dumbbell
+                : slot === 'post_workout'
+                ? Zap
+                : slot === 'dinner'
+                ? Flame
+                : Apple;
+
+            return (
+              <button
+                key={slot}
+                type="button"
+                onClick={() => setSelectedSlot(slot)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold cursor-pointer transition-all flex items-center gap-1.5 whitespace-nowrap ${
+                  selectedSlot === slot
+                    ? 'bg-rose-600 text-white shadow-xs font-bold ring-2 ring-rose-400/40'
+                    : 'bg-gray-100 dark:bg-white/[0.04] text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/[0.08]'
+                }`}
+              >
+                <Icon className="w-3.5 h-3.5" />
+                <span>{MEAL_LABEL[slot]}</span>
+              </button>
+            );
+          })}
         </div>
 
         {/* Mode Selector Display */}
@@ -964,7 +1519,7 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
                   placeholder={`Ví dụ: Bữa ${MEAL_LABEL[selectedSlot]} ngoài quán, Whey...`}
                   value={macroTitle}
                   onChange={(e) => setMacroTitle(e.target.value)}
-                  className="w-full text-xs px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
+                  className="w-full text-xs px-3 py-2 rounded-xl border border-gray-300 dark:border-white/[0.1] bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
                 />
               </div>
 
@@ -1038,12 +1593,12 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
                 placeholder="Ví dụ: 200g ức gà + 250g cơm trắng + 1 chuối hoặc 1 bát phở bò..."
-                className="flex-1 text-xs px-3.5 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 shadow-2xs"
+                className="flex-1 text-xs px-3.5 py-2.5 rounded-xl border border-gray-300 dark:border-white/[0.1] bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 shadow-2xs"
               />
               <button
                 type="submit"
                 disabled={parsedPreview.length === 0}
-                className="px-4 py-2.5 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] disabled:opacity-50 text-white text-xs font-bold cursor-pointer shrink-0 transition-colors shadow-xs"
+                className="px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-white text-xs font-bold cursor-pointer shrink-0 transition-colors shadow-xs"
               >
                 + Ghi nhận ({MEAL_LABEL[selectedSlot]})
               </button>
@@ -1087,7 +1642,7 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
                   placeholder="Ví dụ: Bún chả thịt nướng"
                   value={manualName}
                   onChange={(e) => setManualName(e.target.value)}
-                  className="mt-1 w-full text-xs px-2.5 py-1.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
+                  className="mt-1 w-full text-xs px-2.5 py-1.5 rounded-lg border border-gray-300 dark:border-white/[0.1] bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
                   required
                 />
               </div>
@@ -1100,12 +1655,12 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
                     min="1"
                     value={manualAmount}
                     onChange={(e) => setManualAmount(e.target.value)}
-                    className="w-full text-xs px-2 py-1.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
+                    className="w-full text-xs px-2 py-1.5 rounded-lg border border-gray-300 dark:border-white/[0.1] bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
                   />
                   <select
                     value={manualUnit}
                     onChange={(e) => setManualUnit(e.target.value as 'g' | 'ml')}
-                    className="text-xs px-1 py-1.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800"
+                    className="text-xs px-1 py-1.5 rounded-lg border border-gray-300 dark:border-white/[0.1] bg-white dark:bg-gray-800"
                   >
                     <option value="g">g</option>
                     <option value="ml">ml</option>
@@ -1120,7 +1675,7 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
                   min="0"
                   value={manualKcal}
                   onChange={(e) => setManualKcal(e.target.value)}
-                  className="mt-1 w-full text-xs px-2.5 py-1.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 font-bold"
+                  className="mt-1 w-full text-xs px-2.5 py-1.5 rounded-lg border border-gray-300 dark:border-white/[0.1] bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 font-bold"
                   required
                 />
               </div>
@@ -1133,7 +1688,7 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
                   min="0"
                   value={manualProtein}
                   onChange={(e) => setManualProtein(e.target.value)}
-                  className="mt-1 w-full text-xs px-2.5 py-1.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
+                  className="mt-1 w-full text-xs px-2.5 py-1.5 rounded-lg border border-gray-300 dark:border-white/[0.1] bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
                 />
               </div>
 
@@ -1145,7 +1700,7 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
                   min="0"
                   value={manualCarbs}
                   onChange={(e) => setManualCarbs(e.target.value)}
-                  className="mt-1 w-full text-xs px-2.5 py-1.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
+                  className="mt-1 w-full text-xs px-2.5 py-1.5 rounded-lg border border-gray-300 dark:border-white/[0.1] bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
                 />
               </div>
 
@@ -1157,7 +1712,7 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
                   min="0"
                   value={manualFat}
                   onChange={(e) => setManualFat(e.target.value)}
-                  className="mt-1 w-full text-xs px-2.5 py-1.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
+                  className="mt-1 w-full text-xs px-2.5 py-1.5 rounded-lg border border-gray-300 dark:border-white/[0.1] bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
                 />
               </div>
             </div>
@@ -1166,7 +1721,7 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
               <button
                 type="submit"
                 disabled={!manualName.trim() || Number(manualKcal) <= 0}
-                className="px-4 py-2 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] disabled:opacity-50 text-white text-xs font-bold cursor-pointer transition-colors shadow-xs"
+                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-white text-xs font-bold cursor-pointer transition-colors shadow-xs"
               >
                 + Thêm Món Vào ({MEAL_LABEL[selectedSlot]})
               </button>
@@ -1182,19 +1737,32 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
           Các Bữa Ăn Trong Ngày ({selectedDate})
         </h3>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {MEAL_SLOTS.map((slot) => {
             const slotMeals = dayMeals.filter((m) => m.slot === slot);
             const slotKcal = slotMeals.reduce((sum, m) => sum + mealTotals(m).kcal, 0);
+            const Icon =
+              slot === 'breakfast'
+                ? Coffee
+                : slot === 'lunch'
+                ? Utensils
+                : slot === 'pre_workout'
+                ? Dumbbell
+                : slot === 'post_workout'
+                ? Zap
+                : slot === 'dinner'
+                ? Flame
+                : Apple;
 
             return (
               <div
                 key={slot}
-                className="bg-white dark:bg-[#131b2e] p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between"
+                className="bg-white dark:bg-white/[0.03] backdrop-blur-xl p-4 rounded-2xl border border-slate-200 dark:border-white/[0.08] shadow-xs flex flex-col justify-between"
               >
                 <div>
-                  <div className="flex items-center justify-between border-b border-gray-100 dark:border-slate-800 pb-2 mb-3">
-                    <span className="font-bold text-xs text-gray-900 dark:text-gray-100">
+                  <div className="flex items-center justify-between border-b border-gray-100 dark:border-white/[0.08] pb-2 mb-3">
+                    <span className="font-bold text-xs text-gray-900 dark:text-gray-100 flex items-center gap-1.5">
+                      <Icon className="w-3.5 h-3.5 text-rose-500" />
                       {MEAL_LABEL[slot]}
                     </span>
                     <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
@@ -1211,7 +1779,7 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
                         return (
                           <div
                             key={meal.id}
-                            className="p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-slate-800/80 space-y-2 text-xs"
+                            className="p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-white/[0.08]/80 space-y-2 text-xs"
                           >
                             <div className="flex items-start justify-between">
                               <div className="min-w-0 pr-2">
@@ -1234,7 +1802,7 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
 
                             {/* Detailed breakdown of items inside this meal */}
                             {meal.items && meal.items.length > 0 && (
-                              <div className="divide-y divide-gray-200/60 dark:divide-gray-700/60 pt-1 border-t border-slate-200/60 dark:border-gray-700/60">
+                              <div className="divide-y divide-gray-200/60 dark:divide-gray-700/60 pt-1 border-t border-slate-200/60 dark:border-white/[0.1]/60">
                                 {meal.items.map((item, iIdx) => (
                                   <div key={iIdx} className="py-1.5 flex items-center justify-between text-[11px]">
                                     <div className="truncate pr-2">
@@ -1277,8 +1845,8 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
       {/* Real Macro Override Modal */}
       {showOverrideModal && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200 dark:border-slate-800 max-w-md w-full p-5 space-y-4 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-gray-100 dark:border-slate-800 pb-3">
+          <div className="bg-white dark:bg-white/[0.03] backdrop-blur-xl rounded-2xl border border-slate-200 dark:border-white/[0.08] max-w-md w-full p-5 space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-gray-100 dark:border-white/[0.08] pb-3">
               <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
                 <Sliders className="w-4 h-4 text-emerald-600" />
                 Tùy Chỉnh Mục Tiêu Calo & Đa Lượng ({GOAL_LABEL[profile.goal]})
@@ -1301,7 +1869,7 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
                     value={overrideKcal}
                     placeholder={`Tự động: ${targetKcal}`}
                     onChange={(e) => setOverrideKcal(e.target.value)}
-                    className="mt-1 w-full text-xs px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 font-bold"
+                    className="mt-1 w-full text-xs px-3 py-2 rounded-xl border border-gray-300 dark:border-white/[0.1] bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 font-bold"
                   />
                 </div>
                 <div>
@@ -1313,7 +1881,7 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
                     onChange={(e) =>
                       onUpdateNutritionSettings({ tdeeOffset: Number(e.target.value) || 0 })
                     }
-                    className="mt-1 w-full text-xs px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
+                    className="mt-1 w-full text-xs px-3 py-2 rounded-xl border border-gray-300 dark:border-white/[0.1] bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
                   />
                 </div>
               </div>
@@ -1326,7 +1894,7 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
                     value={overrideProtein}
                     placeholder={`Tự động: ${targets.protein}`}
                     onChange={(e) => setOverrideProtein(e.target.value)}
-                    className="mt-1 w-full text-xs px-2.5 py-1.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 font-bold"
+                    className="mt-1 w-full text-xs px-2.5 py-1.5 rounded-lg border border-gray-300 dark:border-white/[0.1] bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 font-bold"
                   />
                 </div>
                 <div>
@@ -1336,7 +1904,7 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
                     value={overrideCarbs}
                     placeholder={`Tự động: ${targets.carbs}`}
                     onChange={(e) => setOverrideCarbs(e.target.value)}
-                    className="mt-1 w-full text-xs px-2.5 py-1.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 font-bold"
+                    className="mt-1 w-full text-xs px-2.5 py-1.5 rounded-lg border border-gray-300 dark:border-white/[0.1] bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 font-bold"
                   />
                 </div>
                 <div>
@@ -1346,7 +1914,7 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
                     value={overrideFat}
                     placeholder={`Tự động: ${targets.fat}`}
                     onChange={(e) => setOverrideFat(e.target.value)}
-                    className="mt-1 w-full text-xs px-2.5 py-1.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 font-bold"
+                    className="mt-1 w-full text-xs px-2.5 py-1.5 rounded-lg border border-gray-300 dark:border-white/[0.1] bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 font-bold"
                   />
                 </div>
               </div>
@@ -1356,7 +1924,7 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
               </p>
             </div>
 
-            <div className="flex items-center justify-between pt-3 border-t border-gray-100 dark:border-slate-800">
+            <div className="flex items-center justify-between pt-3 border-t border-gray-100 dark:border-white/[0.08]">
               <button
                 type="button"
                 onClick={() => {
@@ -1392,7 +1960,7 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
                   onUpdateNutritionSettings({ overrides: updatedOverrides });
                   setShowOverrideModal(false);
                 }}
-                className="px-4 py-2 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-xs font-bold cursor-pointer shadow-xs"
+                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold cursor-pointer shadow-xs"
               >
                 Lưu Tùy Chỉnh
               </button>
@@ -1404,9 +1972,9 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
       {/* Vietnamese Food Catalog & Multiplier Modal */}
       {showFoodCatalogModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
-          <div className="bg-white dark:bg-[#131b2e] w-full max-w-3xl max-h-[85vh] rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-150">
+          <div className="bg-white dark:bg-white/[0.03] backdrop-blur-xl w-full max-w-3xl max-h-[85vh] rounded-2xl border border-slate-200 dark:border-white/[0.08] shadow-xl overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-150">
             {/* Header */}
-            <div className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-slate-800 bg-linear-to-r from-emerald-500/10 to-transparent">
+            <div className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-white/[0.08] bg-linear-to-r from-emerald-500/10 to-transparent">
               <div className="flex items-center gap-2">
                 <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
                   <BookOpen className="w-5 h-5" />
@@ -1433,7 +2001,7 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
             </div>
 
             {/* Controls: Search, Category Filter & Slot Selector */}
-            <div className="p-4 border-b border-gray-100 dark:border-slate-800 space-y-3 bg-gray-50/50 dark:bg-gray-900/30">
+            <div className="p-4 border-b border-gray-100 dark:border-white/[0.08] space-y-3 bg-gray-50/50 dark:bg-gray-900/30">
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
                 <div className="relative flex-1">
                   <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -1442,7 +2010,7 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
                     value={catalogSearch}
                     onChange={(e) => setCatalogSearch(e.target.value)}
                     placeholder="Tìm món: phở bò, ức gà, cơm tấm, bún chả, whey, cá hồi..."
-                    className="w-full text-xs pl-9 pr-3 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 shadow-2xs"
+                    className="w-full text-xs pl-9 pr-3 py-2 rounded-xl border border-gray-300 dark:border-white/[0.1] bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 shadow-2xs"
                   />
                 </div>
 
@@ -1451,7 +2019,7 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
                   <select
                     value={catalogTargetSlot}
                     onChange={(e) => setCatalogTargetSlot(e.target.value as MealSlot)}
-                    className="text-xs px-2.5 py-1.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 font-semibold"
+                    className="text-xs px-2.5 py-1.5 rounded-xl border border-gray-300 dark:border-white/[0.1] bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 font-semibold"
                   >
                     {MEAL_SLOTS.map((s) => (
                       <option key={s} value={s}>
@@ -1470,7 +2038,7 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
                   className={`px-3 py-1 rounded-lg whitespace-nowrap font-semibold cursor-pointer transition-colors ${
                     catalogCategory === 'all'
                       ? 'bg-emerald-600 text-white shadow-2xs'
-                      : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 border border-slate-200 dark:border-gray-700'
+                      : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 border border-slate-200 dark:border-white/[0.1]'
                   }`}
                 >
                   Tất cả ({VIETNAMESE_FOOD_CATALOG.length})
@@ -1493,7 +2061,7 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
                     className={`px-3 py-1 rounded-lg whitespace-nowrap font-semibold cursor-pointer transition-colors ${
                       catalogCategory === cat
                         ? 'bg-emerald-600 text-white shadow-2xs'
-                        : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 border border-slate-200 dark:border-gray-700'
+                        : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 border border-slate-200 dark:border-white/[0.1]'
                     }`}
                   >
                     {FOOD_CATEGORY_LABEL[cat]}
@@ -1513,7 +2081,7 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
                   {filteredCatalog.map((item) => (
                     <div
                       key={item.id}
-                      className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-gray-900/40 hover:border-emerald-300 dark:hover:border-emerald-800 transition-all flex flex-col justify-between gap-2.5 shadow-2xs"
+                      className="p-3 rounded-xl border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-gray-900/40 hover:border-emerald-300 dark:hover:border-emerald-800 transition-all flex flex-col justify-between gap-2.5 shadow-2xs"
                     >
                       <div>
                         <div className="flex items-start justify-between gap-2">
@@ -1548,7 +2116,7 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
                         </div>
                       </div>
 
-                      <div className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-slate-800">
+                      <div className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-white/[0.08]">
                         <div className="flex items-center gap-1">
                           {[0.5, 1, 1.5, 2].map((mult) => (
                             <button
@@ -1579,14 +2147,222 @@ export const NutritionTab: React.FC<NutritionTabProps> = ({
             </div>
 
             {/* Footer */}
-            <div className="p-3 border-t border-gray-100 dark:border-slate-800 bg-gray-50 dark:bg-gray-900/50 flex items-center justify-between text-xs text-gray-500">
+            <div className="p-3 border-t border-gray-100 dark:border-white/[0.08] bg-gray-50 dark:bg-gray-900/50 flex items-center justify-between text-xs text-gray-500">
               <span>Đang chọn nạp vào: <strong className="text-gray-800 dark:text-gray-200">{MEAL_LABEL[catalogTargetSlot]}</strong></span>
               <button
                 type="button"
                 onClick={() => setShowFoodCatalogModal(false)}
-                className="px-4 py-1.5 rounded-xl border border-gray-300 dark:border-gray-700 font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-100 cursor-pointer"
+                className="px-4 py-1.5 rounded-xl border border-gray-300 dark:border-white/[0.1] font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-100 cursor-pointer"
               >
                 Xong
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cronometer Advanced Micronutrients & Scores Modal */}
+      {showCronometerDrawer && (
+        <div className="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-[#090306] border border-rose-500/40 rounded-3xl max-w-3xl w-full p-5 sm:p-6 shadow-2xl max-h-[90vh] flex flex-col text-white animate-fadeIn">
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-white/[0.08] pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-rose-600/20 border border-rose-500/40 text-rose-400 flex items-center justify-center">
+                  <Sparkles className="w-5 h-5 text-rose-400" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-rose-600 text-white">
+                      Cronometer Gold Standard
+                    </span>
+                    <span className="text-xs text-rose-300 font-mono font-bold">
+                      Điểm Dinh Dưỡng Tổng: {cronoScores.overallNutritionScorePct}%
+                    </span>
+                  </div>
+                  <h3 className="text-base sm:text-lg font-bold text-white mt-1">
+                    Bảng Phân Tích Vi Chất & Thang Điểm Phục Hồi ({selectedDate})
+                  </h3>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowCronometerDrawer(false)}
+                className="p-1.5 rounded-xl text-gray-400 hover:text-white hover:bg-white/[0.08] cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* 3 Cronometer Nutrition Scores */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 my-4">
+              {/* Electrolyte Balance */}
+              <div className="p-3.5 rounded-2xl bg-white/[0.03] border border-white/[0.08] flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between text-xs font-bold text-cyan-400 mb-1">
+                    <span>Cân Bằng Điện Giải</span>
+                    <span className="font-mono text-base font-extrabold">{cronoScores.electrolyteScorePct}%</span>
+                  </div>
+                  <p className="text-[10px] text-gray-400 leading-relaxed">
+                    Độ phủ Kali + Natri + Magie và nước uống giúp chống chuột rút và tối đa áp suất thẩm thấu cơ.
+                  </p>
+                </div>
+                <div className="mt-3">
+                  <ProgressBar percent={cronoScores.electrolyteScorePct} color="#06B6D4" height={6} />
+                </div>
+              </div>
+
+              {/* Muscle Recovery */}
+              <div className="p-3.5 rounded-2xl bg-white/[0.03] border border-white/[0.08] flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between text-xs font-bold text-rose-400 mb-1">
+                    <span>Phục Hồi Cơ Bắp</span>
+                    <span className="font-mono text-base font-extrabold">{cronoScores.recoveryScorePct}%</span>
+                  </div>
+                  <p className="text-[10px] text-gray-400 leading-relaxed">
+                    Hợp chất Protein hoàn chỉnh, Leucine, Magie và Kẽm giúp tái tạo sợi cơ nạc sau buổi tập nặng.
+                  </p>
+                </div>
+                <div className="mt-3">
+                  <ProgressBar percent={cronoScores.recoveryScorePct} color="#E11D48" height={6} />
+                </div>
+              </div>
+
+              {/* Vitality & Immunity */}
+              <div className="p-3.5 rounded-2xl bg-white/[0.03] border border-white/[0.08] flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between text-xs font-bold text-amber-400 mb-1">
+                    <span>Sinh Lực & Miễn Dịch</span>
+                    <span className="font-mono text-base font-extrabold">{cronoScores.vitalityScorePct}%</span>
+                  </div>
+                  <p className="text-[10px] text-gray-400 leading-relaxed">
+                    Vitamin C, Vitamin D3, Sắt và B12 bảo vệ hệ miễn dịch, năng lượng tế bào và nồng độ hormone.
+                  </p>
+                </div>
+                <div className="mt-3">
+                  <ProgressBar percent={cronoScores.vitalityScorePct} color="#F59E0B" height={6} />
+                </div>
+              </div>
+            </div>
+
+            {/* Detailed Micronutrient Breakdown Grid */}
+            <div className="flex-1 overflow-y-auto space-y-3 pr-1">
+              <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+                Mục Tiêu Vi Lượng Thiết Yếu (RDA / DRI Targets)
+              </h4>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* Minerals Column */}
+                <div className="p-3.5 rounded-2xl bg-white/[0.02] border border-white/[0.08] space-y-3">
+                  <div className="text-xs font-bold text-cyan-400 uppercase tracking-wider flex items-center gap-1.5 border-b border-white/[0.08] pb-1.5">
+                    <span>Khoáng Chất & Điện Giải</span>
+                  </div>
+
+                  {/* Potassium */}
+                  <div>
+                    <div className="flex justify-between text-xs mb-1 font-mono">
+                      <span className="text-gray-300">Kali (Potassium)</span>
+                      <span className="font-bold text-cyan-300">{cronoScores.potassiumMg} / {cronoScores.potassiumTargetMg} mg</span>
+                    </div>
+                    <ProgressBar percent={Math.min(100, Math.round((cronoScores.potassiumMg / cronoScores.potassiumTargetMg) * 100))} color="#06B6D4" height={5} />
+                  </div>
+
+                  {/* Magnesium */}
+                  <div>
+                    <div className="flex justify-between text-xs mb-1 font-mono">
+                      <span className="text-gray-300">Magie (Magnesium)</span>
+                      <span className="font-bold text-cyan-300">{cronoScores.magnesiumMg} / {cronoScores.magnesiumTargetMg} mg</span>
+                    </div>
+                    <ProgressBar percent={Math.min(100, Math.round((cronoScores.magnesiumMg / cronoScores.magnesiumTargetMg) * 100))} color="#06B6D4" height={5} />
+                  </div>
+
+                  {/* Calcium */}
+                  <div>
+                    <div className="flex justify-between text-xs mb-1 font-mono">
+                      <span className="text-gray-300">Canxi (Calcium)</span>
+                      <span className="font-bold text-cyan-300">{cronoScores.calciumMg} / {cronoScores.calciumTargetMg} mg</span>
+                    </div>
+                    <ProgressBar percent={Math.min(100, Math.round((cronoScores.calciumMg / cronoScores.calciumTargetMg) * 100))} color="#06B6D4" height={5} />
+                  </div>
+
+                  {/* Zinc */}
+                  <div>
+                    <div className="flex justify-between text-xs mb-1 font-mono">
+                      <span className="text-gray-300">Kẽm (Zinc)</span>
+                      <span className="font-bold text-cyan-300">{cronoScores.zincMg} / {cronoScores.zincTargetMg} mg</span>
+                    </div>
+                    <ProgressBar percent={Math.min(100, Math.round((cronoScores.zincMg / cronoScores.zincTargetMg) * 100))} color="#06B6D4" height={5} />
+                  </div>
+
+                  {/* Iron */}
+                  <div>
+                    <div className="flex justify-between text-xs mb-1 font-mono">
+                      <span className="text-gray-300">Sắt (Iron)</span>
+                      <span className="font-bold text-cyan-300">{cronoScores.ironMg} / {cronoScores.ironTargetMg} mg</span>
+                    </div>
+                    <ProgressBar percent={Math.min(100, Math.round((cronoScores.ironMg / cronoScores.ironTargetMg) * 100))} color="#06B6D4" height={5} />
+                  </div>
+                </div>
+
+                {/* Vitamins & Fatty Acids Column */}
+                <div className="p-3.5 rounded-2xl bg-white/[0.02] border border-white/[0.08] space-y-3">
+                  <div className="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1.5 border-b border-white/[0.08] pb-1.5">
+                    <span>Vitamins & Chất Béo Thiết Yếu</span>
+                  </div>
+
+                  {/* Vitamin D */}
+                  <div>
+                    <div className="flex justify-between text-xs mb-1 font-mono">
+                      <span className="text-gray-300">Vitamin D</span>
+                      <span className="font-bold text-amber-300">{cronoScores.vitaminDIu} / {cronoScores.vitaminDTargetIu} IU</span>
+                    </div>
+                    <ProgressBar percent={Math.min(100, Math.round((cronoScores.vitaminDIu / cronoScores.vitaminDTargetIu) * 100))} color="#F59E0B" height={5} />
+                  </div>
+
+                  {/* Vitamin C */}
+                  <div>
+                    <div className="flex justify-between text-xs mb-1 font-mono">
+                      <span className="text-gray-300">Vitamin C</span>
+                      <span className="font-bold text-amber-300">{cronoScores.vitaminCMg} / {cronoScores.vitaminCTargetMg} mg</span>
+                    </div>
+                    <ProgressBar percent={Math.min(100, Math.round((cronoScores.vitaminCMg / cronoScores.vitaminCTargetMg) * 100))} color="#F59E0B" height={5} />
+                  </div>
+
+                  {/* Vitamin B12 */}
+                  <div>
+                    <div className="flex justify-between text-xs mb-1 font-mono">
+                      <span className="text-gray-300">Vitamin B12</span>
+                      <span className="font-bold text-amber-300">{cronoScores.vitaminB12Mcg} / {cronoScores.vitaminB12TargetMcg} µg</span>
+                    </div>
+                    <ProgressBar percent={Math.min(100, Math.round((cronoScores.vitaminB12Mcg / cronoScores.vitaminB12TargetMcg) * 100))} color="#F59E0B" height={5} />
+                  </div>
+
+                  {/* Omega-3 */}
+                  <div>
+                    <div className="flex justify-between text-xs mb-1 font-mono">
+                      <span className="text-gray-300">Omega-3 (EPA/DHA)</span>
+                      <span className="font-bold text-amber-300">{cronoScores.omega3Grams} / {cronoScores.omega3TargetGrams} g</span>
+                    </div>
+                    <ProgressBar percent={Math.min(100, Math.round((cronoScores.omega3Grams / cronoScores.omega3TargetGrams) * 100))} color="#F59E0B" height={5} />
+                  </div>
+
+                  {/* Dietary Note */}
+                  <div className="p-2 rounded-xl bg-white/[0.03] border border-white/[0.06] text-[10px] text-gray-400 italic">
+                    💡 Dữ liệu vi chất được tính toán & đối chiếu tự động theo cơ sở dữ liệu USDA & Viện Dinh Dưỡng Quốc Gia Việt Nam.
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="pt-4 border-t border-white/[0.08] flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowCronometerDrawer(false)}
+                className="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs cursor-pointer transition-colors shadow-xs"
+              >
+                Đóng Bảng Vi Chất
               </button>
             </div>
           </div>

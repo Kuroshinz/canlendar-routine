@@ -10,7 +10,7 @@
 
 @layer base {
   body {
-    font-family: 'Google Sans', 'Roboto', system-ui, -apple-system, sans-serif;
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     background-color: #060103;
@@ -49,11 +49,10 @@
    ========================================================================= */
 
 .vortex-canvas {
-  background-color: #050102;
+  background-color: #060204;
   background-image: 
-    radial-gradient(ellipse at 50% 22%, rgba(190, 18, 60, 0.38) 0%, rgba(136, 19, 55, 0.22) 32%, rgba(5, 1, 2, 0.98) 72%),
-    radial-gradient(circle at 88% 12%, rgba(225, 29, 72, 0.22) 0%, transparent 45%),
-    radial-gradient(circle at 12% 82%, rgba(190, 18, 60, 0.18) 0%, transparent 40%);
+    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(225, 29, 72, 0.14) 0%, rgba(159, 18, 57, 0.05) 50%, transparent 80%),
+    radial-gradient(ellipse 60% 40% at 50% 110%, rgba(225, 29, 72, 0.08) 0%, transparent 70%);
   background-attachment: fixed;
 }
 
@@ -118,7 +117,7 @@
   font-weight: 700;
   border-radius: 9999px;
   padding: 0.55rem 1.25rem;
-  box-shadow: 0 4px 20px rgba(255, 255, 255, 0.35), 0 0 35px rgba(225, 29, 72, 0.3);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(255, 255, 255, 0.2);
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   cursor: pointer;
   user-select: none;
@@ -127,7 +126,7 @@
 
 .glass-pill-primary:hover {
   background: #f8fafc;
-  box-shadow: 0 6px 26px rgba(255, 255, 255, 0.5), 0 0 45px rgba(225, 29, 72, 0.4);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4), 0 1px 3px rgba(255, 255, 255, 0.25);
   transform: translateY(-1px) scale(1.02);
 }
 
@@ -190,4 +189,661 @@
   );
   mask-image: radial-gradient(circle, transparent 65%, black 66%, black 100%);
   -webkit-mask-image: radial-gradient(circle, transparent 65%, black 66%, black 100%);
+}
+
+/* =========================================================================
+   FLUID TAB & VIEW TRANSITION ANIMATIONS
+   ========================================================================= */
+
+@keyframes tabSlideDownSmooth {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, -22px, 0);
+    filter: blur(4px);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+    filter: blur(0);
+  }
+}
+
+.tab-enter-active {
+  animation: tabSlideDownSmooth 0.38s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: transform, opacity, filter;
+}
+
+/* =========================================================================
+   CINEMATIC VIEW & FUNCTION TRANSITION ANIMATION
+   ========================================================================= */
+
+/* Silky smooth pull-down view transition animation */
+@keyframes viewSlideDownSmooth {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, -32px, 0) scale(0.985);
+    filter: blur(8px);
+  }
+  60% {
+    opacity: 0.92;
+    filter: blur(1px);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+    filter: blur(0);
+  }
+}
+
+.view-slide-down-smooth {
+  animation: viewSlideDownSmooth 0.42s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: transform, opacity, filter;
+}
+
+.view-transition-motion {
+  animation: viewSlideDownSmooth 0.42s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: transform, opacity, filter;
+}
+
+.tab-nav-anim {
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* =========================================================================
+   LUMINOUS TRANSPARENT GLASS DOCK & CAPSULE TOOLBARS
+   "các thanh công cụ làm bo tròn và làm sáng vào một khối glass trong suốt"
+   ========================================================================= */
+
+.luminous-glass-dock {
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 9999px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35), 0 0 20px rgba(255, 255, 255, 0.03);
+}
+
+.luminous-glass-dock-box {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 1.25rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 0 0 20px rgba(255, 255, 255, 0.02);
+}
+
+.luminous-pill-active {
+  background: rgba(225, 29, 72, 0.2) !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  border-radius: 9999px !important;
+  border: 1px solid rgba(225, 29, 72, 0.35) !important;
+  box-shadow: 0 2px 10px rgba(225, 29, 72, 0.18) !important;
+}
+
+.luminous-pill-inactive {
+  color: #cbd5e1;
+  border-radius: 9999px;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.luminous-pill-inactive:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* =========================================================================
+   INTERACTIVE TOAST NOTIFICATIONS & SUCCESS FEEDBACK ANIMATIONS
+   ========================================================================= */
+
+@keyframes toastSlideInDown {
+  0% {
+    opacity: 0;
+    transform: translateY(-24px) scale(0.92);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(3px) scale(1.02);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes toastProgressShrink {
+  from { width: 100%; }
+  to { width: 0%; }
+}
+
+@keyframes successGlowPulse {
+  0%, 100% {
+    box-shadow: 0 0 15px rgba(16, 185, 129, 0.35), 0 8px 24px rgba(0, 0, 0, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(16, 185, 129, 0.7), 0 12px 32px rgba(0, 0, 0, 0.6);
+  }
+}
+
+@keyframes successCheckmarkPop {
+  0% {
+    transform: scale(0.5) rotate(-15deg);
+    opacity: 0;
+  }
+  65% {
+    transform: scale(1.25) rotate(5deg);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+}
+
+.toast-card-enter {
+  animation: toastSlideInDown 0.38s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: transform, opacity;
+}
+
+.toast-success-glow {
+  animation: successGlowPulse 2s infinite ease-in-out;
+}
+
+.icon-pop-enter {
+  animation: successCheckmarkPop 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.btn-success-glow {
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.5), inset 0 0 12px rgba(52, 211, 153, 0.25);
+  animation: successGlowPulse 1.8s infinite ease-in-out;
+}
+
+/* =========================================================================
+   ZENOX CALM, CRAFTED MOTION & MICRO-INTERACTIONS
+   ========================================================================= */
+
+@keyframes calmFadeRise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-calm-fade-rise {
+  animation: calmFadeRise 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Signature Navigation Dark Glass Button */
+.nav-glass-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 38px;
+  padding: 0 20px;
+  border-radius: 9999px;
+  cursor: pointer;
+  overflow: hidden;
+  border: 0;
+  background: transparent;
+  color: #fff1f2;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.45), 0 0 20px rgba(244, 63, 94, 0.5);
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  box-sizing: border-box;
+}
+
+.nav-glass-btn::before {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  content: "";
+  background: linear-gradient(180deg, rgba(34, 12, 24, 0.92) 0%, rgba(14, 4, 10, 0.98) 100%);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.4), inset 0 0 18px rgba(225, 29, 72, 0.24), 0 4px 18px rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  z-index: 1;
+}
+
+.nav-glass-btn::after {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  content: "";
+  z-index: 2;
+  border: 1px solid rgba(251, 113, 133, 0.55);
+  opacity: 0.85;
+  pointer-events: none;
+  mask-image: linear-gradient(170deg, #000 0%, rgba(0, 0, 0, 0.7) 60%, transparent 100%);
+  -webkit-mask-image: linear-gradient(170deg, #000 0%, rgba(0, 0, 0, 0.7) 60%, transparent 100%);
+}
+
+.nav-glass-btn .nav-glass-btn__title {
+  position: relative;
+  z-index: 4;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.nav-glass-btn .nav-glass-btn__circle {
+  position: absolute;
+  z-index: 3;
+  top: calc(50% - 75px);
+  left: calc(50% - 75px);
+  width: 150px;
+  height: 150px;
+  pointer-events: none;
+}
+
+.nav-glass-btn .nav-glass-btn__circle::before {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  content: "";
+  background: conic-gradient(from 180deg, rgba(225, 29, 72, 0.04) 180deg, rgba(244, 63, 94, 0.55) 300deg, rgba(255, 235, 242, 0.95) 360deg);
+  filter: blur(10px);
+  animation: section-button-circle 3.6s linear infinite;
+  transition: opacity 0.4s ease;
+}
+
+.nav-glass-btn .nav-glass-btn__circle::after {
+  position: absolute;
+  inset: 22px;
+  border-radius: 50%;
+  content: "";
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.95) 0%, rgba(244, 63, 94, 0.7) 35%, rgba(225, 29, 72, 0.25) 70%, transparent 100%);
+  opacity: 0;
+  filter: blur(6px);
+  transform: scale(0.6);
+  transition: opacity 0.4s, transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.nav-glass-btn:hover {
+  box-shadow: 0 0 25px rgba(225, 29, 72, 0.6), 0 0 50px rgba(244, 63, 94, 0.25);
+  transform: translateY(-0.5px);
+}
+
+.nav-glass-btn:hover .nav-glass-btn__circle::before {
+  opacity: 0.2;
+}
+
+.nav-glass-btn:hover .nav-glass-btn__circle::after {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.nav-glass-btn:active {
+  transform: scale(0.97);
+}
+
+/* ThreeUI Shader Frame - Harmonized with ZENOX Landing Space */
+.shader-frame {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 160px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: stretch;
+  overflow: hidden;
+  border-radius: inherit;
+  background: radial-gradient(circle at 50% 50%, #11050a 0%, #070205 100%);
+}
+
+.shader-frame > .section-element {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 160px !important;
+  flex: 1 1 100% !important;
+  background: transparent !important;
+}
+
+/* Ambient glow tailored to luxury crimson & rose landing space */
+.shader-frame .section-element--glass-button::before {
+  background: radial-gradient(ellipse at 50% 50%, rgba(225, 29, 72, 0.32) 0%, rgba(244, 63, 94, 0.12) 42%, transparent 72%) !important;
+  filter: blur(45px) !important;
+}
+
+/* Button container & typography */
+.shader-frame .section-button {
+  color: #fff1f2 !important;
+  text-shadow: 0 0 12px rgba(255, 255, 255, 0.45), 0 0 24px rgba(244, 63, 94, 0.5) !important;
+  letter-spacing: 0.04em !important;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease !important;
+}
+
+/* Obsidian-wine dark glass body */
+.shader-frame .section-button::before {
+  background: linear-gradient(180deg, rgba(28, 10, 18, 0.88) 0%, rgba(12, 4, 8, 0.94) 100%) !important;
+  box-shadow: inset 0 1.5px 1px rgba(255, 255, 255, 0.35), inset 0 0 22px rgba(225, 29, 72, 0.18), inset 0 -1px 3px rgba(0, 0, 0, 0.8) !important;
+  backdrop-filter: blur(40px) !important;
+  -webkit-backdrop-filter: blur(40px) !important;
+}
+
+/* Delicately sculpted crimson-rim catch light */
+.shader-frame .section-button::after {
+  border: 1px solid rgba(251, 113, 133, 0.45) !important;
+  opacity: 0.75 !important;
+  mask-image: linear-gradient(175deg, #000 0%, rgba(0, 0, 0, 0.8) 55%, transparent 100%) !important;
+  -webkit-mask-image: linear-gradient(175deg, #000 0%, rgba(0, 0, 0, 0.8) 55%, transparent 100%) !important;
+}
+
+/* Revolving specular highlight tuned to incandescent rose-crimson sweep */
+.shader-frame .section-button__circle::before {
+  background: conic-gradient(from 180deg, rgba(225, 29, 72, 0.04) 180deg, rgba(244, 63, 94, 0.5) 300deg, rgba(255, 230, 238, 0.95) 360deg) !important;
+  filter: blur(14px) !important;
+}
+
+/* Interactive hover glow pool with crimson bloom */
+.shader-frame .section-button__circle::after {
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.9) 0%, rgba(244, 63, 94, 0.7) 35%, rgba(225, 29, 72, 0.3) 70%, transparent 100%) !important;
+  filter: blur(7px) !important;
+}
+
+/* Hover state enhancement */
+.shader-frame .section-button:hover {
+  box-shadow: 0 0 35px rgba(225, 29, 72, 0.5), 0 0 70px rgba(244, 63, 94, 0.25) !important;
+  transform: scale(1.02) !important;
+}
+
+.shader-frame .section-button:active {
+  transform: scale(0.98) !important;
+}
+
+
+/* Standalone Sculpted Dark Glass Submit Button (No outer frame/box) */
+.login-glass-submit-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 50px;
+  padding: 0 32px;
+  border-radius: 9999px;
+  cursor: pointer;
+  overflow: hidden;
+  border: 0;
+  background: transparent;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.45), 0 0 20px rgba(244, 63, 94, 0.5);
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  box-sizing: border-box;
+}
+
+.login-glass-submit-btn::before {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  content: "";
+  background: linear-gradient(180deg, rgba(34, 12, 24, 0.94) 0%, rgba(14, 4, 10, 0.98) 100%);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.45), inset 0 0 20px rgba(225, 29, 72, 0.25), 0 6px 25px rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  z-index: 1;
+}
+
+.login-glass-submit-btn::after {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  content: "";
+  z-index: 2;
+  border: 1px solid rgba(251, 113, 133, 0.55);
+  opacity: 0.85;
+  pointer-events: none;
+  mask-image: linear-gradient(175deg, #000 0%, rgba(0, 0, 0, 0.75) 60%, transparent 100%);
+  -webkit-mask-image: linear-gradient(175deg, #000 0%, rgba(0, 0, 0, 0.75) 60%, transparent 100%);
+}
+
+.login-glass-submit-btn .login-glass-submit-btn__title {
+  position: relative;
+  z-index: 4;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.login-glass-submit-btn .login-glass-submit-btn__circle {
+  position: absolute;
+  z-index: 3;
+  top: calc(50% - 90px);
+  left: calc(50% - 90px);
+  width: 180px;
+  height: 180px;
+  pointer-events: none;
+}
+
+.login-glass-submit-btn .login-glass-submit-btn__circle::before {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  content: "";
+  background: conic-gradient(from 180deg, rgba(225, 29, 72, 0.04) 180deg, rgba(244, 63, 94, 0.55) 300deg, rgba(255, 235, 242, 0.98) 360deg);
+  filter: blur(12px);
+  animation: section-button-circle 3.6s linear infinite;
+  transition: opacity 0.4s ease;
+}
+
+.login-glass-submit-btn .login-glass-submit-btn__circle::after {
+  position: absolute;
+  inset: 24px;
+  border-radius: 50%;
+  content: "";
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.95) 0%, rgba(244, 63, 94, 0.75) 35%, rgba(225, 29, 72, 0.25) 70%, transparent 100%);
+  opacity: 0;
+  filter: blur(7px);
+  transform: scale(0.6);
+  transition: opacity 0.4s, transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.login-glass-submit-btn:hover {
+  box-shadow: 0 0 30px rgba(225, 29, 72, 0.6), 0 0 60px rgba(244, 63, 94, 0.25);
+  transform: translateY(-0.5px);
+}
+
+.login-glass-submit-btn:hover .login-glass-submit-btn__circle::before {
+  opacity: 0.2;
+}
+
+.login-glass-submit-btn:hover .login-glass-submit-btn__circle::after {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.login-glass-submit-btn:active {
+  transform: scale(0.98);
+}
+
+/* ==========================================================================
+   DYNAMIC FUTURISTIC ANIMATIONS FOR ZENOX LANDING SPACE
+   Dev By Zenox Development
+   ========================================================================== */
+
+@keyframes ambientDrift1 {
+  0% {
+    transform: translate(0px, 0px) scale(1);
+    opacity: 0.15;
+  }
+  33% {
+    transform: translate(40px, -30px) scale(1.12);
+    opacity: 0.28;
+  }
+  66% {
+    transform: translate(-30px, 25px) scale(0.95);
+    opacity: 0.18;
+  }
+  100% {
+    transform: translate(0px, 0px) scale(1);
+    opacity: 0.15;
+  }
+}
+
+@keyframes ambientDrift2 {
+  0% {
+    transform: translate(0px, 0px) scale(1);
+    opacity: 0.12;
+  }
+  50% {
+    transform: translate(-50px, -40px) scale(1.18);
+    opacity: 0.24;
+  }
+  100% {
+    transform: translate(0px, 0px) scale(1);
+    opacity: 0.12;
+  }
+}
+
+@keyframes ambientDrift3 {
+  0% {
+    transform: translate(0px, 0px) scale(0.9);
+    opacity: 0.1;
+  }
+  50% {
+    transform: translate(35px, 45px) scale(1.15);
+    opacity: 0.22;
+  }
+  100% {
+    transform: translate(0px, 0px) scale(0.9);
+    opacity: 0.1;
+  }
+}
+
+@keyframes textGlowShimmer {
+  0%, 100% {
+    filter: drop-shadow(0 0 15px rgba(244, 63, 94, 0.4));
+  }
+  50% {
+    filter: drop-shadow(0 0 35px rgba(244, 63, 94, 0.85)) drop-shadow(0 0 50px rgba(56, 189, 248, 0.45));
+  }
+}
+
+@keyframes borderSpin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes waveFlow {
+  0% {
+    stroke-dashoffset: 400;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes laserScanline {
+  0% {
+    top: -10%;
+    opacity: 0;
+  }
+  15% {
+    opacity: 0.6;
+  }
+  85% {
+    opacity: 0.6;
+  }
+  100% {
+    top: 110%;
+    opacity: 0;
+  }
+}
+
+.animate-ambient-1 {
+  animation: ambientDrift1 14s ease-in-out infinite;
+}
+
+.animate-ambient-2 {
+  animation: ambientDrift2 18s ease-in-out infinite;
+}
+
+.animate-ambient-3 {
+  animation: ambientDrift3 16s ease-in-out infinite;
+}
+
+.animate-text-shimmer {
+  animation: textGlowShimmer 5s ease-in-out infinite;
+}
+
+.animate-wave-flow {
+  stroke-dasharray: 400;
+  animation: waveFlow 4s linear infinite;
+}
+
+.animate-laser-scan {
+  animation: laserScanline 8s ease-in-out infinite;
+}
+
+/* Card 3D Lift & Dynamic Backlight */
+.card-futuristic-interactive {
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.35s ease, border-color 0.3s ease;
+  position: relative;
+}
+
+.card-futuristic-interactive:hover {
+  transform: translateY(-4px) scale(1.015);
+  box-shadow: 0 16px 45px rgba(0, 0, 0, 0.7), 0 0 30px rgba(225, 29, 72, 0.25);
+  border-color: rgba(251, 113, 133, 0.4) !important;
+}
+
+/* Spinning glowing border badge */
+.badge-border-glow {
+  position: relative;
+  overflow: hidden;
+}
+
+.badge-border-glow::before {
+  content: "";
+  position: absolute;
+  inset: -200%;
+  background: conic-gradient(from 0deg, transparent 0%, rgba(244, 63, 94, 0.6) 40%, rgba(56, 189, 248, 0.8) 60%, transparent 100%);
+  animation: borderSpin 4s linear infinite;
+  z-index: 0;
+}
+
+.badge-border-glow > * {
+  position: relative;
+  z-index: 1;
+}
+
+@keyframes targetSectionPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(244, 63, 94, 0.7), 0 0 30px rgba(56, 189, 248, 0.4);
+    border-color: rgba(244, 63, 94, 0.8) !important;
+  }
+  40% {
+    box-shadow: 0 0 45px 8px rgba(244, 63, 94, 0.45), 0 0 70px rgba(56, 189, 248, 0.6);
+    border-color: rgba(56, 189, 248, 0.9) !important;
+  }
+  100% {
+    box-shadow: 0 25px 90px -20px rgba(225, 29, 72, 0.35), 0 0 60px rgba(0, 0, 0, 0.85);
+    border-color: rgba(255, 255, 255, 0.1) !important;
+  }
+}
+
+.animate-target-pulse {
+  animation: targetSectionPulse 1.8s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
 }

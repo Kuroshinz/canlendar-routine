@@ -68,8 +68,8 @@ export interface ScientificInterval {
 export const SCIENTIFIC_INTERVALS: ScientificInterval[] = [
   {
     id: 'pomo25',
-    nameVi: '🍅 25 / 5 Pomodoro',
-    nameEn: '🍅 25 / 5 Pomodoro',
+    nameVi: '25 / 5 Pomodoro',
+    nameEn: '25 / 5 Pomodoro',
     focus: 25,
     shortBreak: 5,
     longBreak: 15,
@@ -78,8 +78,8 @@ export const SCIENTIFIC_INTERVALS: ScientificInterval[] = [
   },
   {
     id: 'deep50',
-    nameVi: '🧠 50 / 10 Deep Work',
-    nameEn: '🧠 50 / 10 Deep Work',
+    nameVi: '50 / 10 Deep Work',
+    nameEn: '50 / 10 Deep Work',
     focus: 50,
     shortBreak: 10,
     longBreak: 20,
@@ -88,8 +88,8 @@ export const SCIENTIFIC_INTERVALS: ScientificInterval[] = [
   },
   {
     id: 'ultradian90',
-    nameVi: '⚡ 90 / 20 Ultradian',
-    nameEn: '⚡ 90 / 20 Ultradian',
+    nameVi: '90 / 20 Ultradian',
+    nameEn: '90 / 20 Ultradian',
     focus: 90,
     shortBreak: 20,
     longBreak: 30,
@@ -112,9 +112,9 @@ const PHASE_SECONDS: Record<PomodoroPhase, number> = {
 };
 
 const PHASE_META: Record<PomodoroPhase, { labelVi: string; labelEn: string; color: string }> = {
-  focus: { labelVi: 'Tập trung sâu', labelEn: 'Deep focus', color: '#3F51B5' },
+  focus: { labelVi: 'Tập trung sâu', labelEn: 'Deep focus', color: '#E11D48' },
   shortBreak: { labelVi: 'Nghỉ ngắn', labelEn: 'Short break', color: '#33B679' },
-  longBreak: { labelVi: 'Nghỉ dài', labelEn: 'Long break', color: '#039BE5' },
+  longBreak: { labelVi: 'Nghỉ dài', labelEn: 'Long break', color: '#F43F5E' },
 };
 
 interface PersistedTimer {
@@ -422,14 +422,14 @@ export const StudyFocusView: React.FC<StudyFocusViewProps> = ({
 
   const timerCard = (
     <div
-      className={`rounded-3xl border shadow-sm p-6 flex flex-col items-center transition-colors ${
+      className={`rounded-2xl border shadow-sm p-6 flex flex-col items-center transition-colors ${
         zen
           ? 'bg-[#12151a] border-slate-800 text-gray-100'
-          : 'bg-white dark:bg-[#131b2e] border-slate-200 dark:border-slate-800'
+          : 'bg-white dark:bg-white/[0.03] backdrop-blur-xl border-slate-200 dark:border-white/[0.08]'
       }`}
     >
       {/* Mode tabs */}
-      <div className="flex items-center gap-1 p-1 rounded-xl bg-gray-100 dark:bg-gray-800 mb-5">
+      <div className="flex items-center gap-1 p-1 rounded-xl bg-gray-100 dark:bg-white/[0.04] mb-5">
         {modeTabs.map((tab) => {
           const Icon = tab.icon;
           return (
@@ -438,7 +438,7 @@ export const StudyFocusView: React.FC<StudyFocusViewProps> = ({
               onClick={() => switchMode(tab.id)}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-all cursor-pointer ${
                 mode === tab.id
-                  ? 'bg-white dark:bg-gray-700 text-rose-600 dark:text-rose-400 shadow-xs'
+                  ? 'bg-white dark:bg-rose-600 text-rose-600 dark:text-rose-400 shadow-xs'
                   : 'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
               }`}
             >
@@ -454,7 +454,7 @@ export const StudyFocusView: React.FC<StudyFocusViewProps> = ({
         <div className="w-full max-w-sm mb-3.5">
           <div className="flex items-center gap-1.5 mb-1.5 px-0.5">
             <Brain className="w-3.5 h-3.5 text-rose-500" />
-            <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+            <span className="text-xs font-medium text-slate-400">
               {lang === 'vi' ? 'Phác đồ nhịp sinh học' : 'Scientific Focus Protocol'}
             </span>
           </div>
@@ -467,7 +467,7 @@ export const StudyFocusView: React.FC<StudyFocusViewProps> = ({
                 className={`p-2 rounded-xl border text-left flex flex-col justify-between transition-all cursor-pointer ${
                   activeInterval.id === intv.id
                     ? 'bg-rose-50 dark:bg-rose-950/40 border-rose-500 text-rose-700 dark:text-rose-300 shadow-2xs font-semibold'
-                    : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 text-gray-700 dark:text-gray-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                    : 'bg-slate-50 dark:bg-white/[0.03] border-slate-200 dark:border-white/[0.08] text-gray-700 dark:text-gray-300 hover:bg-slate-100 dark:hover:bg-white/[0.06]'
                 }`}
               >
                 <span className="text-[11px] font-bold leading-tight truncate">
@@ -492,7 +492,7 @@ export const StudyFocusView: React.FC<StudyFocusViewProps> = ({
               className={`text-[10px] px-2.5 py-1 rounded-full font-semibold border transition-all cursor-pointer ${
                 phase === p
                   ? 'text-white border-transparent'
-                  : 'text-gray-500 dark:text-gray-400 border-slate-200 dark:border-gray-700'
+                  : 'text-gray-500 dark:text-gray-400 border-slate-200 dark:border-white/[0.1]'
               }`}
               style={phase === p ? { backgroundColor: PHASE_META[p].color } : undefined}
             >
@@ -512,7 +512,7 @@ export const StudyFocusView: React.FC<StudyFocusViewProps> = ({
               className={`text-[10px] px-2.5 py-1 rounded-full font-semibold border cursor-pointer ${
                 countdownMinutes === min
                   ? 'bg-rose-600 text-white border-transparent'
-                  : 'text-gray-500 dark:text-gray-400 border-slate-200 dark:border-gray-700'
+                  : 'text-gray-500 dark:text-gray-400 border-slate-200 dark:border-white/[0.1]'
               }`}
             >
               {min}m
@@ -539,7 +539,7 @@ export const StudyFocusView: React.FC<StudyFocusViewProps> = ({
               cy="50"
               r="44"
               fill="none"
-              stroke={mode === 'pomodoro' ? PHASE_META[phase].color : '#3F51B5'}
+              stroke={mode === 'pomodoro' ? PHASE_META[phase].color : '#E11D48'}
               strokeWidth="6"
               strokeLinecap="round"
               strokeDasharray={`${2 * Math.PI * 44}`}
@@ -570,13 +570,13 @@ export const StudyFocusView: React.FC<StudyFocusViewProps> = ({
 
       {/* Linked task */}
       <div className="w-full max-w-xs mb-4">
-        <label className="block text-[10px] font-semibold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">
+        <label className="block text-xs font-medium text-slate-400 mb-1.5">
           {lang === 'vi' ? 'Gắn vào công việc' : 'Attach to task'}
         </label>
         <select
           value={linkedTaskId}
           onChange={(e) => setLinkedTaskId(e.target.value)}
-          className="w-full text-xs px-2.5 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-slate-900 text-gray-900 dark:text-gray-100"
+          className="w-full text-xs px-2.5 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-black/60 text-gray-900 dark:text-gray-100"
         >
           <option value="">{lang === 'vi' ? '— Không gắn —' : '— None —'}</option>
           {openTasks.map((t) => (
@@ -597,7 +597,7 @@ export const StudyFocusView: React.FC<StudyFocusViewProps> = ({
       <div className="flex items-center gap-2">
         <button
           onClick={running ? pause : start}
-          className="flex items-center gap-2 px-6 py-3 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-sm font-semibold shadow-md transition-transform hover:scale-105 cursor-pointer"
+          className="flex items-center gap-2 px-6 py-3 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-sm font-semibold shadow-md transition-colors duration-150 active:scale-98 cursor-pointer"
         >
           {running ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
           <span>
@@ -614,7 +614,7 @@ export const StudyFocusView: React.FC<StudyFocusViewProps> = ({
         <button
           onClick={reset}
           title={lang === 'vi' ? 'Đặt lại' : 'Reset'}
-          className="p-3 rounded-xl border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 cursor-pointer"
+          className="p-3 rounded-xl border border-gray-300 dark:border-white/[0.1] hover:bg-gray-50 dark:hover:bg-white/[0.08] text-gray-600 dark:text-gray-300 cursor-pointer"
         >
           <RotateCcw className="w-4 h-4" />
         </button>
@@ -636,7 +636,7 @@ export const StudyFocusView: React.FC<StudyFocusViewProps> = ({
           className={`p-3 rounded-xl border cursor-pointer ${
             soundOn
               ? 'border-rose-300 dark:border-rose-800 text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40'
-              : 'border-gray-300 dark:border-gray-700 text-gray-400'
+              : 'border-gray-300 dark:border-white/[0.1] text-gray-400'
           }`}
         >
           <Volume2 className="w-4 h-4" />
@@ -645,17 +645,17 @@ export const StudyFocusView: React.FC<StudyFocusViewProps> = ({
         <button
           onClick={() => setZen((z) => !z)}
           title={lang === 'vi' ? 'Chế độ tập trung (Zen)' : 'Zen focus mode'}
-          className="p-3 rounded-xl border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 cursor-pointer"
+          className="p-3 rounded-xl border border-gray-300 dark:border-white/[0.1] hover:bg-gray-50 dark:hover:bg-white/[0.08] text-gray-600 dark:text-gray-300 cursor-pointer"
         >
           {zen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
         </button>
       </div>
 
       {/* Ambient Sound Bar */}
-      <div className="w-full max-w-sm mt-5 pt-4 border-t border-gray-100 dark:border-slate-800">
+      <div className="w-full max-w-sm mt-5 pt-4 border-t border-gray-100 dark:border-white/[0.08]">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-1.5 text-xs font-semibold text-gray-700 dark:text-gray-300">
-            <Headphones className={`w-3.5 h-3.5 ${ambientPlaying ? 'text-violet-500 animate-pulse' : 'text-gray-400'}`} />
+            <Headphones className={`w-3.5 h-3.5 ${ambientPlaying ? 'text-rose-500 animate-pulse' : 'text-gray-400'}`} />
             <span>{lang === 'vi' ? 'Âm thanh nền tập trung' : 'Focus Ambient Sound'}</span>
           </div>
           <button
@@ -663,8 +663,8 @@ export const StudyFocusView: React.FC<StudyFocusViewProps> = ({
             onClick={handleToggleAmbient}
             className={`text-xs px-2.5 py-1 rounded-lg font-medium cursor-pointer transition-colors ${
               ambientPlaying
-                ? 'bg-violet-600 text-white shadow-2xs'
-                : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200'
+                ? 'bg-rose-600 text-white shadow-2xs'
+                : 'bg-gray-100 dark:bg-white/[0.04] text-gray-600 dark:text-gray-300 hover:bg-gray-200'
             }`}
           >
             {ambientPlaying ? (lang === 'vi' ? 'Đang phát' : 'Playing') : (lang === 'vi' ? 'Bật âm thanh' : 'Play Sound')}
@@ -679,8 +679,8 @@ export const StudyFocusView: React.FC<StudyFocusViewProps> = ({
               onClick={() => handleSelectTrack(trk.id)}
               className={`text-xs px-2.5 py-1 rounded-lg flex items-center gap-1 cursor-pointer transition-all ${
                 ambientTrack === trk.id
-                  ? 'bg-violet-100 dark:bg-violet-950/60 text-violet-700 dark:text-violet-300 font-bold border border-violet-300 dark:border-violet-700'
-                  : 'bg-gray-50 dark:bg-gray-800/60 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 border border-transparent'
+                  ? 'bg-rose-950/40 dark:bg-rose-950/50 text-rose-300 dark:text-rose-200 font-bold border border-rose-500/30 dark:border-rose-800/40'
+                  : 'bg-gray-50 dark:bg-white/[0.03] text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/[0.08] border border-transparent'
               }`}
             >
               <span>{trk.emoji}</span>
@@ -699,7 +699,7 @@ export const StudyFocusView: React.FC<StudyFocusViewProps> = ({
               step={0.05}
               value={ambientVol}
               onChange={(e) => handleChangeVolume(Number(e.target.value))}
-              className="flex-1 accent-violet-600 h-1 bg-gray-200 dark:bg-gray-700 rounded-lg cursor-pointer"
+              className="flex-1 accent-rose-500 h-1 bg-gray-200 dark:bg-rose-600 rounded-lg cursor-pointer"
             />
             <span className="text-[10px] font-mono text-gray-400 w-8 text-right">{Math.round(ambientVol * 100)}%</span>
           </div>
@@ -718,7 +718,7 @@ export const StudyFocusView: React.FC<StudyFocusViewProps> = ({
     if (!reflectionModal) return null;
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
-        <div className="bg-white dark:bg-[#131b2e] w-full max-w-md rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-5 animate-in zoom-in-95 duration-150">
+        <div className="bg-white dark:bg-white/[0.03] backdrop-blur-xl w-full max-w-md rounded-2xl shadow-2xl border border-slate-200 dark:border-white/[0.08] p-5 animate-in zoom-in-95 duration-150">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-amber-500" />
@@ -738,7 +738,7 @@ export const StudyFocusView: React.FC<StudyFocusViewProps> = ({
           </div>
 
           <p className="text-xs text-gray-600 dark:text-gray-300 mb-3">
-            🎉 {lang === 'vi' ? 'Chúc mừng bạn vừa hoàn thành phiên tập trung' : 'Great job completing your focus session'} ({formatDuration(reflectionModal.durationSeconds)})!
+            {lang === 'vi' ? 'Hoàn thành phiên tập trung' : 'Completed focus session'}: {formatDuration(reflectionModal.durationSeconds)}
           </p>
 
           <div className="mb-4">
@@ -756,7 +756,7 @@ export const StudyFocusView: React.FC<StudyFocusViewProps> = ({
                   ? 'Ví dụ: Đã đọc xong 20 trang sách, giải 5 bài toán khó, fix lỗi thanh toán...'
                   : 'e.g. Read 20 pages, solved 5 problem sets, refactored checkout...'
               }
-              className="w-full text-xs p-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-slate-900 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-rose-500/30"
+              className="w-full text-xs p-3 rounded-xl border border-gray-300 dark:border-white/[0.1] bg-gray-50 dark:bg-black/60 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-rose-500/30"
             />
           </div>
 
@@ -764,7 +764,7 @@ export const StudyFocusView: React.FC<StudyFocusViewProps> = ({
             <button
               type="button"
               onClick={() => handleSaveReflection('')}
-              className="px-3.5 py-2 text-xs font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-xl cursor-pointer"
+              className="px-3.5 py-2 text-xs font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/[0.08] rounded-xl cursor-pointer"
             >
               {lang === 'vi' ? 'Bỏ qua ghi chú' : 'Skip note'}
             </button>
@@ -785,7 +785,7 @@ export const StudyFocusView: React.FC<StudyFocusViewProps> = ({
   // --- Zen mode: full-screen minimal timer ---------------------------------
   if (zen) {
     return (
-      <div className="fixed inset-0 z-50 bg-[#0d1117] flex flex-col items-center justify-center p-6 select-none">
+      <div className="fixed inset-0 z-50 bg-[#050102] flex flex-col items-center justify-center p-6 select-none">
         <div className="absolute top-5 right-5 flex items-center gap-2">
           <button
             onClick={() => setZen(false)}
@@ -849,7 +849,7 @@ export const StudyFocusView: React.FC<StudyFocusViewProps> = ({
             onClick={handleToggleAmbient}
             title={lang === 'vi' ? 'Bật/tắt âm thanh nền' : 'Toggle ambient sound'}
             className={`p-3.5 rounded-full transition-colors cursor-pointer ${
-              ambientPlaying ? 'bg-violet-600 text-white' : 'bg-white/10 hover:bg-white/20 text-gray-300'
+              ambientPlaying ? 'bg-rose-600 text-white' : 'bg-white/10 hover:bg-white/20 text-gray-300'
             }`}
           >
             <Headphones className="w-4 h-4" />
@@ -864,7 +864,7 @@ export const StudyFocusView: React.FC<StudyFocusViewProps> = ({
                 key={trk.id}
                 onClick={() => handleSelectTrack(trk.id)}
                 className={`px-2.5 py-1 rounded-full text-[10px] cursor-pointer transition-colors ${
-                  ambientTrack === trk.id ? 'bg-violet-600 text-white font-bold' : 'text-gray-400 hover:text-white'
+                  ambientTrack === trk.id ? 'bg-rose-600 text-white font-bold' : 'text-gray-400 hover:text-white'
                 }`}
               >
                 {trk.emoji} {lang === 'vi' ? trk.labelVi : trk.labelEn}
@@ -890,10 +890,10 @@ export const StudyFocusView: React.FC<StudyFocusViewProps> = ({
   }
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-y-auto bg-gray-50/50 dark:bg-slate-900 p-4 md:p-6 lg:p-8 select-none">
+    <div className="flex-1 flex flex-col h-full overflow-y-auto bg-gray-50/50 dark:bg-transparent p-4 md:p-5 select-none">
       <div className="mb-6">
         <div className="flex items-center gap-2">
-          <Timer className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
+          <Timer className="w-6 h-6 text-rose-500" />
           <h1 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-gray-100">
             {lang === 'vi' ? 'Môi Trường Học Tập & Tập Trung' : 'Study & Focus Environment'}
           </h1>
@@ -911,17 +911,17 @@ export const StudyFocusView: React.FC<StudyFocusViewProps> = ({
         <div className="lg:col-span-5 space-y-4">
           {/* Stats */}
           <div className="grid grid-cols-2 gap-3">
-            <div className="bg-white dark:bg-[#131b2e] p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
-              <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
+            <div className="bg-white dark:bg-white/[0.03] backdrop-blur-xl p-3.5 rounded-2xl border border-slate-200 dark:border-white/[0.08] shadow-xs">
+              <div className="text-xs font-medium text-slate-400">
                 {lang === 'vi' ? 'Hôm nay' : 'Today'}
               </div>
-              <div className="text-xl font-bold text-gray-900 dark:text-gray-100 font-mono mt-0.5">
+              <div className="text-2xl font-semibold text-slate-900 dark:text-white font-mono tabular-nums tracking-tight mt-0.5">
                 {formatDuration(todayMinutes * 60)}
               </div>
             </div>
-            <div className="bg-white dark:bg-[#131b2e] p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
-              <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
-                {lang === 'vi' ? 'Tổng đã ghi' : 'All recorded'}
+            <div className="bg-white dark:bg-white/[0.03] backdrop-blur-xl p-3.5 rounded-2xl border border-slate-200 dark:border-white/[0.08] shadow-xs">
+              <div className="text-xs font-medium text-slate-400">
+                {lang === 'vi' ? 'Tổng đã ghi' : 'Total recorded'}
               </div>
               <div className="text-xl font-bold text-gray-900 dark:text-gray-100 font-mono mt-0.5">
                 {Math.round(weekMinutes / 60)}h
@@ -930,7 +930,7 @@ export const StudyFocusView: React.FC<StudyFocusViewProps> = ({
           </div>
 
           {/* Weekly chart */}
-          <div className="bg-white dark:bg-[#131b2e] p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
+          <div className="bg-white dark:bg-white/[0.03] backdrop-blur-xl p-4 rounded-2xl border border-slate-200 dark:border-white/[0.08] shadow-xs">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-xs font-bold text-gray-900 dark:text-gray-100 flex items-center gap-1.5">
                 <BarChart3 className="w-3.5 h-3.5 text-rose-500" />
@@ -950,7 +950,7 @@ export const StudyFocusView: React.FC<StudyFocusViewProps> = ({
           </div>
 
           {/* History */}
-          <div className="bg-white dark:bg-[#131b2e] p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
+          <div className="bg-white dark:bg-white/[0.03] backdrop-blur-xl p-4 rounded-2xl border border-slate-200 dark:border-white/[0.08] shadow-xs">
             <h3 className="text-xs font-bold text-gray-900 dark:text-gray-100 mb-2.5">
               {lang === 'vi' ? 'Lịch sử phiên học' : 'Session history'}
             </h3>
@@ -963,7 +963,7 @@ export const StudyFocusView: React.FC<StudyFocusViewProps> = ({
                 {recentSessions.map((s) => (
                   <div
                     key={s.id}
-                    className="flex items-center justify-between gap-2 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/60 group"
+                    className="flex items-center justify-between gap-2 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-white/[0.06] group"
                   >
                     <div className="min-w-0">
                       <p className="text-[11px] font-medium text-gray-800 dark:text-gray-200 truncate">
@@ -992,7 +992,7 @@ export const StudyFocusView: React.FC<StudyFocusViewProps> = ({
 
           {/* Open tasks shortcut */}
           {openTasks.length > 0 && (
-            <div className="bg-white dark:bg-[#131b2e] p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
+            <div className="bg-white dark:bg-white/[0.03] backdrop-blur-xl p-4 rounded-2xl border border-slate-200 dark:border-white/[0.08] shadow-xs">
               <h3 className="text-xs font-bold text-gray-900 dark:text-gray-100 mb-2">
                 {lang === 'vi' ? 'Việc đang mở' : 'Open tasks'}
               </h3>
@@ -1004,7 +1004,7 @@ export const StudyFocusView: React.FC<StudyFocusViewProps> = ({
                       setLinkedTaskId(t.id);
                       onOpenTask(t.id);
                     }}
-                    className="w-full text-left text-[11px] px-2 py-1.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 truncate cursor-pointer"
+                    className="w-full text-left text-[11px] px-2 py-1.5 rounded-lg hover:bg-gray-50 dark:hover:bg-white/[0.08] text-gray-700 dark:text-gray-300 truncate cursor-pointer"
                   >
                     • {t.title}
                   </button>

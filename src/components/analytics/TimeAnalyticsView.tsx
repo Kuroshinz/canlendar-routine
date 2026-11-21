@@ -86,12 +86,12 @@ export const TimeAnalyticsView: React.FC<TimeAnalyticsViewProps> = ({
       : 0;
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-y-auto bg-gray-50/50 dark:bg-gray-900 select-none p-4 md:p-6 lg:p-8">
+    <div className="flex-1 flex flex-col h-full overflow-y-auto bg-gray-50/50 dark:bg-transparent dark:vortex-canvas select-none p-4 md:p-6 lg:p-8">
       {/* Top Bar with Filter Selector & Date Navigator */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
           <div className="flex items-center gap-2">
-            <Activity className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+            <Activity className="w-6 h-6 text-rose-500 dark:text-rose-400" />
             <h1 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-gray-100">
               {lang === 'vi' ? 'Bảng Phân Tích Năng Suất' : 'Productivity & Time Analytics'}
             </h1>
@@ -106,7 +106,7 @@ export const TimeAnalyticsView: React.FC<TimeAnalyticsViewProps> = ({
         {/* Filter controls */}
         <div className="flex items-center gap-2">
           {/* Mode Tabs */}
-          <div className="bg-gray-200/80 dark:bg-gray-800 p-1 rounded-xl flex text-xs font-semibold">
+          <div className="bg-gray-200/80 dark:bg-white/[0.04] p-1 rounded-xl flex text-xs font-semibold">
             <button
               onClick={() => {
                 setFilterMode('today');
@@ -114,7 +114,7 @@ export const TimeAnalyticsView: React.FC<TimeAnalyticsViewProps> = ({
               }}
               className={`px-3 py-1.5 rounded-lg transition-all ${
                 filterMode === 'today'
-                  ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-xs'
+                  ? 'bg-white dark:bg-gray-700 text-rose-500 dark:text-rose-400 shadow-xs'
                   : 'text-gray-600 dark:text-gray-300 hover:text-gray-900'
               }`}
             >
@@ -127,7 +127,7 @@ export const TimeAnalyticsView: React.FC<TimeAnalyticsViewProps> = ({
               }}
               className={`px-3 py-1.5 rounded-lg transition-all ${
                 filterMode === 'week'
-                  ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-xs'
+                  ? 'bg-white dark:bg-gray-700 text-rose-500 dark:text-rose-400 shadow-xs'
                   : 'text-gray-600 dark:text-gray-300 hover:text-gray-900'
               }`}
             >
@@ -140,7 +140,7 @@ export const TimeAnalyticsView: React.FC<TimeAnalyticsViewProps> = ({
               }}
               className={`px-3 py-1.5 rounded-lg transition-all ${
                 filterMode === 'month'
-                  ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-xs'
+                  ? 'bg-white dark:bg-gray-700 text-rose-500 dark:text-rose-400 shadow-xs'
                   : 'text-gray-600 dark:text-gray-300 hover:text-gray-900'
               }`}
             >
@@ -149,7 +149,7 @@ export const TimeAnalyticsView: React.FC<TimeAnalyticsViewProps> = ({
           </div>
 
           {/* Date Offset Navigator */}
-          <div className="flex items-center bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-2 py-1 shadow-xs">
+          <div className="flex items-center bg-white dark:bg-white/[0.04] border border-gray-200 dark:border-white/[0.1] rounded-xl px-2 py-1 shadow-xs">
             <button
               onClick={() => setOffset((prev) => prev - 1)}
               className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-gray-500"
@@ -175,11 +175,11 @@ export const TimeAnalyticsView: React.FC<TimeAnalyticsViewProps> = ({
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {/* Total Time */}
         <div className="bg-white dark:bg-[#1a1e24] p-4 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs flex items-center gap-3.5">
-          <div className="w-11 h-11 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+          <div className="w-11 h-11 rounded-xl bg-rose-950/40 dark:bg-blue-950/40 text-rose-500 dark:text-rose-400 flex items-center justify-center shrink-0">
             <Clock className="w-5 h-5" />
           </div>
           <div>
-            <div className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
+            <div className="text-[11px] font-semibold text-gray-400 ">
               {lang === 'vi' ? 'Tổng Thời Gian' : 'Total Time'}
             </div>
             <div className="text-xl font-bold text-gray-900 dark:text-gray-100 mt-0.5">
@@ -194,7 +194,7 @@ export const TimeAnalyticsView: React.FC<TimeAnalyticsViewProps> = ({
             <CalIcon className="w-5 h-5" />
           </div>
           <div>
-            <div className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
+            <div className="text-[11px] font-semibold text-gray-400 ">
               {lang === 'vi' ? 'Số Sự Kiện' : 'Total Events'}
             </div>
             <div className="text-xl font-bold text-gray-900 dark:text-gray-100 mt-0.5">
@@ -209,7 +209,7 @@ export const TimeAnalyticsView: React.FC<TimeAnalyticsViewProps> = ({
             <Zap className="w-5 h-5" />
           </div>
           <div>
-            <div className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
+            <div className="text-[11px] font-semibold text-gray-400 ">
               {lang === 'vi' ? 'Tập Trung Sâu' : 'Deep Work'}
             </div>
             <div className="text-xl font-bold text-gray-900 dark:text-gray-100 mt-0.5">
@@ -227,7 +227,7 @@ export const TimeAnalyticsView: React.FC<TimeAnalyticsViewProps> = ({
             <Video className="w-5 h-5" />
           </div>
           <div>
-            <div className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
+            <div className="text-[11px] font-semibold text-gray-400 ">
               {lang === 'vi' ? 'Họp & Hội Thảo' : 'Meetings & Calls'}
             </div>
             <div className="text-xl font-bold text-gray-900 dark:text-gray-100 mt-0.5">
@@ -243,7 +243,7 @@ export const TimeAnalyticsView: React.FC<TimeAnalyticsViewProps> = ({
         <div className="lg:col-span-7 bg-white dark:bg-[#1a1e24] p-6 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs flex flex-col">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              <TrendingUp className="w-5 h-5 text-rose-500 dark:text-rose-400" />
               <h2 className="text-base font-bold text-gray-900 dark:text-gray-100">
                 {lang === 'vi' ? 'Phân Bổ Thời Gian Theo Danh Mục' : 'Time Breakdown by Category'}
               </h2>

@@ -1,3 +1,34 @@
+
+const getInitialEventsForCurrentUser = (): CalendarEvent[] => {
+  try {
+    const rawUser = typeof window !== 'undefined' ? localStorage.getItem('gcal_active_user') : null;
+    if (rawUser) {
+      const u = JSON.parse(rawUser);
+      // Fresh isolated event list for current authenticated user
+      return [
+        {
+          id: `ev-welcome-${u.uid || 'usr'}`,
+          title: `Chào mừng ${u.displayName || 'bạn'} đến với ZENOX`,
+          description: `Kho dữ liệu cá nhân cho ${u.email} (${u.authMethod === 'google' ? 'Google Account' : 'Web Account'})`,
+          startDate: '2026-10-29',
+          endDate: '2026-10-29',
+          startTime: '09:00',
+          endTime: '10:00',
+          allDay: false,
+          calendarId: 'personal',
+          color: '#0284c7',
+          type: 'event',
+          createdAt: Date.now(),
+        },
+      ];
+    }
+  } catch {}
+  return INITIAL_EVENTS;
+};
+
+import { accountStorage } from './services/accountStorage';
+import { LoginModal } from './components/auth/LoginModal';
+import { Scene } from './Scene';
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -39,6 +70,8 @@ import { TasksGoalsView } from './components/productivity/TasksGoalsView';
 import { StudyFocusView } from './components/productivity/StudyFocusView';
 import { FinanceView } from './components/productivity/FinanceView';
 import { HealthView } from './components/productivity/HealthView';
+import { LandingPage } from './components/LandingPage';
+import { verifyZenoxSession, logoutZenoxSession, ZenoxUser } from './services/zenoxAuth';
 import { useProductivityStore, todayString } from './hooks/useProductivityStore';
 import { buildTaskEvents } from './utils/productivityUtils';
 import { buildWorkoutEvents, startOfWeek, tdee, calorieTarget, macroTargets } from './utils/fitnessMetrics';
@@ -61,6 +94,7 @@ import { LifeCopilotModal } from './components/productivity/LifeCopilotModal';
 import { ToastContainer } from './components/ToastContainer';
 
 export default function App() {
+
   // 1. Language state
   const [lang, setLang] = useState<'vi' | 'en'>(() => {
     return (localStorage.getItem('gcal_lang') as 'vi' | 'en') || 'vi';
@@ -92,54 +126,150 @@ export default function App() {
     localStorage.setItem('gcal_lang', nextLang);
   };
 
-  // 3. Current active date & view
+  // 2b. Authenticated User State (Crypto-verified session)
+  const [user, setUser] = useState<ZenoxUser | AppUser | User | null>(() => {
+    return verifyZenoxSession();
+  });
+
+  // 3. Current active date & view (Default to Landing Page)
   const [currentDate, setCurrentDate] = useState<Date>(() => new Date(2026, 9, 29)); // Oct 29, 2026
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [loginModalMode, setLoginModalMode] = useState<'login' | 'register'>('login');
   const [view, setView] = useState<CalendarViewType>(() => {
-    return (localStorage.getItem('gcal_view') as CalendarViewType) || 'month';
+    // 1. Scene viewer debug route
+    if (typeof window !== 'undefined' && window.location.hash === '#scene') {
+      return 'scene';
+    }
+
+    // 2. ANTI-BYPASS: Verify cryptographic session token
+    const verified = verifyZenoxSession();
+    if (!verified) {
+      return 'landing';
+    }
+
+    // 3. User authenticated and entered workspace in current session
+    const enteredWorkspace = typeof window !== 'undefined' ? sessionStorage.getItem('zenox_workspace_entered') : null;
+    if (enteredWorkspace === 'true') {
+      const saved = localStorage.getItem('gcal_view') as CalendarViewType | null;
+      return saved && saved !== 'landing' ? saved : 'dashboard';
+    }
+
+    // 4. Default to landing space so user always passes through landing space first
+    return 'landing';
   });
 
   const handleViewChange = (newView: CalendarViewType) => {
+    // ANTI-BYPASS: If entering workspace, verify user session
+    if (newView !== 'landing' && !user) {
+      setLoginModalMode('login');
+      setIsLoginModalOpen(true);
+      return;
+    }
+
     setView(newView);
-    localStorage.setItem('gcal_view', newView);
+    if (newView === 'landing') {
+      sessionStorage.removeItem('zenox_workspace_entered');
+      if (typeof window !== 'undefined') {
+        window.location.hash = '#landing';
+      }
+    } else {
+      sessionStorage.setItem('zenox_workspace_entered', 'true');
+      localStorage.setItem('gcal_view', newView);
+      if (typeof window !== 'undefined' && window.location.hash === '#landing') {
+        window.location.hash = '#workspace';
+      }
+    }
   };
 
-  // 4. Events & Categories persistence (Offline-First)
+  // Dynamic Browser Tab Space Title (Clear Tab Distinction)
+  useEffect(() => {
+    if (!user || view === 'landing') {
+      document.title = 'ZENOX | Landing Space · Hệ Điều Hành Thể Hình & Hiệu Suất';
+    } else {
+      document.title = `ZENOX Workspace · ${user.displayName || 'Cá Nhân'}`;
+    }
+  }, [user, view]);
+
+  useEffect(() => {
+    const onHashChange = () => {
+      const verified = verifyZenoxSession();
+      if (window.location.hash === '#landing') {
+        setView('landing');
+        sessionStorage.removeItem('zenox_workspace_entered');
+      } else if (window.location.hash === '#workspace' || window.location.hash === '#app' || window.location.hash === '#dashboard') {
+        if (!verified) {
+          // STRICT ANTI-BYPASS: Block unauthenticated access immediately
+          setView('landing');
+          setLoginModalMode('login');
+          setIsLoginModalOpen(true);
+        } else {
+          sessionStorage.setItem('zenox_workspace_entered', 'true');
+          setView((prev) => (prev === 'landing' ? 'dashboard' : prev));
+        }
+      }
+    };
+    window.addEventListener('hashchange', onHashChange);
+    return () => window.removeEventListener('hashchange', onHashChange);
+  }, [user]);
+
+  // 4. Events & Categories persistence (Offline-First, Scoped per User Account)
   const [events, setEvents] = useState<CalendarEvent[]>(() => {
     try {
-      const v = localStorage.getItem('gcal_events_v');
-      if (v === '2.1') {
-        const saved = localStorage.getItem('gcal_events');
-        if (saved) return JSON.parse(saved);
-      }
+      const saved = accountStorage.getItem('gcal_events');
+      if (saved) return JSON.parse(saved);
     } catch {}
-    localStorage.setItem('gcal_events_v', '2.1');
-    return INITIAL_EVENTS;
+    return getInitialEventsForCurrentUser();
   });
 
   const [categories, setCategories] = useState<CalendarCategory[]>(() => {
     let saved: CalendarCategory[] | null = null;
     try {
-      const raw = localStorage.getItem('gcal_categories');
+      const raw = accountStorage.getItem('gcal_categories');
       if (raw) saved = JSON.parse(raw);
     } catch {}
 
     if (!saved) return DEFAULT_CALENDARS;
 
-    // Additive migration: categories added to DEFAULT_CALENDARS after a user
-    // already persisted their list (e.g. Study / Fitness) must appear without
-    // touching the user's own custom calendars or visibility choices.
     const knownIds = new Set(saved.map((c) => c.id));
     const missing = DEFAULT_CALENDARS.filter((c) => !knownIds.has(c.id));
     return missing.length > 0 ? [...saved, ...missing] : saved;
   });
 
   useEffect(() => {
-    localStorage.setItem('gcal_events', JSON.stringify(events));
+    accountStorage.setItem('gcal_events', JSON.stringify(events));
   }, [events]);
 
   useEffect(() => {
-    localStorage.setItem('gcal_categories', JSON.stringify(categories));
+    accountStorage.setItem('gcal_categories', JSON.stringify(categories));
   }, [categories]);
+
+  // Synchronize events and categories whenever the logged-in user changes (Google vs Web accounts)
+  useEffect(() => {
+    try {
+      const savedEvents = accountStorage.getItem('gcal_events');
+      if (savedEvents) {
+        setEvents(JSON.parse(savedEvents));
+      } else {
+        setEvents(INITIAL_EVENTS);
+      }
+    } catch {
+      setEvents(INITIAL_EVENTS);
+    }
+
+    try {
+      const savedCats = accountStorage.getItem('gcal_categories');
+      if (savedCats) {
+        const parsed = JSON.parse(savedCats);
+        const knownIds = new Set(parsed.map((c: any) => c.id));
+        const missing = DEFAULT_CALENDARS.filter((c) => !knownIds.has(c.id));
+        setCategories(missing.length > 0 ? [...parsed, ...missing] : parsed);
+      } else {
+        setCategories(DEFAULT_CALENDARS);
+      }
+    } catch {
+      setCategories(DEFAULT_CALENDARS);
+    }
+  }, [user?.uid]);
 
   // Set of visible category IDs
   const visibleCategoryIds = useMemo(() => {
@@ -201,7 +331,7 @@ export default function App() {
       }
       const deduped = deduplicateEvents(filtered);
       try {
-        localStorage.setItem('gcal_events', JSON.stringify(deduped));
+        accountStorage.setItem('gcal_events', JSON.stringify(deduped));
       } catch {}
       return deduped;
     });
@@ -307,13 +437,6 @@ export default function App() {
   });
 
   // Google OAuth & Cloud Sync State
-  const [user, setUser] = useState<AppUser | User | null>(() => {
-    try {
-      const saved = localStorage.getItem('gcal_active_user');
-      if (saved) return JSON.parse(saved);
-    } catch {}
-    return null;
-  });
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [syncState, setSyncState] = useState<SyncState>(() => {
     return localStorage.getItem('gcal_active_user') ? 'synced' : 'offline';
@@ -450,14 +573,22 @@ export default function App() {
 
   // 10. Firebase Auth & Realtime Firestore sync subscription
   useEffect(() => {
+    const verified = verifyZenoxSession();
+    if (verified) {
+      setUser(verified);
+      return;
+    }
+
     const unsubscribeAuth = initAuth(
       (authedUser) => {
         setUser(authedUser);
         setSyncState('synced');
       },
       () => {
-        setUser(null);
-        setSyncState('offline');
+        if (!verifyZenoxSession()) {
+          setUser(null);
+          setSyncState('offline');
+        }
       }
     );
     return () => {
@@ -753,11 +884,35 @@ export default function App() {
   const handleGoogleSignOut = async () => {
     try {
       await logout();
-      setUser(null);
-      localStorage.removeItem('gcal_active_user');
-      setSyncState('offline');
     } catch (err) {
-      console.error('Sign Out failed:', err);
+      console.warn('Logout notice:', err);
+    }
+    logoutZenoxSession();
+    setUser(null);
+    localStorage.removeItem('gcal_active_user');
+    sessionStorage.removeItem('zenox_workspace_entered');
+    setView('landing');
+    window.location.hash = '#landing';
+  };
+
+  const handleAuthUserSuccess = (authedUser: ZenoxUser) => {
+    setUser(authedUser);
+    setIsLoginModalOpen(false);
+    sessionStorage.setItem('zenox_workspace_entered', 'true');
+    setView('dashboard');
+    window.location.hash = '#workspace';
+
+    // Immediately re-hydrate events so synced Google Calendar & preserved data are instantly visible
+    try {
+      const stored = accountStorage.getItem('gcal_events');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setEvents(parsed);
+        }
+      }
+    } catch (e) {
+      console.warn('Could not re-hydrate events on auth success:', e);
     }
   };
 
@@ -775,7 +930,7 @@ export default function App() {
 
     if (clearData) {
       setEvents([]);
-      localStorage.setItem('gcal_events', JSON.stringify([]));
+      accountStorage.setItem('gcal_events', JSON.stringify([]));
       productivity.clearAll(trimmedName, trimmedEmail || undefined);
     } else {
       productivity.updateCtgProfile({
@@ -812,7 +967,7 @@ export default function App() {
           const filtered = cleaned.filter((e) => !incomingIds.has(e.id));
           const merged = deduplicateEvents([...gEvents, ...filtered]);
           try {
-            localStorage.setItem('gcal_events', JSON.stringify(merged));
+            accountStorage.setItem('gcal_events', JSON.stringify(merged));
           } catch {}
           return merged;
         });
@@ -957,15 +1112,88 @@ export default function App() {
     return null;
   }, [productivity.bodyPoints, productivity.ctgProfile.goal, lang]);
 
+  if (view === 'scene') {
+    return (
+      <div className="w-screen h-screen bg-[#070205] flex flex-col items-center justify-center p-4 relative overflow-hidden select-none">
+        <button
+          onClick={() => setView('landing')}
+          className="absolute top-6 left-6 z-50 flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 hover:bg-white/20 text-white text-xs font-semibold backdrop-blur-xl border border-white/20 transition-all cursor-pointer"
+        >
+          ← Quay lại Trang Chủ
+        </button>
+
+        <div className="text-center mb-6 max-w-md">
+          <span className="text-[11px] font-mono tracking-widest text-emerald-400 uppercase bg-emerald-500/10 border border-emerald-500/30 px-3 py-1 rounded-full">
+            ThreeUI Component
+          </span>
+          <h2 className="text-2xl sm:text-3xl font-bold text-white mt-3">RectangleButtons (Dark Glass)</h2>
+          <p className="text-xs text-zinc-400 mt-1">
+            Deep charcoal glass rectangle with a softly revolving inner highlight and restrained metallic type.
+          </p>
+        </div>
+
+        <div className="w-full max-w-[540px] h-[240px] sm:h-[280px] rounded-3xl overflow-hidden border border-white/15 shadow-[0_20px_80px_rgba(0,0,0,0.9),0_0_60px_rgba(225,29,72,0.25)] bg-[#0a0a0a]">
+          <Scene />
+        </div>
+      </div>
+    );
+  }
+
+  // STRICT ANTI-BYPASS RENDER GUARD:
+  // If user is unauthenticated OR view is landing, NEVER render workspace!
+  if (!user || view === 'landing') {
+    return (
+      <>
+        <LandingPage
+          onEnterApp={() => {
+            if (!user) {
+              setLoginModalMode('login');
+              setIsLoginModalOpen(true);
+            } else {
+              handleViewChange('dashboard');
+            }
+          }}
+          onOpenLogin={() => {
+            setLoginModalMode('login');
+            setIsLoginModalOpen(true);
+          }}
+          isLoggedIn={Boolean(user)}
+          userName={user?.displayName || undefined}
+          darkMode={darkMode}
+          onToggleDarkMode={toggleDarkMode}
+        />
+        <LoginModal
+          isOpen={isLoginModalOpen}
+          onClose={() => setIsLoginModalOpen(false)}
+          initialMode={loginModalMode}
+          onLoginSuccess={(authedUser) => {
+            handleAuthUserSuccess(authedUser);
+          }}
+          lang={lang}
+        />
+      </>
+    );
+  }
+
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-slate-50 dark:bg-[#070204] dark:vortex-canvas text-slate-800 dark:text-slate-100 font-sans antialiased">
+    <div key={user?.uid || "zenox_guest"} className="flex h-screen w-screen overflow-hidden bg-slate-50 dark:bg-[#070204] dark:vortex-canvas text-slate-800 dark:text-slate-100 font-sans antialiased">
+
       {/* Global Interactive Notification Toast Container */}
+      <LoginModal
+        isOpen={isLoginModalOpen}
+        onClose={() => setIsLoginModalOpen(false)}
+        initialMode={loginModalMode}
+        onLoginSuccess={(authedUser) => {
+          handleAuthUserSuccess(authedUser);
+        }}
+        lang={lang}
+      />
       <ToastContainer />
 
       {/* Reminder Banner Toast */}
       {activeAlert && (
         <div className="fixed top-4 right-4 bg-rose-600 text-white px-4 py-2.5 rounded-2xl shadow-xl z-50 flex items-center gap-3 animate-in slide-in-from-top">
-          <Bell className="w-4 h-4 animate-bounce" />
+          <Bell className="w-4 h-4" />
           <div className="text-xs">
             <span className="font-bold">{lang === 'vi' ? 'Nhắc nhở: ' : 'Reminder: '}</span>
             <span>
@@ -1027,7 +1255,7 @@ export default function App() {
           onOpenGeminiMacro={() => setIsGeminiMacroOpen(true)}
           onOpenLifeCopilot={() => setIsLifeCopilotOpen(true)}
           onToggleRightDrawer={() => setIsRightDrawerOpen((prev) => !prev)}
-          userEmail={user?.email || 'admin@vortexcal.io'}
+          userEmail={user?.email || ''}
           userName={user?.displayName || undefined}
           darkMode={darkMode}
           onToggleDarkMode={toggleDarkMode}
@@ -1045,13 +1273,14 @@ export default function App() {
 
         {/* Viewport Content */}
         <main className="flex-1 overflow-y-auto p-3 sm:p-5 lg:p-6 min-w-0">
+          <div key={view} className="view-slide-down-smooth h-full flex flex-col min-w-0">
           {view === 'month' ||
           view === 'week' ||
           view === 'day' ||
           view === 'fourDay' ||
           view === 'year' ||
           view === 'schedule' ? (
-            <div className="flex flex-col h-full bg-white dark:bg-[#131b2e] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xs overflow-hidden">
+            <div className="flex flex-col h-full bg-white dark:bg-white/[0.03] backdrop-blur-xl border border-slate-200 dark:border-white/[0.08] rounded-2xl shadow-xs overflow-hidden">
               <CalendarActionBar
                 currentDate={currentDate}
                 onPrev={handleNavigatePrev}
@@ -1349,13 +1578,14 @@ export default function App() {
               )}
             </div>
           )}
+        </div>
         </main>
       </div>
 
       {/* Slide-over Right Drawer for Notes & Tasks */}
       {isRightDrawerOpen && (
-        <div className="fixed inset-y-0 right-0 z-50 w-80 sm:w-96 bg-white dark:bg-[#111726] border-l border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col animate-in slide-in-from-right">
-          <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-800">
+        <div className="fixed inset-y-0 right-0 z-50 w-80 sm:w-96 bg-white dark:bg-[#111726] border-l border-slate-200 dark:border-white/[0.08] shadow-2xl flex flex-col animate-in slide-in-from-right">
+          <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-white/[0.08]">
             <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
               <FileText className="w-4 h-4 text-blue-600" />
               <span>{lang === 'vi' ? 'Ghi chú & Tác vụ nhanh' : 'Quick Notes & Tasks'}</span>
@@ -1502,7 +1732,7 @@ export default function App() {
             }
             const deduped = deduplicateEvents(Array.from(map.values()));
             try {
-              localStorage.setItem('gcal_events', JSON.stringify(deduped));
+              accountStorage.setItem('gcal_events', JSON.stringify(deduped));
             } catch {}
             return deduped;
           });
@@ -1531,7 +1761,7 @@ export default function App() {
             }
             const deduped = deduplicateEvents(Array.from(map.values()));
             try {
-              localStorage.setItem('gcal_events', JSON.stringify(deduped));
+              accountStorage.setItem('gcal_events', JSON.stringify(deduped));
             } catch {}
             return deduped;
           });

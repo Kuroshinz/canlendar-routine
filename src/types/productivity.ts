@@ -414,6 +414,8 @@ export interface CtgRoadmapPhase {
   };
   note?: string;
   isCurrent?: boolean;
+  weeks?: number;
+  block?: string;
 }
 
 export interface CtgPeriodizedRoadmap {
@@ -427,6 +429,8 @@ export interface CtgPeriodizedRoadmap {
   initialBodyFatPct?: number;
   targetFfmi?: number;
   sex?: Sex;
+  totalWeeks?: number;
+  totalMonths?: number;
 }
 
 export interface SavedRoadmap {
@@ -478,6 +482,9 @@ export interface SetLog {
   weightKg: number;
   reps: number;
   rpe?: number;
+  rir?: number; // Reps In Reserve (Tracked.gg / CTG)
+  setType?: 'warmup' | 'normal' | 'dropset' | 'failure';
+  isPr?: boolean;
 }
 
 export interface WorkoutSession {
@@ -532,13 +539,15 @@ export interface SportSession {
   createdAt: number;
 }
 
-export type MealSlot = 'breakfast' | 'lunch' | 'dinner' | 'snack';
+export type MealSlot = 'breakfast' | 'lunch' | 'dinner' | 'snack' | 'pre_workout' | 'post_workout';
 
 export const MEAL_LABEL: Record<MealSlot, string> = {
   breakfast: 'Bữa sáng',
   lunch: 'Bữa trưa',
   dinner: 'Bữa tối',
   snack: 'Bữa phụ',
+  pre_workout: 'Trước tập (Pre-workout)',
+  post_workout: 'Sau tập (Post-workout)',
 };
 
 export interface FoodItem {
@@ -549,6 +558,18 @@ export interface FoodItem {
   protein: number;
   carbs: number;
   fat: number;
+  fiber?: number;
+  sugar?: number;
+  sodium?: number;
+  potassium?: number; // mg (Cronometer)
+  magnesium?: number; // mg (Cronometer)
+  calcium?: number; // mg (Cronometer)
+  zinc?: number; // mg (Cronometer)
+  iron?: number; // mg (Cronometer)
+  vitaminD?: number; // IU (Cronometer)
+  vitaminC?: number; // mg (Cronometer)
+  vitaminB12?: number; // mcg (Cronometer)
+  omega3?: number; // g (Cronometer)
 }
 
 export interface MealLog {
@@ -558,6 +579,10 @@ export interface MealLog {
   description: string;
   items: FoodItem[];
   createdAt: number;
+  time?: string; // HH:mm timestamp for meal timing (Cronometer)
+  hungerScore?: number; // 1-5 scale (Cronometer / Satiety)
+  satietyScore?: number; // 1-5 scale
+  notes?: string;
 }
 
 export interface MacroOverride {
@@ -574,3 +599,69 @@ export interface NutritionSettings {
 
 
 
+
+
+// ==========================================
+// CRONOMETER & TRACKED.GG ENHANCED TYPES
+// ==========================================
+
+export interface CronometerScores {
+  electrolyteScorePct: number;
+  recoveryScorePct: number;
+  vitalityScorePct: number;
+  overallNutritionScorePct: number;
+  potassiumMg: number;
+  potassiumTargetMg: number;
+  magnesiumMg: number;
+  magnesiumTargetMg: number;
+  calciumMg: number;
+  calciumTargetMg: number;
+  zincMg: number;
+  zincTargetMg: number;
+  ironMg: number;
+  ironTargetMg: number;
+  vitaminDIu: number;
+  vitaminDTargetIu: number;
+  vitaminCMg: number;
+  vitaminCTargetMg: number;
+  vitaminB12Mcg: number;
+  vitaminB12TargetMcg: number;
+  omega3Grams: number;
+  omega3TargetGrams: number;
+}
+
+export interface MuscleVolumeLandmark {
+  muscle: MuscleGroup;
+  muscleLabel: string;
+  currentSets: number;
+  mevSets: number; // Minimum Effective Volume
+  mavSets: number; // Maximum Adaptive Volume
+  mrvSets: number; // Maximum Recoverable Volume
+  status: 'below_mev' | 'optimal_mav' | 'near_mrv' | 'exceeded_mrv';
+  statusLabel: string;
+  percentageOfMav: number;
+}
+
+export interface ProgressiveOverloadComparison {
+  exerciseId: string;
+  exerciseName: string;
+  hasPreviousData: boolean;
+  previousBest?: {
+    date: string;
+    weightKg: number;
+    reps: number;
+    oneRmKg: number;
+  };
+  currentBest?: {
+    weightKg: number;
+    reps: number;
+    oneRmKg: number;
+  };
+  weightDeltaKg: number;
+  repsDelta: number;
+  oneRmDeltaKg: number;
+  isNewPr: boolean;
+  status: 'improved' | 'maintained' | 'regressed' | 'first_time';
+  headline: string;
+  badgeText: string;
+}

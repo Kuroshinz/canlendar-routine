@@ -171,36 +171,23 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <header className="h-18 px-4 sm:px-6 lg:px-8 border-b border-slate-200/80 dark:border-white/[0.08] bg-white/90 dark:bg-[#080204]/85 backdrop-blur-2xl flex items-center justify-between gap-3 sm:gap-6 shrink-0 select-none z-30 transition-colors">
-      {/* Left: Hamburger & Greeting (ShipNexus style: Hello, Admin) */}
-      <div className="flex items-center gap-3">
+      {/* Left: Hamburger & Greeting */}
+      <div className="flex items-center gap-2.5">
         <button
           onClick={onToggleSidebar}
           title={lang === 'vi' ? 'Ẩn/hiện thanh bên' : 'Toggle sidebar'}
-          className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors cursor-pointer"
+          className="p-2 rounded-xl hover:bg-white/10 text-slate-300 hover:text-white transition-colors cursor-pointer"
         >
           <Menu className="w-5 h-5" />
         </button>
 
-        <div className="hidden sm:flex items-center mr-1">
-          <img
-            src="/logo-icon.png"
-            alt="VortexCal"
-            className="w-8 h-8 object-contain filter drop-shadow-[0_1px_6px_rgba(59,130,246,0.35)]"
-          />
-        </div>
-
         <div className="flex flex-col">
-          <h1 className="text-base sm:text-xl font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
+          <h1 className="text-sm sm:text-base font-bold tracking-tight text-white flex items-center gap-1.5 leading-none">
             <span>
               {lang === 'vi' ? `${timeGreetingVi}, ` : `${timeGreetingEn}, `}
-              <span className="text-rose-500 dark:text-rose-400 capitalize">{displayName}</span>
+              <span className="text-rose-500 font-extrabold capitalize">{displayName}</span>
             </span>
           </h1>
-          <span className="text-[11px] font-medium text-slate-400 hidden sm:inline">
-            {lang === 'vi'
-              ? 'Hệ thống quản lý lịch & năng suất VortexCal'
-              : 'VortexCal Smart Routine & Executive Workspace'}
-          </span>
         </div>
       </div>
 
@@ -233,7 +220,7 @@ export const Header: React.FC<HeaderProps> = ({
         <button
           onClick={onOpenQuickAdd}
           title={lang === 'vi' ? 'Tạo nhanh bằng câu lệnh tự nhiên' : 'Quick add'}
-          className="glass-pill-primary text-xs cursor-pointer"
+          className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs shadow-md shadow-rose-600/25 transition-all cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
         >
           <Plus className="w-3.5 h-3.5" />
           <span className="hidden md:inline">{lang === 'vi' ? 'Tạo mới' : 'Create'}</span>
@@ -262,9 +249,9 @@ export const Header: React.FC<HeaderProps> = ({
                 className="fixed inset-0 z-40"
                 onClick={() => setShowNotificationPopup(false)}
               />
-              <div className="absolute right-0 mt-2 w-84 sm:w-96 bg-white dark:bg-[#0c1424] border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl p-4 z-50 max-h-[82vh] flex flex-col backdrop-blur-xl animate-fadeIn">
+              <div className="absolute right-0 mt-2 w-84 sm:w-96 bg-white dark:bg-[#0c1424] border border-slate-200 dark:border-white/[0.08] rounded-3xl shadow-2xl p-4 z-50 max-h-[82vh] flex flex-col backdrop-blur-xl animate-fadeIn">
                 {/* Header */}
-                <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800/80 shrink-0">
+                <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-white/[0.08]/80 shrink-0">
                   <div className="flex items-center gap-2">
                     <h3 className="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-200">
                       {lang === 'vi' ? 'Thông báo hệ thống' : 'Notifications'}
@@ -405,7 +392,7 @@ export const Header: React.FC<HeaderProps> = ({
                   )}
 
                   {/* Real Cloud & Google Sync Status */}
-                  <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-xs space-y-1">
+                  <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-white/[0.08] text-xs space-y-1">
                     <div className="flex items-center gap-2 font-semibold text-slate-700 dark:text-slate-300">
                       <Cloud className="w-4 h-4 text-rose-500 shrink-0" />
                       <span>
@@ -427,7 +414,7 @@ export const Header: React.FC<HeaderProps> = ({
 
                   {/* Stored Recent Activity / Notifications */}
                   {storedNotifs.length > 0 && (
-                    <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80 space-y-2">
+                    <div className="pt-2 border-t border-slate-100 dark:border-white/[0.08]/80 space-y-2">
                       <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block px-1">
                         {lang === 'vi' ? 'Hoạt động & Thông báo gần đây' : 'Recent Activity'}
                       </span>
@@ -449,7 +436,7 @@ export const Header: React.FC<HeaderProps> = ({
                               n.targetView ? 'cursor-pointer hover:bg-slate-100/80 dark:hover:bg-slate-800/80' : ''
                             } ${
                               n.read
-                                ? 'bg-slate-50/50 dark:bg-slate-900/40 border-slate-100 dark:border-slate-800/60 opacity-80'
+                                ? 'bg-slate-50/50 dark:bg-slate-900/40 border-slate-100 dark:border-white/[0.08]/60 opacity-80'
                                 : 'bg-slate-50 dark:bg-slate-900/80 border-slate-200 dark:border-slate-700/80'
                             }`}
                           >
@@ -500,40 +487,45 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         {/* Life Copilot AI Button */}
-        <button
-          onClick={onOpenLifeCopilot}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-violet-600 via-indigo-600 to-rose-600 hover:from-violet-500 hover:to-rose-500 text-white font-bold text-xs shadow-md shadow-indigo-500/20 cursor-pointer transition-all hover:scale-105 active:scale-95"
-          title="Siêu Trợ Lý Cuộc Sống (⌘K / Ctrl + K)"
-        >
-          <Sparkles className="w-3.5 h-3.5 animate-pulse" />
-          <span className="hidden sm:inline">Trợ Lý AI</span>
-          <kbd className="hidden md:inline-block px-1.5 py-0.2 rounded bg-white/20 text-[9px] font-mono">
-            ⌘K
-          </kbd>
-        </button>
+        {onOpenLifeCopilot && (
+          <button
+            onClick={onOpenLifeCopilot}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 hover:bg-rose-950/40 text-rose-300 hover:text-white border border-rose-500/30 hover:border-rose-500/60 font-semibold text-xs shadow-xs cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.98] backdrop-blur-md"
+            title="Trợ Lý AI (⌘K / Ctrl + K)"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-rose-400 animate-pulse" />
+            <span className="hidden sm:inline">Trợ Lý AI</span>
+            <kbd className="hidden lg:inline-block px-1 py-0.2 rounded bg-white/10 text-[9px] font-mono text-rose-300/80">
+              ⌘K
+            </kbd>
+          </button>
+        )}
 
-        {/* Language switch */}
-        <button
-          onClick={onToggleLang}
-          title={lang === 'vi' ? 'Đổi sang English' : 'Chuyển sang Tiếng Việt'}
-          className="p-2 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer font-bold text-xs flex items-center gap-1"
-        >
-          <Globe className="w-3.5 h-3.5" />
-          <span>{lang === 'vi' ? 'VI' : 'EN'}</span>
-        </button>
+        {/* Consolidated Utility Capsule: Lang + Theme */}
+        <div className="flex items-center p-0.5 rounded-full bg-white/5 border border-white/10 backdrop-blur-md">
+          <button
+            onClick={onToggleLang}
+            title={lang === 'vi' ? 'Đổi sang English' : 'Chuyển sang Tiếng Việt'}
+            className="px-2 py-1 rounded-full text-[11px] font-bold text-white/75 hover:text-white hover:bg-white/10 transition-colors cursor-pointer flex items-center gap-1"
+          >
+            <Globe className="w-3 h-3 text-rose-400" />
+            <span>{lang === 'vi' ? 'VI' : 'EN'}</span>
+          </button>
 
-        {/* Theme Dark / Light toggle */}
-        <button
-          onClick={onToggleDarkMode}
-          title={darkMode ? 'Chuyển giao diện sáng' : 'Chuyển giao diện tối'}
-          className="p-2 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
-        >
-          {darkMode ? (
-            <Sun className="w-4 h-4 text-amber-400" />
-          ) : (
-            <Moon className="w-4 h-4 text-slate-600" />
-          )}
-        </button>
+          <div className="w-px h-3 bg-white/15 mx-0.5" />
+
+          <button
+            onClick={onToggleDarkMode}
+            title={darkMode ? 'Chuyển giao diện sáng' : 'Chuyển giao diện tối'}
+            className="p-1 rounded-full text-white/75 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+          >
+            {darkMode ? (
+              <Sun className="w-3.5 h-3.5 text-amber-400" />
+            ) : (
+              <Moon className="w-3.5 h-3.5 text-slate-300" />
+            )}
+          </button>
+        </div>
 
         {/* User Profile Avatar with dropdown (ShipNexus style) */}
         <div className="relative ml-1">
@@ -558,7 +550,7 @@ export const Header: React.FC<HeaderProps> = ({
                     {displayName}
                   </p>
                   <p className="text-xs text-slate-400 truncate">
-                    {userEmail || 'admin@vortexcal.io'}
+                    {userEmail || (lang === 'vi' ? 'Tài khoản ZENOX' : 'ZENOX Account')}
                   </p>
                   <div className="mt-1.5 flex items-center gap-1.5">
                     <span
@@ -604,7 +596,7 @@ export const Header: React.FC<HeaderProps> = ({
                     }}
                     className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors text-left cursor-pointer"
                   >
-                    <HelpCircle className="w-4 h-4 text-indigo-500" />
+                    <HelpCircle className="w-4 h-4 text-rose-500" />
                     <span>{lang === 'vi' ? 'Phím tắt bàn phím' : 'Keyboard Shortcuts'}</span>
                   </button>
 

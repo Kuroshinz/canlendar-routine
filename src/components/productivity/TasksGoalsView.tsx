@@ -374,13 +374,13 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
   const categoryOf = (id: string) => categories.find((c) => c.id === id);
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-y-auto bg-gray-50/50 dark:bg-slate-900 p-4 md:p-6 lg:p-8 select-none">
+    <div className="flex-1 flex flex-col h-full overflow-y-auto bg-gray-50/50 dark:bg-transparent p-4 md:p-6 lg:p-8 select-none">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
           <div className="flex items-center gap-2">
             <ListChecks className="w-6 h-6 text-rose-600 dark:text-rose-400" />
-            <h1 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-gray-100">
+            <h1 className="text-xl md:text-2xl font-semibold text-slate-900 dark:text-white">
               {lang === 'vi' ? 'Công Việc & Mục Tiêu' : 'Tasks & Goals'}
             </h1>
           </div>
@@ -404,9 +404,9 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
           </button>
           <button
             onClick={() => setShowGoalForm(true)}
-            className="flex items-center gap-1.5 px-3.5 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-[#242931] text-gray-700 dark:text-gray-200 rounded-xl text-xs font-semibold transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-white dark:bg-white/[0.04] border border-gray-300 dark:border-white/[0.1] hover:bg-gray-50 dark:hover:bg-white/[0.08] text-gray-700 dark:text-gray-200 rounded-xl text-xs font-semibold transition-colors cursor-pointer"
           >
-            <Target className="w-4 h-4 text-indigo-500" />
+            <Target className="w-4 h-4 text-rose-500" />
             <span>{lang === 'vi' ? 'Thêm mục tiêu' : 'New goal'}</span>
           </button>
         </div>
@@ -444,16 +444,16 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
           return (
             <div
               key={card.label}
-              className="bg-white dark:bg-[#131b2e] p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex items-center gap-3"
+              className="bg-white dark:bg-white/[0.03] backdrop-blur-xl p-3.5 rounded-xl border border-slate-200 dark:border-white/[0.08] shadow-xs flex items-center gap-3"
             >
               <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${card.cls}`}>
                 <Icon className="w-4.5 h-4.5" />
               </div>
               <div className="min-w-0">
-                <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider truncate">
+                <div className="text-xs font-medium text-slate-400 truncate">
                   {card.label}
                 </div>
-                <div className="text-lg font-bold text-gray-900 dark:text-gray-100">{card.value}</div>
+                <div className="text-xl font-semibold text-slate-900 dark:text-white tabular-nums tracking-tight mt-0.5">{card.value}</div>
               </div>
             </div>
           );
@@ -466,7 +466,7 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
           {/* Quick Task Input Bar */}
           <form
             onSubmit={handleQuickAddTask}
-            className="bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200 dark:border-slate-800 p-2.5 shadow-xs flex flex-wrap sm:flex-nowrap items-center gap-2"
+            className="bg-white dark:bg-white/[0.03] backdrop-blur-xl rounded-xl border border-slate-200 dark:border-white/[0.08] p-2.5 shadow-xs flex flex-wrap sm:flex-nowrap items-center gap-2"
           >
             <div className="flex items-center gap-2 flex-1 min-w-[200px]">
               <Plus className="w-4 h-4 text-rose-500 shrink-0 ml-1.5" />
@@ -475,16 +475,14 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
                 value={quickTitle}
                 onChange={(e) => setQuickTitle(e.target.value)}
                 placeholder={
-                  lang === 'vi'
-                    ? 'Thêm nhanh việc cần làm... (Gõ tên việc rồi nhấn Enter)'
-                    : 'Quick add task... (Type and press Enter)'
+                  lang === 'vi' ? 'Thêm nhanh việc cần làm (nhấn Enter để lưu)' : 'Add task (press Enter to save)'
                 }
                 className="w-full text-xs bg-transparent border-none outline-none text-gray-800 dark:text-gray-100 placeholder:text-gray-400"
               />
             </div>
 
             <div className="flex items-center gap-1.5 shrink-0">
-              <div className="flex bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg text-[10px] font-semibold">
+              <div className="flex bg-slate-100 dark:bg-white/[0.05] p-0.5 rounded-lg text-[10px] font-semibold">
                 <button
                   type="button"
                   onClick={() => setQuickPriority('high')}
@@ -494,7 +492,7 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
                       : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'
                   }`}
                 >
-                  🔴 {lang === 'vi' ? 'Gấp' : 'High'}
+                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500 inline-block mr-1.5" />{lang === 'vi' ? 'Gấp' : 'High'}
                 </button>
                 <button
                   type="button"
@@ -505,7 +503,7 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
                       : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'
                   }`}
                 >
-                  🟡 {lang === 'vi' ? 'Vừa' : 'Med'}
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block mr-1.5" />{lang === 'vi' ? 'Vừa' : 'Medium'}
                 </button>
                 <button
                   type="button"
@@ -516,11 +514,11 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
                       : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'
                   }`}
                 >
-                  🟢 {lang === 'vi' ? 'Nhẹ' : 'Low'}
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block mr-1.5" />{lang === 'vi' ? 'Nhẹ' : 'Low'}
                 </button>
               </div>
 
-              <div className="flex bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg text-[10px] font-semibold">
+              <div className="flex bg-slate-100 dark:bg-white/[0.05] p-0.5 rounded-lg text-[10px] font-semibold">
                 <button
                   type="button"
                   onClick={() => setQuickDueOption('today')}
@@ -568,13 +566,13 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
 
           {/* View Mode Toggle & Filters */}
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="bg-gray-200/80 dark:bg-gray-800 p-1 rounded-xl flex text-xs font-semibold">
+            <div className="p-1 rounded-full bg-white/[0.04] dark:bg-white/[0.04] backdrop-blur-2xl border border-white/[0.12] shadow-[0_4px_20px_rgba(0,0,0,0.3)] flex items-center gap-1 text-xs font-semibold">
               <button
                 onClick={() => setViewMode('list')}
-                className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer ${
+                className={`px-3.5 py-1.5 rounded-full flex items-center gap-1.5 transition-all cursor-pointer ${
                   viewMode === 'list'
-                    ? 'bg-white dark:bg-gray-700 text-rose-600 dark:text-rose-400 shadow-xs'
-                    : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100'
+                    ? 'bg-white text-slate-950 font-extrabold shadow-[0_2px_12px_rgba(255,255,255,0.4)]'
+                    : 'text-slate-300 hover:text-white hover:bg-white/[0.08]'
                 }`}
               >
                 <ListChecks className="w-3.5 h-3.5" />
@@ -582,10 +580,10 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
               </button>
               <button
                 onClick={() => setViewMode('matrix')}
-                className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer ${
+                className={`px-3.5 py-1.5 rounded-full flex items-center gap-1.5 transition-all cursor-pointer ${
                   viewMode === 'matrix'
-                    ? 'bg-white dark:bg-gray-700 text-rose-600 dark:text-rose-400 shadow-xs'
-                    : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100'
+                    ? 'bg-white text-slate-950 font-extrabold shadow-[0_2px_12px_rgba(255,255,255,0.4)]'
+                    : 'text-slate-300 hover:text-white hover:bg-white/[0.08]'
                 }`}
               >
                 <LayoutGrid className="w-3.5 h-3.5" />
@@ -595,15 +593,15 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
 
             {viewMode === 'list' && (
               <div className="flex flex-wrap items-center gap-2 flex-1 justify-end">
-                <div className="bg-gray-200/80 dark:bg-gray-800 p-1 rounded-xl flex text-xs font-semibold">
+                <div className="p-1 rounded-full bg-white/[0.04] dark:bg-white/[0.04] backdrop-blur-2xl border border-white/[0.12] shadow-[0_4px_20px_rgba(0,0,0,0.3)] flex items-center gap-0.5 text-xs font-semibold">
                   {STATUS_TABS.map((tab) => (
                     <button
                       key={tab.id}
                       onClick={() => setStatusFilter(tab.id)}
-                      className={`px-2 py-1 rounded-lg transition-all cursor-pointer text-[11px] ${
+                      className={`px-3 py-1 rounded-full transition-all cursor-pointer text-[11px] ${
                         statusFilter === tab.id
-                          ? 'bg-white dark:bg-gray-700 text-rose-600 dark:text-rose-400 shadow-xs'
-                          : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100'
+                          ? 'bg-white text-slate-950 font-extrabold shadow-[0_2px_10px_rgba(255,255,255,0.4)]'
+                          : 'text-slate-300 hover:text-white hover:bg-white/[0.08]'
                       }`}
                     >
                       {lang === 'vi' ? tab.labelVi : tab.labelEn}
@@ -614,7 +612,7 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
                 <select
                   value={priorityFilter}
                   onChange={(e) => setPriorityFilter(e.target.value as TaskPriority | 'all')}
-                  className="text-xs px-2.5 py-1.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200"
+                  className="text-xs px-2.5 py-1.5 rounded-lg border border-gray-300 dark:border-white/[0.1] bg-white dark:bg-white/[0.04] text-gray-700 dark:text-gray-200"
                 >
                   <option value="all">{lang === 'vi' ? 'Mọi ưu tiên' : 'All priorities'}</option>
                   <option value="high">{lang === 'vi' ? 'Cao' : 'High'}</option>
@@ -627,7 +625,7 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder={lang === 'vi' ? 'Tìm công việc...' : 'Search tasks...'}
-                  className="w-32 lg:w-40 text-xs px-2.5 py-1.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
+                  className="w-32 lg:w-40 text-xs px-2.5 py-1.5 rounded-lg border border-gray-300 dark:border-white/[0.1] bg-white dark:bg-white/[0.04] text-gray-800 dark:text-gray-100"
                 />
               </div>
             )}
@@ -661,7 +659,7 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
                     matrixQuadrants.q1.map((t) => (
                       <div
                         key={t.id}
-                        className="bg-white dark:bg-[#131b2e] p-2.5 rounded-xl border border-rose-200/50 dark:border-rose-900/40 flex items-center justify-between gap-2 text-xs shadow-2xs"
+                        className="bg-white dark:bg-white/[0.03] backdrop-blur-xl p-2.5 rounded-xl border border-rose-200/50 dark:border-rose-900/40 flex items-center justify-between gap-2 text-xs shadow-2xs"
                       >
                         <div className="flex items-center gap-2 min-w-0">
                           <button
@@ -727,7 +725,7 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
                     matrixQuadrants.q2.map((t) => (
                       <div
                         key={t.id}
-                        className="bg-white dark:bg-[#131b2e] p-2.5 rounded-xl border border-rose-200/50 dark:border-rose-900/40 flex items-center justify-between gap-2 text-xs shadow-2xs"
+                        className="bg-white dark:bg-white/[0.03] backdrop-blur-xl p-2.5 rounded-xl border border-rose-200/50 dark:border-rose-900/40 flex items-center justify-between gap-2 text-xs shadow-2xs"
                       >
                         <div className="flex items-center gap-2 min-w-0">
                           <button
@@ -793,7 +791,7 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
                     matrixQuadrants.q3.map((t) => (
                       <div
                         key={t.id}
-                        className="bg-white dark:bg-[#131b2e] p-2.5 rounded-xl border border-amber-200/50 dark:border-amber-900/40 flex items-center justify-between gap-2 text-xs shadow-2xs"
+                        className="bg-white dark:bg-white/[0.03] backdrop-blur-xl p-2.5 rounded-xl border border-amber-200/50 dark:border-amber-900/40 flex items-center justify-between gap-2 text-xs shadow-2xs"
                       >
                         <div className="flex items-center gap-2 min-w-0">
                           <button
@@ -826,7 +824,7 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
               </div>
 
               {/* Q4: Eliminate */}
-              <div className="bg-slate-50/40 dark:bg-slate-900/30 border border-slate-300/80 dark:border-slate-800 rounded-2xl p-4 flex flex-col min-h-[220px]">
+              <div className="bg-slate-50/40 dark:bg-white/[0.03] border border-slate-300/80 dark:border-white/[0.08] rounded-2xl p-4 flex flex-col min-h-[220px]">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-1.5">
                     <span className="w-2.5 h-2.5 rounded-full bg-slate-400" />
@@ -834,7 +832,7 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
                       {lang === 'vi' ? 'Q4: Cân Nhắc Hủy (Không gấp, Không quan trọng)' : 'Q4: Eliminate (Not Urgent, Not Important)'}
                     </h4>
                   </div>
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-slate-200/60 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold">
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-slate-200/60 dark:bg-white/[0.05] text-slate-700 dark:text-slate-300 font-bold">
                     {matrixQuadrants.q4.length}
                   </span>
                 </div>
@@ -850,7 +848,7 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
                     matrixQuadrants.q4.map((t) => (
                       <div
                         key={t.id}
-                        className="bg-white dark:bg-[#131b2e] p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2 text-xs shadow-2xs"
+                        className="bg-white dark:bg-white/[0.03] backdrop-blur-xl p-2.5 rounded-xl border border-slate-200 dark:border-white/[0.08] flex items-center justify-between gap-2 text-xs shadow-2xs"
                       >
                         <div className="flex items-center gap-2 min-w-0">
                           <button
@@ -888,7 +886,7 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
           {viewMode === 'list' && (
             <>
               {filteredTasks.length === 0 ? (
-                <div className="bg-white dark:bg-[#131b2e] rounded-2xl border border-dashed border-gray-300 dark:border-gray-700 p-10 text-center">
+                <div className="bg-white dark:bg-white/[0.03] backdrop-blur-xl rounded-xl border border-dashed border-gray-300 dark:border-white/[0.1] p-10 text-center">
                   <ListChecks className="w-8 h-8 text-gray-300 dark:text-gray-600 mx-auto mb-2" />
                   <p className="text-xs text-gray-400">
                     {lang === 'vi' ? 'Không có công việc nào phù hợp bộ lọc.' : 'No tasks match this filter.'}
@@ -908,10 +906,10 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
                 return (
                   <div
                     key={task.id}
-                    className={`bg-white dark:bg-[#131b2e] rounded-2xl border shadow-xs transition-colors ${
+                    className={`bg-white dark:bg-white/[0.03] backdrop-blur-xl rounded-xl border shadow-xs transition-colors ${
                       overdue
                         ? 'border-rose-200 dark:border-rose-900/70'
-                        : 'border-slate-200 dark:border-slate-800'
+                        : 'border-slate-200 dark:border-white/[0.08]'
                     }`}
                   >
                     <div className="p-3.5 flex items-start gap-3">
@@ -974,7 +972,7 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
                             {lang === 'vi' ? priority.labelVi : priority.label}
                           </span>
                           <span
-                            className="text-[10px] px-1.5 py-0.5 rounded border font-medium text-gray-600 dark:text-gray-300 border-slate-200 dark:border-gray-700 flex items-center gap-1"
+                            className="text-[10px] px-1.5 py-0.5 rounded border font-medium text-gray-600 dark:text-gray-300 border-slate-200 dark:border-white/[0.08] flex items-center gap-1"
                             style={{ borderLeftColor: cat?.color, borderLeftWidth: 3 }}
                           >
                             {lang === 'vi' ? cat?.nameVi || task.categoryId : cat?.name || task.categoryId}
@@ -984,7 +982,7 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
                               className={`text-[10px] px-1.5 py-0.5 rounded font-mono font-medium flex items-center gap-1 ${
                                 overdue
                                   ? 'bg-rose-50 text-rose-600 dark:bg-rose-950/40 dark:text-rose-300'
-                                  : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'
+                                  : 'bg-gray-100 text-gray-500 dark:bg-white/[0.04] dark:text-gray-400'
                               }`}
                             >
                               <CalIcon className="w-2.5 h-2.5" />
@@ -993,7 +991,7 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
                             </span>
                           )}
                           {goal && (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-600 dark:bg-indigo-950/40 dark:text-indigo-300 font-medium flex items-center gap-1">
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-rose-50 text-rose-600 dark:bg-rose-950/40 dark:text-indigo-300 font-medium flex items-center gap-1">
                               <Target className="w-2.5 h-2.5" />
                               {goal.title}
                             </span>
@@ -1001,7 +999,7 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
                           {task.subtasks.length > 0 && (
                             <button
                               onClick={() => toggleExpanded(task.id)}
-                              className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 font-medium flex items-center gap-1 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700"
+                              className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 dark:bg-white/[0.04] text-gray-500 dark:text-gray-400 font-medium flex items-center gap-1 cursor-pointer hover:bg-gray-200 dark:hover:bg-white/[0.1]"
                             >
                               {isOpen ? (
                                 <ChevronDown className="w-2.5 h-2.5" />
@@ -1047,7 +1045,7 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
 
                         {/* Sub-tasks */}
                         {isOpen && (
-                          <div className="mt-2.5 pl-1 space-y-1.5 border-l-2 border-gray-100 dark:border-slate-800 ml-1">
+                          <div className="mt-2.5 pl-1 space-y-1.5 border-l-2 border-gray-100 dark:border-white/[0.08] ml-1">
                             {task.subtasks.map((sub) => (
                               <div key={sub.id} className="flex items-center gap-2 pl-2 group/sub">
                                 <button
@@ -1116,7 +1114,7 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
                             className={`text-[10px] px-2 py-0.5 rounded-full font-semibold transition-all cursor-pointer border ${
                               active
                                 ? 'text-white border-transparent'
-                                : 'text-gray-500 dark:text-gray-400 border-slate-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'
+                                : 'text-gray-500 dark:text-gray-400 border-slate-200 dark:border-white/[0.08] hover:bg-gray-50 dark:hover:bg-white/[0.08]'
                             }`}
                             style={active ? { backgroundColor: meta.color } : undefined}
                           >
@@ -1138,14 +1136,14 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
         <div className="xl:col-span-5 space-y-3">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-bold text-gray-900 dark:text-gray-100 flex items-center gap-1.5">
-              <Target className="w-4 h-4 text-indigo-500" />
+              <Target className="w-4 h-4 text-rose-500" />
               {lang === 'vi' ? 'Mục tiêu & Tiến độ' : 'Goals & Progress'}
             </h2>
             <span className="text-[11px] text-gray-400 font-mono">{goals.length}</span>
           </div>
 
           {goals.length === 0 ? (
-            <div className="bg-white dark:bg-[#131b2e] rounded-2xl border border-dashed border-gray-300 dark:border-gray-700 p-8 text-center">
+            <div className="bg-white dark:bg-white/[0.03] backdrop-blur-xl rounded-xl border border-dashed border-gray-300 dark:border-white/[0.1] p-8 text-center">
               <Target className="w-8 h-8 text-gray-300 dark:text-gray-600 mx-auto mb-2" />
               <p className="text-xs text-gray-400">
                 {lang === 'vi' ? 'Chưa có mục tiêu nào.' : 'No goals yet.'}
@@ -1159,7 +1157,7 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
               return (
                 <div
                   key={goal.id}
-                  className="bg-white dark:bg-[#131b2e] p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs"
+                  className="bg-white dark:bg-white/[0.03] backdrop-blur-xl p-4 rounded-xl border border-slate-200 dark:border-white/[0.08] shadow-xs"
                 >
                   <div className="flex items-start justify-between gap-2 mb-2">
                     <div className="min-w-0">
@@ -1216,7 +1214,7 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
           )}
 
           {/* Daily Habits & Routines */}
-          <div className="pt-4 border-t border-slate-200 dark:border-slate-800 space-y-3">
+          <div className="pt-4 border-t border-slate-200 dark:border-white/[0.08] space-y-3">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-bold text-gray-900 dark:text-gray-100 flex items-center gap-1.5">
                 <Flame className="w-4 h-4 text-amber-500 fill-amber-500" />
@@ -1241,7 +1239,7 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
                 return (
                   <div
                     key={habit.id}
-                    className="bg-white dark:bg-[#131b2e] p-3 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col gap-2"
+                    className="bg-white dark:bg-white/[0.03] backdrop-blur-xl p-3 rounded-xl border border-slate-200 dark:border-white/[0.08] shadow-xs flex flex-col gap-2"
                   >
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2.5 min-w-0">
@@ -1307,7 +1305,7 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
                     </div>
 
                     {/* 7-Day Weekly Streak Grid */}
-                    <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between gap-1">
+                    <div className="pt-2 border-t border-slate-100 dark:border-white/[0.08]/80 flex items-center justify-between gap-1">
                       {weekDays.map((d) => {
                         const done = isHabitDoneOn(habit, d.dateStr);
                         return (
@@ -1320,7 +1318,7 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
                                 ? 'bg-emerald-500 text-white font-bold shadow-xs'
                                 : d.isToday
                                   ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400 font-bold border border-rose-500/30'
-                                  : 'bg-slate-100 dark:bg-slate-800/70 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
+                                  : 'bg-slate-100 dark:bg-white/[0.04] text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
                             }`}
                             title={`${d.dayName} (${d.dateStr})`}
                           >
@@ -1348,9 +1346,9 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
           <form
             onSubmit={handleSubmitTask}
-            className="bg-white dark:bg-[#131b2e] w-full max-w-lg rounded-2xl shadow-2xl border border-slate-200 dark:border-gray-700 overflow-hidden max-h-[92vh] flex flex-col"
+            className="bg-white dark:bg-white/[0.03] backdrop-blur-xl w-full max-w-lg rounded-2xl shadow-2xl border border-slate-200 dark:border-white/[0.08] overflow-hidden max-h-[92vh] flex flex-col"
           >
-            <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-100 dark:border-slate-800">
+            <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-100 dark:border-white/[0.08]">
               <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100">
                 {editingTask
                   ? lang === 'vi'
@@ -1366,7 +1364,7 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
                   setShowTaskForm(false);
                   resetTaskForm();
                 }}
-                className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 cursor-pointer"
+                className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-white/[0.08] text-gray-400 cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -1383,7 +1381,7 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
                   onChange={(e) => setFormTitle(e.target.value)}
                   autoFocus
                   required
-                  className="w-full text-xs px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-slate-900 text-gray-900 dark:text-gray-100"
+                  className="w-full text-xs px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-black/60 text-gray-900 dark:text-gray-100"
                 />
               </div>
 
@@ -1395,7 +1393,7 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
                   <select
                     value={formPriority}
                     onChange={(e) => setFormPriority(e.target.value as TaskPriority)}
-                    className="w-full text-xs px-2.5 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-slate-900 text-gray-900 dark:text-gray-100"
+                    className="w-full text-xs px-2.5 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-black/60 text-gray-900 dark:text-gray-100"
                   >
                     <option value="high">{lang === 'vi' ? 'Cao' : 'High'}</option>
                     <option value="medium">{lang === 'vi' ? 'Trung bình' : 'Medium'}</option>
@@ -1409,7 +1407,7 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
                   <select
                     value={formCategory}
                     onChange={(e) => setFormCategory(e.target.value)}
-                    className="w-full text-xs px-2.5 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-slate-900 text-gray-900 dark:text-gray-100"
+                    className="w-full text-xs px-2.5 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-black/60 text-gray-900 dark:text-gray-100"
                   >
                     {categories.map((c) => (
                       <option key={c.id} value={c.id}>
@@ -1427,7 +1425,7 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
                 <select
                   value={formGoal}
                   onChange={(e) => setFormGoal(e.target.value)}
-                  className="w-full text-xs px-2.5 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-slate-900 text-gray-900 dark:text-gray-100"
+                  className="w-full text-xs px-2.5 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-black/60 text-gray-900 dark:text-gray-100"
                 >
                   <option value="">{lang === 'vi' ? '— Không gắn —' : '— None —'}</option>
                   {goals.map((g) => (
@@ -1447,7 +1445,7 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
                     type="date"
                     value={formDueDate}
                     onChange={(e) => setFormDueDate(e.target.value)}
-                    className="w-full text-xs px-2 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-slate-900 text-gray-900 dark:text-gray-100 font-mono"
+                    className="w-full text-xs px-2 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-black/60 text-gray-900 dark:text-gray-100 font-mono"
                   />
                 </div>
                 <div>
@@ -1458,7 +1456,7 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
                     type="time"
                     value={formStartTime}
                     onChange={(e) => setFormStartTime(e.target.value)}
-                    className="w-full text-xs px-2 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-slate-900 text-gray-900 dark:text-gray-100 font-mono"
+                    className="w-full text-xs px-2 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-black/60 text-gray-900 dark:text-gray-100 font-mono"
                   />
                 </div>
                 <div>
@@ -1469,7 +1467,7 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
                     type="time"
                     value={formEndTime}
                     onChange={(e) => setFormEndTime(e.target.value)}
-                    className="w-full text-xs px-2 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-slate-900 text-gray-900 dark:text-gray-100 font-mono"
+                    className="w-full text-xs px-2 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-black/60 text-gray-900 dark:text-gray-100 font-mono"
                   />
                 </div>
               </div>
@@ -1488,19 +1486,19 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
                   value={formNotes}
                   onChange={(e) => setFormNotes(e.target.value)}
                   rows={2}
-                  className="w-full text-xs px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-slate-900 text-gray-900 dark:text-gray-100 resize-none"
+                  className="w-full text-xs px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-black/60 text-gray-900 dark:text-gray-100 resize-none"
                 />
               </div>
             </div>
 
-            <div className="px-5 py-3 border-t border-gray-100 dark:border-slate-800 flex justify-end gap-2">
+            <div className="px-5 py-3 border-t border-gray-100 dark:border-white/[0.08] flex justify-end gap-2">
               <button
                 type="button"
                 onClick={() => {
                   setShowTaskForm(false);
                   resetTaskForm();
                 }}
-                className="px-3.5 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg cursor-pointer"
+                className="px-3.5 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/[0.08] rounded-lg cursor-pointer"
               >
                 {lang === 'vi' ? 'Hủy' : 'Cancel'}
               </button>
@@ -1520,16 +1518,16 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
           <form
             onSubmit={handleSubmitGoal}
-            className="bg-white dark:bg-[#131b2e] w-full max-w-md rounded-2xl shadow-2xl border border-slate-200 dark:border-gray-700 overflow-hidden"
+            className="bg-white dark:bg-white/[0.03] backdrop-blur-xl w-full max-w-md rounded-2xl shadow-2xl border border-slate-200 dark:border-white/[0.08] overflow-hidden"
           >
-            <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-100 dark:border-slate-800">
+            <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-100 dark:border-white/[0.08]">
               <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100">
                 {lang === 'vi' ? 'Thêm mục tiêu' : 'New goal'}
               </h3>
               <button
                 type="button"
                 onClick={() => setShowGoalForm(false)}
-                className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 cursor-pointer"
+                className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-white/[0.08] text-gray-400 cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -1546,7 +1544,7 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
                   onChange={(e) => setGoalTitle(e.target.value)}
                   autoFocus
                   required
-                  className="w-full text-xs px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-slate-900 text-gray-900 dark:text-gray-100"
+                  className="w-full text-xs px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-black/60 text-gray-900 dark:text-gray-100"
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">
@@ -1557,7 +1555,7 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
                   <select
                     value={goalCategory}
                     onChange={(e) => setGoalCategory(e.target.value)}
-                    className="w-full text-xs px-2.5 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-slate-900 text-gray-900 dark:text-gray-100"
+                    className="w-full text-xs px-2.5 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-black/60 text-gray-900 dark:text-gray-100"
                   >
                     {categories.map((c) => (
                       <option key={c.id} value={c.id}>
@@ -1574,7 +1572,7 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
                     type="date"
                     value={goalTargetDate}
                     onChange={(e) => setGoalTargetDate(e.target.value)}
-                    className="w-full text-xs px-2 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-slate-900 text-gray-900 dark:text-gray-100 font-mono"
+                    className="w-full text-xs px-2 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-black/60 text-gray-900 dark:text-gray-100 font-mono"
                   />
                 </div>
               </div>
@@ -1585,11 +1583,11 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
               </p>
             </div>
 
-            <div className="px-5 py-3 border-t border-gray-100 dark:border-slate-800 flex justify-end gap-2">
+            <div className="px-5 py-3 border-t border-gray-100 dark:border-white/[0.08] flex justify-end gap-2">
               <button
                 type="button"
                 onClick={() => setShowGoalForm(false)}
-                className="px-3.5 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg cursor-pointer"
+                className="px-3.5 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/[0.08] rounded-lg cursor-pointer"
               >
                 {lang === 'vi' ? 'Hủy' : 'Cancel'}
               </button>
@@ -1609,9 +1607,9 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
           <form
             onSubmit={handleSubmitHabit}
-            className="bg-white dark:bg-[#131b2e] w-full max-w-md rounded-2xl shadow-2xl border border-slate-200 dark:border-gray-700 overflow-hidden"
+            className="bg-white dark:bg-white/[0.03] backdrop-blur-xl w-full max-w-md rounded-2xl shadow-2xl border border-slate-200 dark:border-white/[0.08] overflow-hidden"
           >
-            <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-100 dark:border-slate-800">
+            <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-100 dark:border-white/[0.08]">
               <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
                 <Flame className="w-4 h-4 text-amber-500 fill-amber-500" />
                 <span>{lang === 'vi' ? 'Thêm thói quen mới' : 'New Habit'}</span>
@@ -1619,7 +1617,7 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
               <button
                 type="button"
                 onClick={() => setShowHabitForm(false)}
-                className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 cursor-pointer"
+                className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-white/[0.08] text-gray-400 cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -1641,7 +1639,7 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
                       ? 'Ví dụ: Đọc sách 20 phút mỗi ngày...'
                       : 'e.g. Read 20 minutes daily...'
                   }
-                  className="w-full text-xs px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-slate-900 text-gray-900 dark:text-gray-100"
+                  className="w-full text-xs px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-black/60 text-gray-900 dark:text-gray-100"
                 />
               </div>
 
@@ -1652,7 +1650,7 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
                 <select
                   value={habitTimeOfDay}
                   onChange={(e) => setHabitTimeOfDay(e.target.value as RoutineTimeOfDay)}
-                  className="w-full text-xs px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-slate-900 text-gray-900 dark:text-gray-100"
+                  className="w-full text-xs px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-black/60 text-gray-900 dark:text-gray-100"
                 >
                   <option value="morning">{lang === 'vi' ? 'Buổi sáng' : 'Morning'}</option>
                   <option value="afternoon">{lang === 'vi' ? 'Buổi chiều' : 'Afternoon'}</option>
@@ -1665,7 +1663,7 @@ export const TasksGoalsView: React.FC<TasksGoalsViewProps> = ({
                 <button
                   type="button"
                   onClick={() => setShowHabitForm(false)}
-                  className="px-3.5 py-1.5 rounded-lg text-xs font-medium border border-slate-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 cursor-pointer"
+                  className="px-3.5 py-1.5 rounded-lg text-xs font-medium border border-slate-200 dark:border-white/[0.08] text-gray-600 dark:text-gray-300 cursor-pointer"
                 >
                   {lang === 'vi' ? 'Hủy' : 'Cancel'}
                 </button>

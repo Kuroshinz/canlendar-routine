@@ -10,6 +10,7 @@ import {
   HealthDayLog,
   MealLog,
   MealSlot,
+  MEAL_LABEL,
   MuscleGroup,
   NutritionSettings,
   PlannedSession,
@@ -20,6 +21,10 @@ import {
   SportSession,
   SportType,
   WorkoutSession,
+  CronometerScores,
+  MuscleVolumeLandmark,
+  ProgressiveOverloadComparison,
+  MUSCLE_LABEL,
 } from '../types/productivity';
 
 // ---------------------------------------------------------------------------
@@ -1071,6 +1076,11 @@ export interface GenerateCtgRoadmapParams {
   currentBodyFatPct: number;
   targetFfmi?: number;
   targetWeightKg?: number;
+  targetBodyFatPct?: number;
+  targetBfPct?: number;
+  steps?: number;
+  trainDays?: number;
+  trainDurationMin?: number;
   startDate?: string;
 }
 
@@ -1157,206 +1167,374 @@ export function calculatePhaseNutrition(
 export function generateCtgPeriodizedRoadmap(
   params: GenerateCtgRoadmapParams
 ): CtgPeriodizedRoadmap {
-  const { sex, heightCm, currentWeightKg, currentBodyFatPct } = params;
-  const hMeter = heightCm / 100;
-  const hSq = hMeter * hMeter;
-  const isFemale = sex === 'female';
+  const r = params.sex || 'male';
+  const isFemale = r === 'female';
+  const heightCm = Math.max(120, Math.min(220, params.heightCm || 172));
+  const currentWeightKg = Math.max(30, Math.min(250, params.currentWeightKg || 68));
+  // Strictly clamp bodyfat between 4% and 55% to prevent any input error or overflow!
+  const currentBodyFatPct = Math.max(4, Math.min(55, params.currentBodyFatPct || 18));
 
-  const defaultMaxFfmi = isFemale ? 19.5 : 22.0;
-  const targetFfmi = params.targetFfmi ? Math.min(24.5, Math.max(16, params.targetFfmi)) : defaultMaxFfmi;
+  const targetFfmi = params.targetFfmi ? Math.min(24.5, Math.max(16, params.targetFfmi)) : (isFemale ? 19.5 : 22.0);
+  const targetBfPct = params.targetBodyFatPct ? Math.min(35, Math.max(8, params.targetBodyFatPct)) : (isFemale ? 20.0 : 12.0);
 
-  const leanBaseBf = isFemale ? 21.0 : 14.8;
+  // CTG Biological Constants
+  const rf = { male: 25, female: 21.2 };
+  const Fje = { male: 15, female: 23 };
+  const rl = [
+    { ffmi: 19.31, rate: 0.296 },
+    { ffmi: 20.87, rate: 0.276 },
+    { ffmi: 22.7, rate: 0.126 },
+    { ffmi: 24.32, rate: 0.0144 },
+  ];
+  const c_ = 25.934;
+  const rV = (e: number) => Math.max(0, Math.min(1, e));
 
-  let curW = Math.round(currentWeightKg * 100) / 100;
-  let curBf = Math.round(currentBodyFatPct * 10) / 10;
-  let curLbm = Math.round(curW * (1 - curBf / 100) * 10) / 10;
-  let curFfmi = Math.round((curLbm / hSq) * 10) / 10;
+  function Bje(e: number, t: 'male' | 'female') {
+    const n = e / (rf[t] / 25), rObj = rl[rl.length - 1];
+    if (n >= c_) return 0;
+    if (n >= rObj.ffmi) {
+      const i = (c_ - n) / (c_ - rObj.ffmi);
+      return rObj.rate * i * i;
+    }
+    if (n <= rl[0].ffmi) {
+      const [i, a] = rl;
+      const o = (Math.log(a.rate) - Math.log(i.rate)) / (a.ffmi - i.ffmi);
+      return Math.exp(Math.log(i.rate) + o * (n - i.ffmi));
+    }
+    for (let i = 0; i < rl.length - 1; i++) {
+      const a = rl[i], o = rl[i + 1];
+      if (n >= a.ffmi && n <= o.ffmi) {
+        const l = (n - a.ffmi) / (o.ffmi - a.ffmi);
+        return Math.exp(Math.log(a.rate) * (1 - l) + Math.log(o.rate) * l);
+      }
+    }
+    return 0;
+  }
 
+  function zje(e: number) {
+    if (e <= 0) return 0;
+    const t = 395 / 2.45 / 8;
+    const n = Math.min(e / 2.45 / 8, t);
+    return (1 - Math.exp(-n / 7.15)) / (1 - Math.exp(-t / 7.15));
+  }
+
+  function Uje(e: number) {
+    return rV((0.16 + 31e-5 * e) / (0.16 + 31e-5 * 311));
+  }
+
+  function fS(e: number, t: number, n: 'male' | 'female', rFactor: number, iDelta: number) {
+    return e * (Bje(t, n) / 100) * rV(rFactor) * Uje(iDelta / 7);
+  }
+
+  function hS(eDelta: number, tGain: number) {
+    return (eDelta - tGain * 1800) / 7700;
+  }
+
+  function iV(eFfmi: number, tSex: 'male' | 'female') {
+    const n = (rf[tSex] - eFfmi) / (rf[tSex] / 25);
+    return n >= 4.5
+      ? { goal: 'minicut', label: 'Mini-cut', maxWeeks: 4 }
+      : n >= 3
+      ? { goal: 'cut', label: 'Giảm mỡ', maxWeeks: 0 }
+      : n >= 0.7
+      ? { goal: 'recomp', label: 'Tăng cơ + giảm mỡ', maxWeeks: 0 }
+      : { goal: 'maintain', label: 'Ăn bằng', maxWeeks: 24, timed: true };
+  }
+
+  function Hje(eFfmi: number, tSex: 'male' | 'female') {
+    return (rf[tSex] - eFfmi) / (rf[tSex] / 25) >= 3 ? 'cut' : 'recomp';
+  }
+
+  const HW: Record<string, number> = { bulk: 1.1, maintain: 1, recomp: 0.9, cut: 0.8, minicut: 0.7 };
+  const HE: Record<string, number> = { bulk: 2, maintain: 2.2, recomp: 2.6, cut: 2.7, minicut: 2.9 };
+  const WE: Record<string, number> = { bulk: 1.25, maintain: 1.05, recomp: 0.9, cut: 0.65, minicut: 0.55 };
+  const Gm = { male: 5, female: 12 };
+  const Ul = { male: 15, female: 23 };
+
+  const hw = (lbm: number) => Math.round(370 + 21.6 * lbm);
+  const XW = (met: number, dur: number, wt: number) => (met * 3.5 * wt / 200) * dur;
+  const QW = (steps: number, wt: number, ht: number) => Math.round(57e-5 * wt * steps * (0.415 * ht / 100));
+
+  function Dje(e: { steps?: number; trainDays?: number; trainDurationMin?: number; weightKg: number; heightCm: number }) {
+    return {
+      steps: QW(e.steps || 8000, e.weightKg, e.heightCm),
+      gym: Math.round(XW(6, ((e.trainDays || 4) * (e.trainDurationMin || 60)) / 7, e.weightKg)),
+      other: 0,
+    };
+  }
+
+  function eV(e: { lbmKg: number; steps?: number; trainDays?: number; trainDurationMin?: number; weightKg: number; heightCm: number }) {
+    const tBmr = hw(e.lbmKg);
+    return { bmr: tBmr, ...Dje(e), tef: Math.round(tBmr * 0.1) };
+  }
+
+  function Oje(e: { lbmKg: number; steps?: number; trainDays?: number; trainDurationMin?: number; weightKg: number; heightCm: number }) {
+    const t = eV(e);
+    return t.bmr + t.steps + t.gym + t.other + t.tef;
+  }
+
+  const VE = (h: number) => Math.pow(h * 0.01, 2);
+  const KE = (lbm: number, h: number) => {
+    const n = h * 0.01, r = VE(h);
+    return r > 0 ? lbm / r + 6.1 * (1.8 - n) : 0;
+  };
+
+  const Ku = 200, aA = 60, aV = 5, mS = 2, sV = 12, oV = 8;
+
+  let p = currentWeightKg;
+  let g = currentBodyFatPct;
+  const l = targetFfmi;
+  const c = targetBfPct;
+  const u = Math.max(Gm[r], Math.min(45, c));
+  const f = Ul[r];
+  const d = zje(4 * 60);
+
+  let v = 0, y = false, x = false;
+  const b = () => p * (1 - g / 100);
+  const w = () => KE(b(), heightCm);
+  const _ = () => ({ bmr: hw(b()), tdee: Oje({ weightKg: p, heightCm, lbmKg: b() }) });
+  const j = (F: number) => (5e-4 * F) / 52;
+
+  let k = w() >= l - 0.02 ? 0 : null;
+  let S = g <= u + 0.05 ? 0 : null;
+
+  interface RawPhase {
+    type: string;
+    label: string;
+    mealGoal: string;
+    stopReason: string;
+    mergedCount: number;
+    startMacros: { caloGoal: number; protein: number; fat: number; carb: number; pct: number };
+    phaseNum: number;
+    isSpecialPhase: 'minicut' | 'dietbreak' | null;
+    block: 'block1' | 'block2' | 'block3';
+    startW: number;
+    endW: number;
+    startBF: number;
+    endBF: number;
+    startLBM: number;
+    endLBM: number;
+    startFFMI: number;
+    endFFMI: number;
+    weeks: number;
+    pctMagnitude: number;
+    macros: { caloGoal: number; protein: number; fat: number; carb: number; pct: number };
+    prescriptionBmr: number;
+    prescriptionTdee: number;
+  }
+
+  const C: RawPhase[] = [];
+
+  const M = (
+    F: string,
+    T: string,
+    L: string,
+    $: 'block1' | 'block2' | 'block3',
+    K: () => boolean,
+    Q = 0,
+    te?: (B: number, le: number, be: number) => boolean,
+    se = false
+  ) => {
+    const le = p, ne = g, re = b(), D = w(), H = _();
+    let B = 0, G = 'đạt mốc', A = 0, oe = H.bmr, ue = H.tdee, je = false;
+    const Ne = Math.round((HW[T] - 1) * 100);
+
+    for (; K() && B < aA; ) {
+      const Le = _();
+      oe = Le.bmr;
+      ue = Le.tdee;
+      const st = ue * (1 + Ne / 100);
+      A = Math.max(oe, st);
+      je = st < oe;
+      const Ze = (A - ue) * 7;
+      const Mt = fS(b(), w(), r, d, Ze);
+      if (se && Mt < j(b())) {
+        y = true;
+        G = 'kịch trần thực tế';
+        break;
+      }
+      const be = hS(Ze, Mt);
+      const Ee = b() + Mt;
+      p = p + Mt + be;
+      g = Math.max(4, ((p - Ee) / p) * 100);
+      B++;
+      v++;
+      if (k === null && w() >= l - 0.02) k = v;
+      if (S === null && g <= u + 0.05) S = v;
+      if (Q && B >= Q) {
+        G = 'hết số tuần';
+        break;
+      }
+      if (te != null && te(B, le, be)) {
+        G = 'chững';
+        break;
+      }
+    }
+
+    if (B >= aA && K()) {
+      x = true;
+      G = 'giới hạn mô phỏng';
+    }
+
+    if (B > 0) {
+      const Le = Math.round(b() * HE[T]);
+      const st = Math.round(b() * WE[T]);
+      const Ze = {
+        caloGoal: Math.round(A),
+        protein: Le,
+        fat: st,
+        carb: Math.max(0, Math.round((A - Le * 4 - st * 9) / 4)),
+        pct: Ne,
+      };
+      C.push({
+        type: L,
+        label: F,
+        mealGoal: T,
+        stopReason: G,
+        mergedCount: 1,
+        startMacros: { ...Ze },
+        phaseNum: C.length + 1,
+        isSpecialPhase: L === 'MiniCut' ? 'minicut' : L === 'DietBreak' ? 'dietbreak' : null,
+        block: $,
+        startW: Math.round(le * 10) / 10,
+        endW: Math.round(p * 10) / 10,
+        startBF: Math.round(ne * 10) / 10,
+        endBF: Math.round(g * 10) / 10,
+        startLBM: Math.round(re * 10) / 10,
+        endLBM: Math.round(b() * 10) / 10,
+        startFFMI: Math.round(D * 10) / 10,
+        endFFMI: Math.round(w() * 10) / 10,
+        weeks: B,
+        pctMagnitude: Math.abs(Ne),
+        macros: Ze,
+        prescriptionBmr: oe,
+        prescriptionTdee: ue,
+      });
+    }
+    return G;
+  };
+
+  const E = (F: number, T: number) => F >= oV || ((T - p) / T) * 100 >= aV;
+  const P = (F: number, T: number, L?: number) => g + (L || 0) > f + 3;
+  const R = (F: 'block1' | 'block2' | 'block3') => {
+    let T = 0;
+    M('Diet break', 'maintain', 'DietBreak', F, () => T++ < mS, mS);
+  };
+
+  let I = 0;
+  // Block 1: Initial Cut to ideal bodyfat if needed
+  for (; g > f + 0.05 && I++ < Ku && (M('Giảm mỡ', 'cut', 'Block1', 'block1', () => g > f + 0.05, 0, E), g > f + 0.05); ) {
+    R('block1');
+  }
+
+  // Block 2: Hypertrophy bulk waves with minicuts/diet breaks
+  for (I = 0; w() < l - 0.02 && I++ < Ku; ) {
+    const F = v, T = b();
+    if (M('Tăng cơ', 'bulk', 'Block2', 'block2', () => w() < l - 0.02, sV, P, true), y || v === F || w() >= l - 0.02) break;
+    const L = iV(w(), r);
+    M(L.label, L.goal, L.goal === 'maintain' ? 'DietBreak' : 'MiniCut', 'block2', L.timed ? () => true : () => g > f, L.maxWeeks, L.timed ? void 0 : E);
+    const $ = v - F;
+    if ($ > 0 && b() - T < j(b()) * $) {
+      y = true;
+      break;
+    }
+  }
+
+  // Block 3: Final Cut to target bodyfat if needed
+  for (I = 0; g > u + 0.05 && I++ < Ku; ) {
+    const F = M('Điều chỉnh %mỡ', Hje(w(), r), 'Block3', 'block3', () => g > u + 0.05, 0, E);
+    if (g > u + 0.05 && F === 'chững') R('block3');
+    else break;
+  }
+
+  // Phase Merging exactly like CTG
+  const O: RawPhase[] = [];
+  for (const F of C) {
+    const T = O[O.length - 1];
+    if (T && T.label === F.label) {
+      T.weeks += F.weeks;
+      T.mergedCount = (T.mergedCount ?? 1) + 1;
+      T.macros = F.macros;
+      T.endW = F.endW;
+      T.endBF = F.endBF;
+      T.endLBM = F.endLBM;
+      T.endFFMI = F.endFFMI;
+      T.stopReason = F.stopReason;
+    } else {
+      O.push({ ...F, phaseNum: O.length + 1 });
+    }
+  }
+
+  // Map into CtgRoadmapPhase
   let curDate = parseAnyDateStr(params.startDate);
   const today = new Date();
-  const phases: CtgRoadmapPhase[] = [];
-  let phaseIdx = 1;
+  const phases: CtgRoadmapPhase[] = O.map((pRaw, idx) => {
+    const durWeeks = Math.max(1, pRaw.weeks);
+    const endDate = addWeeksToDate(curDate, durWeeks);
 
-  // Step 1: Initial Cut if starting fat is above base + 1.2%
-  if (curBf > leanBaseBf + 1.2) {
-    const targetBf = leanBaseBf;
-    const targetLbm = Math.round(curLbm * 0.995 * 10) / 10;
-    const targetW = Math.round((targetLbm / (1 - targetBf / 100)) * 100) / 100;
-    const kgToLose = Math.max(0.8, curW - targetW);
-    const durationWeeks = Math.max(3, Math.min(16, Math.round(kgToLose / 0.45)));
-    const endDate = addWeeksToDate(curDate, durationWeeks);
+    const mappedType: 'cut' | 'bulk' | 'minicut' | 'maintain' | 'final_cut' =
+      pRaw.label === 'Mini-cut' ? 'minicut' :
+      pRaw.label === 'Diet break' ? 'maintain' :
+      pRaw.label === 'Tăng cơ' ? 'bulk' :
+      pRaw.block === 'block3' ? 'final_cut' : 'cut';
 
-    const nut = calculatePhaseNutrition(sex, heightCm, (curW + targetW) / 2, 'cut');
-    const targetFfmiStep = Math.round((targetLbm / hSq) * 10) / 10;
-
-    phases.push({
-      id: `ctg-p${phaseIdx++}`,
-      name: 'Giảm mỡ',
-      phaseType: 'cut',
+    const phaseObj: CtgRoadmapPhase = {
+      weeks: durWeeks,
+      block: pRaw.block,
+      id: `ctg-p${idx + 1}`,
+      name: pRaw.label,
+      phaseType: mappedType,
       startDate: formatVnDateStr(curDate),
       endDate: formatVnDateStr(endDate),
-      startWeightKg: curW,
-      targetWeightKg: targetW,
-      startBodyFatPct: curBf,
-      targetBodyFatPct: targetBf,
-      startLbmKg: curLbm,
-      targetLbmKg: targetLbm,
-      startFfmi: curFfmi,
-      targetFfmi: targetFfmiStep,
-      targetKcal: nut.targetKcal,
-      macros: { protein: nut.protein, carbs: nut.carbs, fat: nut.fat },
-      note: 'Hạ mỡ về ngưỡng nhạy insulin tối ưu trước khi bước vào chu kỳ tăng cơ dài hạn.',
-    });
+      startWeightKg: pRaw.startW,
+      targetWeightKg: pRaw.endW,
+      startBodyFatPct: pRaw.startBF,
+      targetBodyFatPct: pRaw.endBF,
+      startLbmKg: pRaw.startLBM,
+      targetLbmKg: pRaw.endLBM,
+      startFfmi: pRaw.startFFMI,
+      targetFfmi: pRaw.endFFMI,
+      targetKcal: pRaw.macros.caloGoal,
+      macros: {
+        protein: pRaw.macros.protein,
+        carbs: pRaw.macros.carb,
+        fat: pRaw.macros.fat,
+      },
+      note: `${pRaw.label} (${durWeeks} tuần): ${pRaw.stopReason === 'đạt mốc' ? 'Hoàn thành mốc chỉ số chu kỳ' : pRaw.stopReason}.`,
+    };
 
-    curW = targetW;
-    curBf = targetBf;
-    curLbm = targetLbm;
-    curFfmi = targetFfmiStep;
     curDate = endDate;
-  }
-
-  // Step 2: Alternating Waves of Bulk & Mini-cut
-  const targetTotalLbm = Math.round(targetFfmi * hSq * 10) / 10;
-  let wave = 1;
-
-  while (curLbm < targetTotalLbm - 0.5 && phaseIdx <= 22) {
-    // 2A: Wave Bulk
-    const lbmToGainThisWave = Math.min(
-      isFemale ? 1.8 : 2.9,
-      Math.max(1.2, targetTotalLbm - curLbm)
-    );
-    const totalWeightGain = Math.round((lbmToGainThisWave / 0.65) * 100) / 100;
-    const targetBulkWeight = Math.round((curW + totalWeightGain) * 100) / 100;
-    const targetBulkLbm = Math.round((curLbm + lbmToGainThisWave) * 10) / 10;
-    const targetBulkBf = Math.round(((targetBulkWeight - targetBulkLbm) / targetBulkWeight) * 1000) / 10;
-    const targetBulkFfmi = Math.round((targetBulkLbm / hSq) * 10) / 10;
-
-    const bulkDurationWeeks = Math.max(8, Math.min(16, Math.round(totalWeightGain / 0.38)));
-    const bulkEndDate = addWeeksToDate(curDate, bulkDurationWeeks);
-    const bulkNut = calculatePhaseNutrition(sex, heightCm, (curW + targetBulkWeight) / 2, 'bulk');
-
-    phases.push({
-      id: `ctg-p${phaseIdx++}`,
-      name: 'Tăng cơ',
-      phaseType: 'bulk',
-      startDate: formatVnDateStr(curDate),
-      endDate: formatVnDateStr(bulkEndDate),
-      startWeightKg: curW,
-      targetWeightKg: targetBulkWeight,
-      startBodyFatPct: curBf,
-      targetBodyFatPct: targetBulkBf,
-      startLbmKg: curLbm,
-      targetLbmKg: targetBulkLbm,
-      startFfmi: curFfmi,
-      targetFfmi: targetBulkFfmi,
-      targetKcal: bulkNut.targetKcal,
-      macros: { protein: bulkNut.protein, carbs: bulkNut.carbs, fat: bulkNut.fat },
-      note: `Giai đoạn tăng cơ đợt ${wave}: thặng dư calo nhẹ và tăng tải liên tục để kích hoạt phì đại cơ bắp.`,
-    });
-
-    curW = targetBulkWeight;
-    curBf = targetBulkBf;
-    curLbm = targetBulkLbm;
-    curFfmi = targetBulkFfmi;
-    curDate = bulkEndDate;
-
-    if (curLbm >= targetTotalLbm - 0.3) {
-      break;
-    }
-
-    // 2B: Wave Mini-cut
-    const targetMinicutBf = leanBaseBf;
-    const targetMinicutLbm = Math.round(curLbm * 0.996 * 10) / 10;
-    const targetMinicutWeight = Math.round((targetMinicutLbm / (1 - targetMinicutBf / 100)) * 100) / 100;
-    const targetMinicutFfmi = Math.round((targetMinicutLbm / hSq) * 10) / 10;
-
-    const minicutKgToLose = Math.max(0.6, curW - targetMinicutWeight);
-    const minicutDurationWeeks = Math.max(2, Math.min(4, Math.round(minicutKgToLose / 0.65)));
-    const minicutEndDate = addWeeksToDate(curDate, minicutDurationWeeks);
-    const minicutNut = calculatePhaseNutrition(sex, heightCm, (curW + targetMinicutWeight) / 2, 'minicut');
-
-    phases.push({
-      id: `ctg-p${phaseIdx++}`,
-      name: 'Mini-cut',
-      phaseType: 'minicut',
-      startDate: formatVnDateStr(curDate),
-      endDate: formatVnDateStr(minicutEndDate),
-      startWeightKg: curW,
-      targetWeightKg: targetMinicutWeight,
-      startBodyFatPct: curBf,
-      targetBodyFatPct: targetMinicutBf,
-      startLbmKg: curLbm,
-      targetLbmKg: targetMinicutLbm,
-      startFfmi: curFfmi,
-      targetFfmi: targetMinicutFfmi,
-      targetKcal: minicutNut.targetKcal,
-      macros: { protein: minicutNut.protein, carbs: minicutNut.carbs, fat: minicutNut.fat },
-      note: `Mini-cut đợt ${wave}: thâm hụt calo sâu trong ${minicutDurationWeeks} tuần để đốt sạch mỡ thừa tích tụ, đưa độ nhạy insulin về mức đỉnh.`,
-    });
-
-    curW = targetMinicutWeight;
-    curBf = targetMinicutBf;
-    curLbm = targetMinicutLbm;
-    curFfmi = targetMinicutFfmi;
-    curDate = minicutEndDate;
-    wave++;
-  }
-
-  // Step 3: Final Polish Cut
-  const finalTargetBf = Math.min(curBf, isFemale ? 20.0 : 16.0);
-  const finalLbm = Math.round(curLbm * 0.997 * 10) / 10;
-  const finalWeight = Math.round((finalLbm / (1 - finalTargetBf / 100)) * 100) / 100;
-  const finalFfmi = Math.round((finalLbm / hSq) * 10) / 10;
-  const finalWeeks = 4;
-  const finalEndDate = addWeeksToDate(curDate, finalWeeks);
-  const finalNut = calculatePhaseNutrition(sex, heightCm, (curW + finalWeight) / 2, 'final_cut');
-
-  phases.push({
-    id: `ctg-p${phaseIdx}`,
-    name: 'Giảm mỡ hoàn thiện',
-    phaseType: 'final_cut',
-    startDate: formatVnDateStr(curDate),
-    endDate: formatVnDateStr(finalEndDate),
-    startWeightKg: curW,
-    targetWeightKg: finalWeight,
-    startBodyFatPct: curBf,
-    targetBodyFatPct: finalTargetBf,
-    startLbmKg: curLbm,
-    targetLbmKg: finalLbm,
-    startFfmi: curFfmi,
-    targetFfmi: finalFfmi,
-    targetKcal: finalNut.targetKcal,
-    macros: { protein: finalNut.protein, carbs: finalNut.carbs, fat: finalNut.fat },
-    note: 'Giai đoạn về đích: siết nét toàn diện để lộ rõ từng khối cơ bắp, đạt đỉnh cao phong độ hình thể.',
+    return phaseObj;
   });
 
-  // Find active phase based on current date
+  // Determine active phase based on today
   let activePhaseId = phases[0]?.id;
-  for (const p of phases) {
-    const s = parseAnyDateStr(p.startDate);
-    const e = parseAnyDateStr(p.endDate);
+  for (const ph of phases) {
+    const s = parseAnyDateStr(ph.startDate);
+    const e = parseAnyDateStr(ph.endDate);
     if (today >= s && today <= e) {
-      activePhaseId = p.id;
-      p.isCurrent = true;
+      activePhaseId = ph.id;
+      ph.isCurrent = true;
       break;
     }
   }
-  if (!phases.some((p) => p.isCurrent) && phases.length > 1) {
-    phases[1].isCurrent = true;
-    activePhaseId = phases[1].id;
+  if (!phases.some((ph) => ph.isCurrent) && phases[0]) {
+    phases[0].isCurrent = true;
   }
 
   return {
-    id: `ctg-custom-${Date.now()}`,
-    title: `Lộ Trình Chu Kỳ CTG (${heightCm}cm · ${currentWeightKg}kg → ${finalWeight}kg · ${phases.length} Giai Đoạn)`,
+    id: `ctg-roadmap-${Date.now()}`,
+    title: `Lộ Trình Chu Kỳ CTG (${phases.length} Giai Đoạn)`,
     createdAt: Date.now(),
     activePhaseId,
     heightCm,
     initialWeightKg: currentWeightKg,
     initialBodyFatPct: currentBodyFatPct,
     targetFfmi,
-    sex,
+    sex: r,
     phases,
+    totalWeeks: v,
+    totalMonths: Math.round((v / 4.33) * 10) / 10,
   };
 }
 
@@ -2212,5 +2390,796 @@ export function calculateDailyHealthScore(
         icon: 'Utensils',
       },
     ],
+  };
+}
+
+
+// ---------------------------------------------------------------------------
+// 12. Tracked.gg & CTG Adaptive Metabolism & World-Class Nutrition Analytics
+// ---------------------------------------------------------------------------
+
+export interface AdaptiveTDEEResult {
+  adaptiveTdee: number;
+  staticTdee: number;
+  differenceKcal: number;
+  trendWeightKg: number;
+  rawWeightKg: number;
+  weightTrendDeltaPerWeekKg: number;
+  averageDailyIntakeKcal: number;
+  confidenceScore: number; // 0 - 100%
+  loggedDaysCount: number;
+  analysisMessage: string;
+  recommendedCaloTarget: number;
+}
+
+/**
+ * Calculates smoothed trend weights using Exponential Moving Average (EMA) with alpha = 0.15
+ * (Filters out sodium, water retention, and glycogen noise exactly like Tracked.gg and MacroFactor).
+ */
+export function calculateTrendWeights(bodyPoints: BodyPoint[]): {
+  currentRaw: number;
+  currentTrend: number;
+  trendPoints: Array<{ date: string; rawWeight: number; trendWeight: number }>;
+  weeklyRateKg: number;
+} {
+  if (!bodyPoints || bodyPoints.length === 0) {
+    return { currentRaw: 68, currentTrend: 68, trendPoints: [], weeklyRateKg: 0 };
+  }
+
+  const sorted = [...bodyPoints].sort((a, b) => (a.date > b.date ? 1 : a.date < b.date ? -1 : 0));
+  const alpha = 0.15; // Smooth exponential weighting
+  let runningTrend = sorted[0].weightKg;
+
+  const trendPoints = sorted.map((pt) => {
+    runningTrend = Math.round((runningTrend * (1 - alpha) + pt.weightKg * alpha) * 100) / 100;
+    return {
+      date: pt.date,
+      rawWeight: pt.weightKg,
+      trendWeight: runningTrend,
+    };
+  });
+
+  const currentRaw = sorted[sorted.length - 1].weightKg;
+  const currentTrend = trendPoints[trendPoints.length - 1].trendWeight;
+
+  // Calculate 7-day rate of change
+  let weeklyRateKg = 0;
+  if (trendPoints.length >= 2) {
+    const last = trendPoints[trendPoints.length - 1];
+    const prevIndex = Math.max(0, trendPoints.length - 8);
+    const prev = trendPoints[prevIndex];
+    const days = Math.max(1, (new Date(last.date).getTime() - new Date(prev.date).getTime()) / (86400 * 1000));
+    weeklyRateKg = Math.round(((last.trendWeight - prev.trendWeight) / days) * 7 * 100) / 100;
+  }
+
+  return {
+    currentRaw,
+    currentTrend,
+    trendPoints,
+    weeklyRateKg,
+  };
+}
+
+/**
+ * Tracked.gg Adaptive Expenditure Engine:
+ * Dynamically recalibrates TDEE based on logged calorie intake vs real weight trend rate.
+ */
+export function calculateAdaptiveTDEE(
+  meals: MealLog[],
+  bodyPoints: BodyPoint[],
+  currentStaticTdee: number,
+  goal: Goal = 'bulk',
+  ctgPhaseTargetKcal?: number
+): AdaptiveTDEEResult {
+  const trendResult = calculateTrendWeights(bodyPoints);
+  const now = new Date();
+  const twoWeeksAgo = new Date(now.getTime() - 14 * 86400 * 1000);
+  const todayStr = now.toISOString().slice(0, 10);
+
+  // Determine baseline maintenance TDEE
+  // If CTG phase target is provided (e.g. 2302 kcal for bulk with +10% surplus), baseline maintenance is Math.round(2302 / 1.1) = 2093 kcal.
+  let baselineTdee = currentStaticTdee;
+  if (ctgPhaseTargetKcal && ctgPhaseTargetKcal > 0) {
+    baselineTdee = goal === 'bulk'
+      ? Math.round(ctgPhaseTargetKcal / 1.1)
+      : goal === 'cut'
+      ? Math.round(ctgPhaseTargetKcal / 0.85)
+      : ctgPhaseTargetKcal;
+  }
+
+  // Group meals by date within the last 14 days
+  const dailyCalories: Record<string, number> = {};
+  for (const m of meals || []) {
+    const mDate = new Date(m.date);
+    if (mDate >= twoWeeksAgo && mDate <= now) {
+      const kcal = (m.items || []).reduce((sum, it) => sum + (it.kcal || 0), 0);
+      dailyCalories[m.date] = (dailyCalories[m.date] || 0) + kcal;
+    }
+  }
+
+  // Filter out incomplete days (e.g. today with < 1200 kcal or partial logs < 800 kcal)
+  const allLoggedDates = Object.keys(dailyCalories);
+  const completedDates = allLoggedDates.filter((date) => {
+    const totalKcal = dailyCalories[date];
+    if (date === todayStr && totalKcal < 1200) return false;
+    return totalKcal >= 800;
+  });
+
+  const loggedDaysCount = completedDates.length;
+
+  // Confidence based on number of completed log days in last 14 days
+  const confidenceScore = Math.min(100, Math.round((loggedDaysCount / 7) * 100));
+
+  let finalAdaptiveTdee: number;
+  let recommendedCaloTarget: number;
+  let differenceKcal: number;
+  let analysisMessage = '';
+
+  if (loggedDaysCount < 4) {
+    // Insufficient data: adhere strictly to baseline / CTG phase roadmap to prevent false deficits
+    finalAdaptiveTdee = baselineTdee;
+    differenceKcal = 0;
+    recommendedCaloTarget = ctgPhaseTargetKcal && ctgPhaseTargetKcal > 0
+      ? ctgPhaseTargetKcal
+      : goal === 'bulk'
+      ? Math.round(baselineTdee * 1.1)
+      : goal === 'cut'
+      ? Math.round(baselineTdee * 0.85)
+      : baselineTdee;
+
+    analysisMessage = ctgPhaseTargetKcal
+      ? `Đang đồng bộ tiêu chuẩn theo lộ trình Giai đoạn CTG (${ctgPhaseTargetKcal.toLocaleString('vi-VN')} kcal). Cần thêm ít nhất 4-7 ngày ghi nhận bữa ăn đầy đủ để hệ thống tự động hiệu chỉnh chuyển hóa.`
+      : 'Chưa đủ dữ liệu ghi nhận bữa ăn liên tục (cần ít nhất 4-7 ngày). Hệ thống đang duy trì mức tiêu hao cơ sở chuẩn.';
+  } else {
+    // Sufficient data: calculate adaptive expenditure
+    const totalIntake = completedDates.reduce((sum, d) => sum + dailyCalories[d], 0);
+    const averageDailyIntakeKcal = Math.round(totalIntake / loggedDaysCount);
+
+    // Rate: weeklyRateKg in kg/week => Daily energy surplus/deficit = (weeklyRateKg * 7700) / 7
+    const dailyWeightEnergyDelta = (trendResult.weeklyRateKg * 7700) / 7;
+
+    // Expenditure = Intake - Energy stored/burned from tissue
+    let rawAdaptiveTdee = Math.round(averageDailyIntakeKcal - dailyWeightEnergyDelta);
+
+    // Damping: limit max deviation from baseline to prevent wild swings (±150 kcal max adjustment per week)
+    const maxDeviation = 150;
+    rawAdaptiveTdee = Math.max(baselineTdee - maxDeviation, Math.min(baselineTdee + maxDeviation, rawAdaptiveTdee));
+
+    // Safeguard clamping
+    finalAdaptiveTdee = Math.max(1200, Math.min(3800, rawAdaptiveTdee));
+    differenceKcal = finalAdaptiveTdee - baselineTdee;
+
+    recommendedCaloTarget = goal === 'bulk'
+      ? Math.round(finalAdaptiveTdee * 1.1)
+      : goal === 'cut'
+      ? Math.round(finalAdaptiveTdee * 0.85)
+      : finalAdaptiveTdee;
+
+    if (trendResult.weeklyRateKg < -0.15) {
+      analysisMessage = `Cân nặng xu hướng giảm ${Math.abs(trendResult.weeklyRateKg)}kg/tuần. Tiêu hao chuyển hóa thực tế đạt ${finalAdaptiveTdee.toLocaleString('vi-VN')} kcal/ngày.`;
+    } else if (trendResult.weeklyRateKg > 0.15) {
+      analysisMessage = `Cân nặng xu hướng tăng +${trendResult.weeklyRateKg}kg/tuần. Mức tiêu hao trao đổi chất thực tế là ${finalAdaptiveTdee.toLocaleString('vi-VN')} kcal/ngày.`;
+    } else {
+      analysisMessage = `Cân nặng xu hướng ổn định (${trendResult.weeklyRateKg}kg/tuần). Mức tiêu hao trao đổi chất đạt ${finalAdaptiveTdee.toLocaleString('vi-VN')} kcal/ngày.`;
+    }
+  }
+
+  const averageDailyIntakeKcal = completedDates.length > 0
+    ? Math.round(completedDates.reduce((sum, d) => sum + dailyCalories[d], 0) / completedDates.length)
+    : baselineTdee;
+
+  return {
+    adaptiveTdee: finalAdaptiveTdee,
+    staticTdee: baselineTdee,
+    differenceKcal,
+    trendWeightKg: trendResult.currentTrend,
+    rawWeightKg: trendResult.currentRaw,
+    weightTrendDeltaPerWeekKg: trendResult.weeklyRateKg,
+    averageDailyIntakeKcal,
+    confidenceScore,
+    loggedDaysCount,
+    analysisMessage,
+    recommendedCaloTarget,
+  };
+}
+
+export interface MpsFeedingWindow {
+  slot: MealSlot;
+  slotLabel: string;
+  proteinGrams: number;
+  calories: number;
+  hitsMpsTrigger: boolean; // >= threshold
+  leucineGrams: number; // estimated ~8.5% of total protein
+}
+
+export interface ProteinDistributionResult {
+  totalProteinGrams: number;
+  targetProteinGrams: number;
+  windows: MpsFeedingWindow[];
+  successfulMpsTriggers: number;
+  optimalFeedingWindowsCount: number;
+  distributionScorePct: number;
+  feedback: string;
+}
+
+/**
+ * CTG & Tracked.gg Muscle Protein Synthesis (MPS) & Leucine Threshold Distribution:
+ * Analyzes whether protein intake is distributed optimally across 3-5 meals to hit leucine threshold.
+ */
+export function calculateProteinDistribution(
+  todayMeals: MealLog[],
+  targetProtein: number,
+  lbmKg: number = 55
+): ProteinDistributionResult {
+  const mpsThreshold = Math.max(25, Math.round(lbmKg * 0.38)); // ~25g - 40g per meal
+  const slots: MealSlot[] = ['breakfast', 'lunch', 'pre_workout', 'post_workout', 'dinner', 'snack'];
+
+  const slotMap: Record<MealSlot, { protein: number; calories: number }> = {
+    breakfast: { protein: 0, calories: 0 },
+    lunch: { protein: 0, calories: 0 },
+    dinner: { protein: 0, calories: 0 },
+    snack: { protein: 0, calories: 0 },
+    pre_workout: { protein: 0, calories: 0 },
+    post_workout: { protein: 0, calories: 0 },
+  };
+
+  for (const m of todayMeals || []) {
+    const s = m.slot || 'snack';
+    for (const it of m.items || []) {
+      if (slotMap[s]) {
+        slotMap[s].protein += it.protein || 0;
+        slotMap[s].calories += it.kcal || 0;
+      }
+    }
+  }
+
+  const windows: MpsFeedingWindow[] = [];
+  let successfulMpsTriggers = 0;
+  let activeSlotsCount = 0;
+
+  for (const s of slots) {
+    const data = slotMap[s];
+    if (data.protein > 0 || data.calories > 0) {
+      activeSlotsCount++;
+      const p = Math.round(data.protein);
+      const hits = p >= mpsThreshold;
+      if (hits) successfulMpsTriggers++;
+      windows.push({
+        slot: s,
+        slotLabel: MEAL_LABEL[s] || s,
+        proteinGrams: p,
+        calories: Math.round(data.calories),
+        hitsMpsTrigger: hits,
+        leucineGrams: Math.round(p * 0.085 * 10) / 10,
+      });
+    }
+  }
+
+  const totalProteinGrams = Object.values(slotMap).reduce((acc, d) => acc + Math.round(d.protein), 0);
+  const optimalFeedingWindowsCount = 4;
+  const distributionScorePct = Math.min(100, Math.round((successfulMpsTriggers / optimalFeedingWindowsCount) * 100));
+
+  let feedback = '';
+  if (successfulMpsTriggers >= 4) {
+    feedback = 'Hoàn hảo! Bạn đã kích hoạt tối đa 4 đợt tổng hợp protein cơ bắp (MPS) trong ngày.';
+  } else if (successfulMpsTriggers >= 3) {
+    feedback = 'Rất tốt! 3 bữa ăn đạt ngưỡng leucine tối ưu giúp duy trì đồng hóa cơ nạc liên tục.';
+  } else if (successfulMpsTriggers >= 1) {
+    feedback = `Đã kích hoạt ${successfulMpsTriggers} lần MPS (ngưỡng ${mpsThreshold}g đạm/bữa). Hãy phân bổ đạm đều sang các bữa khác thay vì dồn vào một bữa.`;
+  } else {
+    feedback = `Chưa có bữa nào đạt ngưỡng Leucine (${mpsThreshold}g protein). Hãy bổ sung thêm ức gà, trứng hoặc whey vào mỗi bữa.`;
+  }
+
+  return {
+    totalProteinGrams,
+    targetProteinGrams: targetProtein,
+    windows,
+    successfulMpsTriggers,
+    optimalFeedingWindowsCount,
+    distributionScorePct,
+    feedback,
+  };
+}
+
+export interface MicronutrientSummary {
+  fiberGrams: number;
+  fiberTargetGrams: number;
+  fiberScorePct: number;
+  sodiumMg: number;
+  sodiumTargetMg: number;
+  sugarGrams: number;
+  sugarLimitGrams: number;
+  waterMl: number;
+  waterTargetMl: number;
+  waterScorePct: number;
+}
+
+/**
+ * Calculates essential micronutrients and hydration status
+ */
+export function calculateMicronutrientSummary(
+  todayMeals: MealLog[],
+  waterMl: number = 0
+): MicronutrientSummary {
+  let fiberGrams = 0;
+  let sugarGrams = 0;
+  let sodiumMg = 0;
+
+  for (const m of todayMeals || []) {
+    for (const it of m.items || []) {
+      fiberGrams += it.fiber || 0;
+      sugarGrams += it.sugar || 0;
+      sodiumMg += it.sodium || 0;
+    }
+  }
+
+  // If fiber wasn't explicitly logged on items, estimate realistically based on food names and carbs
+  if (fiberGrams === 0) {
+    for (const m of todayMeals || []) {
+      for (const it of m.items || []) {
+        const nameLower = (it.name || '').toLowerCase();
+        if (nameLower.includes('khoai') || nameLower.includes('yến mạch') || nameLower.includes('gạo lứt') || nameLower.includes('rau') || nameLower.includes('chuối')) {
+          fiberGrams += Math.round((it.carbs || 0) * 0.12);
+        } else if ((it.carbs || 0) > 20) {
+          fiberGrams += Math.round((it.carbs || 0) * 0.05);
+        }
+      }
+    }
+  }
+
+  const fiberTargetGrams = 30; // standard fiber target
+  const fiberScorePct = Math.min(100, Math.round((fiberGrams / fiberTargetGrams) * 100));
+
+  const waterTargetMl = 3000;
+  const waterScorePct = Math.min(100, Math.round((waterMl / waterTargetMl) * 100));
+
+  return {
+    fiberGrams: Math.round(fiberGrams),
+    fiberTargetGrams,
+    fiberScorePct,
+    sodiumMg: Math.round(sodiumMg),
+    sodiumTargetMg: 2300,
+    sugarGrams: Math.round(sugarGrams),
+    sugarLimitGrams: 50,
+    waterMl,
+    waterTargetMl,
+    waterScorePct,
+  };
+}
+
+export interface CarbCyclingTargets {
+  trainingDay: { kcal: number; protein: number; carbs: number; fat: number };
+  restDay: { kcal: number; protein: number; carbs: number; fat: number };
+  refeedDay: { kcal: number; protein: number; carbs: number; fat: number };
+}
+
+/**
+ * CTG Carb Cycling Strategy:
+ * Splits daily calorie and carb budget between Training Days, Rest Days, and Refeed Days.
+ */
+export function calculateCarbCyclingTargets(
+  baseKcal: number,
+  baseProtein: number,
+  baseCarbs: number,
+  baseFat: number
+): CarbCyclingTargets {
+  // Training Day: +10% carbs, full glycogen fueling
+  const trainingCarbs = Math.round(baseCarbs * 1.15);
+  const trainingFat = Math.round(baseFat * 0.95);
+  const trainingKcal = baseProtein * 4 + trainingCarbs * 4 + trainingFat * 9;
+
+  // Rest Day: -20% carbs, +10% healthy fat for hormonal recovery
+  const restCarbs = Math.round(baseCarbs * 0.8);
+  const restFat = Math.round(baseFat * 1.1);
+  const restKcal = baseProtein * 4 + restCarbs * 4 + restFat * 9;
+
+  // Refeed Day: +50% carbs, ultra-low fat (<25g-30g), maintenance kcal to restore leptin
+  const refeedFat = Math.max(20, Math.min(30, Math.round(baseFat * 0.5)));
+  const refeedKcal = Math.round(baseKcal * 1.05);
+  const refeedCarbs = Math.round((refeedKcal - (baseProtein * 4 + refeedFat * 9)) / 4);
+
+  return {
+    trainingDay: { kcal: trainingKcal, protein: baseProtein, carbs: trainingCarbs, fat: trainingFat },
+    restDay: { kcal: restKcal, protein: baseProtein, carbs: restCarbs, fat: restFat },
+    refeedDay: { kcal: refeedKcal, protein: baseProtein, carbs: refeedCarbs, fat: refeedFat },
+  };
+}
+
+
+// ==========================================
+// CRONOMETER ADVANCED MICRONUTRIENTS & SCORES
+// ==========================================
+
+/**
+ * Calculates Cronometer-grade micronutrient targets, scores and bio-markers
+ */
+export function calculateCronometerNutrientScores(
+  todayMeals: MealLog[] = [],
+  waterMl: number = 0,
+  targetProtein: number = 140
+): CronometerScores {
+  let potassiumMg = 0;
+  let magnesiumMg = 0;
+  let calciumMg = 0;
+  let zincMg = 0;
+  let ironMg = 0;
+  let vitaminDIu = 0;
+  let vitaminCMg = 0;
+  let vitaminB12Mcg = 0;
+  let omega3Grams = 0;
+  let totalProtein = 0;
+
+  for (const m of todayMeals || []) {
+    for (const it of m.items || []) {
+      totalProtein += it.protein || 0;
+      potassiumMg += it.potassium || 0;
+      magnesiumMg += it.magnesium || 0;
+      calciumMg += it.calcium || 0;
+      zincMg += it.zinc || 0;
+      ironMg += it.iron || 0;
+      vitaminDIu += it.vitaminD || 0;
+      vitaminCMg += it.vitaminC || 0;
+      vitaminB12Mcg += it.vitaminB12 || 0;
+      omega3Grams += it.omega3 || 0;
+
+      // Realistic estimation for common gym/Vietnamese foods if not explicitly tagged
+      const name = (it.name || '').toLowerCase();
+      const amountRatio = Math.max(0.5, (it.amount || 100) / 100);
+
+      if (it.potassium === undefined) {
+        if (name.includes('chuối')) potassiumMg += Math.round(360 * amountRatio);
+        else if (name.includes('khoai')) potassiumMg += Math.round(450 * amountRatio);
+        else if (name.includes('bò') || name.includes('gà')) potassiumMg += Math.round(300 * amountRatio);
+        else if (name.includes('rau') || name.includes('canh')) potassiumMg += Math.round(250 * amountRatio);
+      }
+
+      if (it.magnesium === undefined) {
+        if (name.includes('yến mạch') || name.includes('hạt')) magnesiumMg += Math.round(140 * amountRatio);
+        else if (name.includes('gạo lứt') || name.includes('chuối')) magnesiumMg += Math.round(35 * amountRatio);
+        else if (name.includes('rau')) magnesiumMg += Math.round(40 * amountRatio);
+        else if (it.protein > 20) magnesiumMg += Math.round(25 * amountRatio);
+      }
+
+      if (it.calcium === undefined) {
+        if (name.includes('sữa') || name.includes('whey') || name.includes('chua')) calciumMg += Math.round(220 * amountRatio);
+        else if (name.includes('đậu phụ') || name.includes('phô mai')) calciumMg += Math.round(180 * amountRatio);
+        else if (name.includes('rau')) calciumMg += Math.round(50 * amountRatio);
+      }
+
+      if (it.zinc === undefined) {
+        if (name.includes('bò') || name.includes('hàu') || name.includes('thịt đỏ')) zincMg += Math.round(5.5 * amountRatio);
+        else if (name.includes('gà') || name.includes('trứng')) zincMg += Math.round(2.0 * amountRatio);
+        else if (it.protein > 15) zincMg += Math.round(1.2 * amountRatio);
+      }
+
+      if (it.iron === undefined) {
+        if (name.includes('bò') || name.includes('gan') || name.includes('tiết')) ironMg += Math.round(4.0 * amountRatio);
+        else if (name.includes('trứng') || name.includes('rau')) ironMg += Math.round(1.8 * amountRatio);
+        else if (it.protein > 15) ironMg += Math.round(1.2 * amountRatio);
+      }
+
+      if (it.vitaminD === undefined) {
+        if (name.includes('cá hồi') || name.includes('hồi')) vitaminDIu += Math.round(400 * amountRatio);
+        else if (name.includes('trứng')) vitaminDIu += Math.round(45 * amountRatio);
+        else if (name.includes('sữa')) vitaminDIu += Math.round(80 * amountRatio);
+      }
+
+      if (it.vitaminC === undefined) {
+        if (name.includes('cam') || name.includes('ổi') || name.includes('bưởi') || name.includes('chanh')) vitaminCMg += Math.round(60 * amountRatio);
+        else if (name.includes('rau') || name.includes('cà chua') || name.includes('ớt')) vitaminCMg += Math.round(25 * amountRatio);
+        else if (name.includes('chuối') || name.includes('táo')) vitaminCMg += Math.round(10 * amountRatio);
+      }
+
+      if (it.vitaminB12 === undefined) {
+        if (name.includes('bò') || name.includes('thịt')) vitaminB12Mcg += Math.round(2.1 * amountRatio);
+        else if (name.includes('trứng') || name.includes('sữa')) vitaminB12Mcg += Math.round(0.8 * amountRatio);
+        else if (it.protein > 20) vitaminB12Mcg += Math.round(0.6 * amountRatio);
+      }
+
+      if (it.omega3 === undefined) {
+        if (name.includes('cá hồi') || name.includes('cá ngừ') || name.includes('cá thu')) omega3Grams += Math.round(1.8 * amountRatio * 10) / 10;
+        else if (name.includes('hạt chia') || name.includes('óc chó')) omega3Grams += Math.round(1.2 * amountRatio * 10) / 10;
+        else if (name.includes('trứng')) omega3Grams += 0.15;
+      }
+    }
+  }
+
+  // Reference targets
+  const potassiumTargetMg = 3400;
+  const magnesiumTargetMg = 400;
+  const calciumTargetMg = 1000;
+  const zincTargetMg = 11;
+  const ironTargetMg = 14;
+  const vitaminDTargetIu = 800;
+  const vitaminCTargetMg = 90;
+  const vitaminB12TargetMcg = 2.4;
+  const omega3TargetGrams = 2.0;
+
+  // Cronometer Scores (0 - 100)
+  const electrolyteScorePct = Math.min(
+    100,
+    Math.round(
+      0.45 * Math.min(100, (potassiumMg / potassiumTargetMg) * 100) +
+        0.35 * Math.min(100, (magnesiumMg / magnesiumTargetMg) * 100) +
+        0.20 * Math.min(100, (waterMl / 3000) * 100)
+    )
+  );
+
+  const recoveryScorePct = Math.min(
+    100,
+    Math.round(
+      0.40 * Math.min(100, (totalProtein / Math.max(1, targetProtein)) * 100) +
+        0.30 * Math.min(100, (magnesiumMg / magnesiumTargetMg) * 100) +
+        0.30 * Math.min(100, (zincMg / zincTargetMg) * 100)
+    )
+  );
+
+  const vitalityScorePct = Math.min(
+    100,
+    Math.round(
+      0.35 * Math.min(100, (vitaminCMg / vitaminCTargetMg) * 100) +
+        0.35 * Math.min(100, (vitaminDIu / vitaminDTargetIu) * 100) +
+        0.30 * Math.min(100, (ironMg / ironTargetMg) * 100)
+    )
+  );
+
+  const overallNutritionScorePct = Math.round(
+    (electrolyteScorePct + recoveryScorePct + vitalityScorePct) / 3
+  );
+
+  return {
+    electrolyteScorePct,
+    recoveryScorePct,
+    vitalityScorePct,
+    overallNutritionScorePct,
+    potassiumMg: Math.round(potassiumMg),
+    potassiumTargetMg,
+    magnesiumMg: Math.round(magnesiumMg),
+    magnesiumTargetMg,
+    calciumMg: Math.round(calciumMg),
+    calciumTargetMg,
+    zincMg: Math.round(zincMg * 10) / 10,
+    zincTargetMg,
+    ironMg: Math.round(ironMg * 10) / 10,
+    ironTargetMg,
+    vitaminDIu: Math.round(vitaminDIu),
+    vitaminDTargetIu,
+    vitaminCMg: Math.round(vitaminCMg),
+    vitaminCTargetMg,
+    vitaminB12Mcg: Math.round(vitaminB12Mcg * 10) / 10,
+    vitaminB12TargetMcg,
+    omega3Grams: Math.round(omega3Grams * 10) / 10,
+    omega3TargetGrams,
+  };
+}
+
+// ==========================================
+// CTG & RENAISSANCE PERIODIZATION VOLUME LANDMARKS
+// ==========================================
+
+export const VOLUME_LANDMARKS_CONFIG: Record<
+  MuscleGroup,
+  { mev: number; mav: number; mrv: number }
+> = {
+  chest: { mev: 8, mav: 14, mrv: 22 },
+  back: { mev: 10, mav: 16, mrv: 24 },
+  legs: { mev: 10, mav: 16, mrv: 22 },
+  shoulders: { mev: 8, mav: 16, mrv: 24 },
+  arms: { mev: 8, mav: 14, mrv: 20 },
+  core: { mev: 4, mav: 10, mrv: 16 },
+  cardio: { mev: 3, mav: 6, mrv: 10 },
+};
+
+/**
+ * Calculates current weekly working sets per muscle group against MEV, MAV, and MRV
+ */
+export function calculateMuscleVolumeLandmarks(
+  workoutSessions: WorkoutSession[] = [],
+  lookbackDays: number = 7
+): MuscleVolumeLandmark[] {
+  const cutoffTime = Date.now() - lookbackDays * 86400000;
+  const recentSessions = (workoutSessions || []).filter((s) => {
+    const sessionTime = s.startedAt || new Date(s.date).getTime();
+    return sessionTime >= cutoffTime;
+  });
+
+  const muscleSets: Partial<Record<MuscleGroup, number>> = {};
+  const exerciseMap = new Map(EXERCISES.map((e) => [e.id, e.muscle]));
+
+  for (const session of recentSessions) {
+    for (const s of session.sets || []) {
+      const muscle = exerciseMap.get(s.exerciseId) as MuscleGroup | undefined;
+      if (!muscle) continue;
+      muscleSets[muscle] = (muscleSets[muscle] || 0) + 1;
+    }
+  }
+
+  const groups: MuscleGroup[] = [
+    'chest',
+    'back',
+    'legs',
+    'shoulders',
+    'arms',
+    'core',
+    'cardio',
+  ];
+
+  return groups.map((m) => {
+    const currentSets = muscleSets[m] || 0;
+    const config = VOLUME_LANDMARKS_CONFIG[m] || { mev: 8, mav: 14, mrv: 20 };
+    let status: MuscleVolumeLandmark['status'] = 'below_mev';
+    let statusLabel = 'Dưới MEV (Chưa đủ kích thích)';
+
+    if (currentSets < config.mev) {
+      status = 'below_mev';
+      statusLabel = `${currentSets}/${config.mev} sets · Dưới MEV`;
+    } else if (currentSets <= config.mav + 2) {
+      status = 'optimal_mav';
+      statusLabel = `${currentSets} sets · Vùng MAV Tối Ưu 🔥`;
+    } else if (currentSets <= config.mrv) {
+      status = 'near_mrv';
+      statusLabel = `${currentSets} sets · Sát Ngưỡng MRV ⚠️`;
+    } else {
+      status = 'exceeded_mrv';
+      statusLabel = `${currentSets}/${config.mrv} sets · Vượt Quá MRV ⛔`;
+    }
+
+    const percentageOfMav = Math.round((currentSets / config.mav) * 100);
+
+    return {
+      muscle: m,
+      muscleLabel: MUSCLE_LABEL[m] || m,
+      currentSets,
+      mevSets: config.mev,
+      mavSets: config.mav,
+      mrvSets: config.mrv,
+      status,
+      statusLabel,
+      percentageOfMav,
+    };
+  });
+}
+
+// ==========================================
+// TRACKED.GG PROGRESSIVE OVERLOAD COMPARISON
+// ==========================================
+
+/**
+ * Compares current workout sets against previous session history to detect Progressive Overload & PRs
+ */
+export function compareProgressiveOverload(
+  exerciseId: string,
+  currentSets: { weightKg: number; reps: number }[] = [],
+  previousSessions: WorkoutSession[] = [],
+  exerciseName: string = 'Bài tập'
+): ProgressiveOverloadComparison {
+  const activeCurrentSets = (currentSets || []).filter((s) => s.weightKg > 0 && s.reps > 0);
+
+  // Find previous sessions that contained this exercise, sorted descending by date
+  const sortedSessions = [...(previousSessions || [])].sort(
+    (a, b) => (b.startedAt || new Date(b.date).getTime()) - (a.startedAt || new Date(a.date).getTime())
+  );
+
+  let prevBest: { date: string; weightKg: number; reps: number; oneRmKg: number } | undefined;
+
+  for (const session of sortedSessions) {
+    const matchSets = (session.sets || []).filter(
+      (s) => s.exerciseId === exerciseId && s.weightKg > 0 && s.reps > 0
+    );
+    if (matchSets.length > 0) {
+      // Find best set in this session based on estimated 1RM
+      let best1Rm = 0;
+      let bestSet = matchSets[0];
+      for (const st of matchSets) {
+        const est = calculate1RM(st.weightKg, st.reps).oneRepMax;
+        if (est > best1Rm) {
+          best1Rm = est;
+          bestSet = st;
+        }
+      }
+      prevBest = {
+        date: session.date,
+        weightKg: bestSet.weightKg,
+        reps: bestSet.reps,
+        oneRmKg: best1Rm,
+      };
+      break;
+    }
+  }
+
+  // Calculate current best set
+  let currBest: { weightKg: number; reps: number; oneRmKg: number } | undefined;
+  if (activeCurrentSets.length > 0) {
+    let best1Rm = 0;
+    let bestSet = activeCurrentSets[0];
+    for (const st of activeCurrentSets) {
+      const est = calculate1RM(st.weightKg, st.reps).oneRepMax;
+      if (est > best1Rm) {
+        best1Rm = est;
+        bestSet = st;
+      }
+    }
+    currBest = {
+      weightKg: bestSet.weightKg,
+      reps: bestSet.reps,
+      oneRmKg: best1Rm,
+    };
+  }
+
+  if (!prevBest) {
+    return {
+      exerciseId,
+      exerciseName,
+      hasPreviousData: false,
+      currentBest: currBest,
+      weightDeltaKg: 0,
+      repsDelta: 0,
+      oneRmDeltaKg: 0,
+      isNewPr: false,
+      status: 'first_time',
+      headline: 'Buổi đầu tiên thiết lập mốc cơ sở',
+      badgeText: 'Mốc Khởi Đầu',
+    };
+  }
+
+  if (!currBest) {
+    return {
+      exerciseId,
+      exerciseName,
+      hasPreviousData: true,
+      previousBest: prevBest,
+      weightDeltaKg: 0,
+      repsDelta: 0,
+      oneRmDeltaKg: 0,
+      isNewPr: false,
+      status: 'maintained',
+      headline: `Buổi trước: ${prevBest.weightKg}kg × ${prevBest.reps} reps (1RM ~${prevBest.oneRmKg}kg)`,
+      badgeText: 'Mục Tiêu Vượt Qua',
+    };
+  }
+
+  const weightDeltaKg = currBest.weightKg - prevBest.weightKg;
+  const repsDelta = currBest.reps - prevBest.reps;
+  const oneRmDeltaKg = Math.round((currBest.oneRmKg - prevBest.oneRmKg) * 10) / 10;
+
+  const isImproved = oneRmDeltaKg > 0.5 || weightDeltaKg > 0 || (weightDeltaKg === 0 && repsDelta > 0);
+  const isMaintained = Math.abs(oneRmDeltaKg) <= 0.5;
+
+  let headline = '';
+  let badgeText = '';
+  let status: ProgressiveOverloadComparison['status'] = 'maintained';
+
+  if (isImproved) {
+    status = 'improved';
+    if (weightDeltaKg > 0) {
+      headline = `+${weightDeltaKg}kg tạ so với buổi trước (${currBest.weightKg}kg vs ${prevBest.weightKg}kg)! Kỷ lục mới!`;
+      badgeText = '🔥 Tăng Tiến Mức Tạ (PR)';
+    } else {
+      headline = `+${repsDelta} reps với mức tạ ${currBest.weightKg}kg! Sức bền tăng tiến!`;
+      badgeText = '⚡ Tăng Tiến Reps (PR)';
+    }
+  } else if (isMaintained) {
+    status = 'maintained';
+    headline = `Duy trì ổn định mức tạ ${currBest.weightKg}kg × ${currBest.reps} reps`;
+    badgeText = '✓ Giữ Vững Phong Độ';
+  } else {
+    status = 'regressed';
+    headline = `Giảm nhẹ ${Math.abs(oneRmDeltaKg)}kg 1RM so với lần trước (${prevBest.date})`;
+    badgeText = 'Cần Phục Hồi Thêm';
+  }
+
+  return {
+    exerciseId,
+    exerciseName,
+    hasPreviousData: true,
+    previousBest: prevBest,
+    currentBest: currBest,
+    weightDeltaKg,
+    repsDelta,
+    oneRmDeltaKg,
+    isNewPr: isImproved,
+    status,
+    headline,
+    badgeText,
   };
 }

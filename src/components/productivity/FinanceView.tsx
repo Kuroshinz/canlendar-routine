@@ -479,7 +479,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
           ? `Hạn mức ${formatMoneyCompact(budget.monthlyLimit, budget.currency)}`
           : `Limit ${formatMoneyCompact(budget.monthlyLimit, budget.currency)}`,
       icon: PiggyBank,
-      cls: 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/40',
+      cls: 'text-rose-500 dark:text-rose-400 bg-rose-950/30 dark:bg-rose-950/40',
     },
   ];
 
@@ -612,7 +612,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
             <div
               key={card.label}
               onClick={card.action}
-              className={`glass-panel p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex items-center justify-between gap-3 ${
+              className={`glass-panel p-3.5 rounded-2xl border border-slate-200 dark:border-white/[0.08] shadow-xs flex items-center justify-between gap-3 ${
                 card.action
                   ? 'cursor-pointer hover:border-rose-400 dark:hover:border-rose-500 transition-all group/card'
                   : ''
@@ -623,7 +623,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
                   <Icon className="w-4.5 h-4.5" />
                 </div>
                 <div className="min-w-0">
-                  <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider truncate flex items-center gap-1">
+                  <div className="text-[10px] font-semibold text-gray-400  truncate flex items-center gap-1">
                     <span>{card.label}</span>
                     {card.action && <Pencil className="w-2.5 h-2.5 text-rose-500 opacity-0 group-hover/card:opacity-100 transition-opacity" />}
                   </div>
@@ -656,7 +656,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
           <span className="font-semibold text-slate-500 dark:text-slate-400">
             {lang === 'vi' ? 'Đối soát dòng tiền:' : 'Cashflow equation:'}
           </span>
-          <span className="font-mono px-2 py-0.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-medium">
+          <span className="font-mono px-2 py-0.5 rounded-lg bg-white dark:bg-[#070205] border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-medium">
             {lang === 'vi' ? 'Vốn ban đầu' : 'Initial'}: {formatMoneyCompact(budget.initialBalance || 0, budget.currency)}
           </span>
           <span className="text-slate-400 font-bold">+</span>
@@ -755,7 +755,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
               step={100000}
               value={limitDraft}
               onChange={(e) => setLimitDraft(e.target.value)}
-              className="flex-1 text-xs px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
+              className="flex-1 text-xs px-3 py-1.5 rounded-lg border border-gray-300 dark:border-white/[0.1] bg-white dark:bg-white/[0.04] text-gray-800 dark:text-gray-100"
               placeholder={lang === 'vi' ? 'Hạn mức tháng (VND)' : 'Monthly limit (VND)'}
             />
             <button
@@ -767,7 +767,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
             <button
               type="button"
               onClick={() => setShowBudgetEditor(false)}
-              className="px-2 py-1.5 rounded-lg text-[11px] font-semibold border border-gray-300 dark:border-gray-700 cursor-pointer"
+              className="px-2 py-1.5 rounded-lg text-[11px] font-semibold border border-gray-300 dark:border-white/[0.1] cursor-pointer"
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -789,7 +789,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
           <div className="flex items-center justify-between gap-2 mb-2">
             <div className="flex items-center gap-2">
               <ShieldCheck className="w-4 h-4 text-emerald-500" />
-              <span className="text-xs font-bold text-gray-800 dark:text-gray-100 uppercase tracking-wider">
+              <span className="text-xs font-bold text-gray-800 dark:text-gray-100 ">
                 {lang === 'vi' ? 'Hạn Mức Chi Tiêu An Toàn Mỗi Ngày' : 'Safe Daily Spending Allowance'}
               </span>
             </div>
@@ -851,7 +851,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
       </div>
 
       {/* Quick 1-Tap Frequent Logging Strip */}
-      <div className="glass-panel rounded-2xl border border-slate-200 dark:border-slate-800 p-3.5 mb-6 shadow-xs">
+      <div className="glass-panel rounded-2xl border border-slate-200 dark:border-white/[0.08] p-3.5 mb-6 shadow-xs">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2.5">
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-1.5 text-xs font-bold text-gray-700 dark:text-gray-300">
@@ -929,10 +929,10 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
       {showForm && (
         <form
           onSubmit={handleSubmit}
-          className="glass-panel rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs p-4 mb-6 animate-in fade-in duration-150"
+          className="glass-panel rounded-2xl border border-slate-200 dark:border-white/[0.08] shadow-xs p-4 mb-6 animate-in fade-in duration-150"
         >
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+            <h3 className="text-xs font-bold  text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
               {editingTransaction ? (
                 <>
                   <Pencil className="w-3.5 h-3.5 text-rose-500" />
@@ -959,7 +959,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
 
           <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
             <div className="md:col-span-3">
-              <div className="bg-gray-200/80 dark:bg-gray-800 p-1 rounded-xl flex text-xs font-semibold">
+              <div className="bg-gray-200/80 dark:bg-white/[0.04] p-1 rounded-xl flex text-xs font-semibold">
                 {(['expense', 'income'] as TransactionType[]).map((t) => (
                   <button
                     key={t}
@@ -987,7 +987,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
             </div>
 
             <input
-              className="md:col-span-3 text-xs px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
+              className="md:col-span-3 text-xs px-3 py-2 rounded-lg border border-gray-300 dark:border-white/[0.1] bg-white dark:bg-white/[0.04] text-gray-800 dark:text-gray-100"
               placeholder={lang === 'vi' ? 'Nội dung (VD: Cà phê sáng)' : 'Title (e.g. Morning coffee)'}
               value={formTitle}
               onChange={(e) => setFormTitle(e.target.value)}
@@ -998,7 +998,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
               type="number"
               min={0}
               step={1000}
-              className="md:col-span-2 text-xs px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 font-mono"
+              className="md:col-span-2 text-xs px-3 py-2 rounded-lg border border-gray-300 dark:border-white/[0.1] bg-white dark:bg-white/[0.04] text-gray-800 dark:text-gray-100 font-mono"
               placeholder={lang === 'vi' ? 'Số tiền' : 'Amount'}
               value={formAmount}
               onChange={(e) => setFormAmount(e.target.value)}
@@ -1006,7 +1006,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
             />
 
             <select
-              className="md:col-span-2 text-xs px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
+              className="md:col-span-2 text-xs px-3 py-2 rounded-lg border border-gray-300 dark:border-white/[0.1] bg-white dark:bg-white/[0.04] text-gray-800 dark:text-gray-100"
               value={formCategory}
               onChange={(e) => setFormCategory(e.target.value as FinanceCategoryId)}
             >
@@ -1019,13 +1019,13 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
 
             <input
               type="date"
-              className="md:col-span-2 text-xs px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
+              className="md:col-span-2 text-xs px-3 py-2 rounded-lg border border-gray-300 dark:border-white/[0.1] bg-white dark:bg-white/[0.04] text-gray-800 dark:text-gray-100"
               value={formDate}
               onChange={(e) => setFormDate(e.target.value)}
             />
 
             <input
-              className="md:col-span-8 text-xs px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
+              className="md:col-span-8 text-xs px-3 py-2 rounded-lg border border-gray-300 dark:border-white/[0.1] bg-white dark:bg-white/[0.04] text-gray-800 dark:text-gray-100"
               placeholder={lang === 'vi' ? 'Ghi chú (không bắt buộc)' : 'Note (optional)'}
               value={formNote}
               onChange={(e) => setFormNote(e.target.value)}
@@ -1051,7 +1051,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
                     setEditingTransaction(null);
                     setShowForm(false);
                   }}
-                  className="px-3 py-2 rounded-lg text-xs font-semibold border border-gray-300 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer"
+                  className="px-3 py-2 rounded-lg text-xs font-semibold border border-gray-300 dark:border-white/[0.1] text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/[0.08] cursor-pointer"
                 >
                   {lang === 'vi' ? 'Hủy' : 'Cancel'}
                 </button>
@@ -1065,7 +1065,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
         {/* Left: history */}
         <div className="xl:col-span-7 space-y-4">
           {/* Top Filter and Search Bar */}
-          <div className="flex flex-col gap-2.5 glass-panel p-3 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
+          <div className="flex flex-col gap-2.5 glass-panel p-3 rounded-2xl border border-slate-200 dark:border-white/[0.08] shadow-xs">
             {/* Row 1: Type Tabs & Sort */}
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="inline-flex p-0.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-xs font-semibold">
@@ -1110,7 +1110,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
                 <select
                   value={sortOption}
                   onChange={(e) => setSortOption(e.target.value as any)}
-                  className="text-xs px-2.5 py-1.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-medium"
+                  className="text-xs px-2.5 py-1.5 rounded-xl border border-gray-200 dark:border-white/[0.1] bg-gray-50 dark:bg-white/[0.04] text-gray-700 dark:text-gray-200 font-medium"
                 >
                   <option value="newest">{lang === 'vi' ? 'Mới nhất' : 'Newest'}</option>
                   <option value="oldest">{lang === 'vi' ? 'Cũ nhất' : 'Oldest'}</option>
@@ -1123,7 +1123,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
                   onClick={handleExportCSV}
                   disabled={visibleTransactions.length === 0}
                   title={lang === 'vi' ? 'Xuất danh sách giao dịch sang file CSV' : 'Export transactions to CSV'}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 text-gray-700 dark:text-gray-200 text-xs font-semibold cursor-pointer shrink-0 transition-colors shadow-2xs"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-gray-200 dark:border-white/[0.1] bg-gray-50 dark:bg-white/[0.04] hover:bg-gray-100 dark:hover:bg-white/[0.08] disabled:opacity-40 text-gray-700 dark:text-gray-200 text-xs font-semibold cursor-pointer shrink-0 transition-colors shadow-2xs"
                 >
                   <Download className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                   <span>{lang === 'vi' ? 'Xuất CSV' : 'Export'}</span>
@@ -1136,7 +1136,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
               <select
                 value={categoryFilter}
                 onChange={(e) => setCategoryFilter(e.target.value as FinanceCategoryId | 'all')}
-                className="text-xs px-2.5 py-1.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-200"
+                className="text-xs px-2.5 py-1.5 rounded-xl border border-gray-200 dark:border-white/[0.1] bg-gray-50 dark:bg-white/[0.04] text-gray-700 dark:text-gray-200"
               >
                 <option value="all">{lang === 'vi' ? 'Mọi danh mục' : 'All categories'}</option>
                 {FINANCE_CATEGORIES.map((c) => (
@@ -1153,7 +1153,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder={lang === 'vi' ? 'Tìm theo tên, ghi chú...' : 'Search title, notes...'}
-                  className="w-full text-xs pl-8 pr-7 py-1.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-100 placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-rose-500"
+                  className="w-full text-xs pl-8 pr-7 py-1.5 rounded-xl border border-gray-200 dark:border-white/[0.1] bg-gray-50 dark:bg-white/[0.04] text-gray-800 dark:text-gray-100 placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-rose-500"
                 />
                 {query && (
                   <button
@@ -1168,7 +1168,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
             </div>
 
             {/* Row 3: Subtotal stats info */}
-            <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-between text-[11px] text-gray-500 dark:text-gray-400">
+            <div className="pt-2 border-t border-slate-100 dark:border-white/[0.08] flex flex-wrap items-center justify-between text-[11px] text-gray-500 dark:text-gray-400">
               <div>
                 {lang === 'vi' ? 'Đang lọc' : 'Showing'}: <strong className="text-gray-800 dark:text-gray-200">{visibleStats.count}</strong> {lang === 'vi' ? 'giao dịch' : 'txs'}
               </div>
@@ -1191,14 +1191,14 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
           </div>
 
           {visibleTransactions.length === 0 ? (
-            <div className="glass-panel rounded-2xl border border-dashed border-gray-300 dark:border-gray-700 p-10 text-center">
+            <div className="glass-panel rounded-2xl border border-dashed border-gray-300 dark:border-white/[0.1] p-10 text-center">
               <Wallet className="w-8 h-8 text-gray-300 dark:text-gray-600 mx-auto mb-2" />
               <p className="text-xs text-gray-400">
                 {lang === 'vi' ? 'Chưa có giao dịch nào trong tháng này.' : 'No transactions in this month.'}
               </p>
             </div>
           ) : (
-            <div className="glass-panel rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs divide-y divide-gray-100 dark:divide-gray-800 overflow-hidden">
+            <div className="glass-panel rounded-2xl border border-slate-200 dark:border-white/[0.08] shadow-xs divide-y divide-gray-100 dark:divide-gray-800 overflow-hidden">
               {visibleTransactions.map((tx) => {
                 const meta = categoryMeta(tx.category);
                 const isIncome = tx.type === 'income';
@@ -1255,7 +1255,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
         {/* Right: charts */}
         <div className="xl:col-span-5 space-y-4">
           <div className="glass-panel p-4">
-            <h3 className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 mb-3">
+            <h3 className="text-[10px] font-semibold  text-gray-400 mb-3">
               {lang === 'vi' ? 'Tỷ lệ chi tiêu theo danh mục' : 'Spending by category'}
             </h3>
 
@@ -1296,7 +1296,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
           </div>
 
           <div className="glass-panel p-4">
-            <h3 className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 mb-3">
+            <h3 className="text-[10px] font-semibold  text-gray-400 mb-3">
               {lang === 'vi' ? 'Dòng tiền theo ngày' : 'Daily cash flow'}
             </h3>
             <BarChart
@@ -1325,7 +1325,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
       {/* Set Real Balance Modal */}
       {showBalanceModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
-          <div className="glass-panel w-full max-w-md rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-5 animate-in zoom-in-95 duration-150">
+          <div className="glass-panel w-full max-w-md rounded-2xl shadow-2xl border border-slate-200 dark:border-white/[0.08] p-5 animate-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <Wallet className="w-5 h-5 text-rose-600 dark:text-rose-400" />
@@ -1350,7 +1350,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
 
             <form onSubmit={handleSaveRealBalance}>
               <div className="mb-3">
-                <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">
+                <label className="block text-[10px] font-bold text-gray-500  mb-1">
                   {lang === 'vi' ? 'Số dư hiện có lúc này' : 'Current real balance'}
                 </label>
                 <div className="relative">
@@ -1359,7 +1359,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
                     step={1000}
                     value={realBalanceDraft}
                     onChange={(e) => setRealBalanceDraft(e.target.value)}
-                    className="w-full text-lg font-bold font-mono px-3 py-2.5 rounded-xl border border-rose-400 dark:border-rose-600 bg-white dark:bg-slate-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-rose-500/30"
+                    className="w-full text-lg font-bold font-mono px-3 py-2.5 rounded-xl border border-rose-400 dark:border-rose-600 bg-white dark:bg-[#070205] text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-rose-500/30"
                     placeholder="VD: 25000000"
                     autoFocus
                   />
@@ -1428,7 +1428,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
 
               {/* Calibration Mode Selector */}
               <div className="mb-4 space-y-2">
-                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
+                <span className="text-[10px] font-bold text-gray-400  block">
                   {lang === 'vi' ? 'Cách thức đồng bộ số dư:' : 'Sync method:'}
                 </span>
 
@@ -1437,7 +1437,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
                   className={`flex items-start gap-2.5 p-2.5 rounded-xl border cursor-pointer transition-colors ${
                     balanceMode === 'wipe_clean'
                       ? 'border-rose-500 bg-rose-50/50 dark:bg-rose-950/30'
-                      : 'border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50'
+                      : 'border-slate-200 dark:border-white/[0.08] hover:bg-slate-50 dark:hover:bg-slate-800/50'
                   }`}
                 >
                   <input
@@ -1464,7 +1464,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
                   className={`flex items-start gap-2.5 p-2.5 rounded-xl border cursor-pointer transition-colors ${
                     balanceMode === 'calibrate_base'
                       ? 'border-rose-500 bg-rose-50/50 dark:bg-rose-950/30'
-                      : 'border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50'
+                      : 'border-slate-200 dark:border-white/[0.08] hover:bg-slate-50 dark:hover:bg-slate-800/50'
                   }`}
                 >
                   <input
@@ -1491,7 +1491,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
                   className={`flex items-start gap-2.5 p-2.5 rounded-xl border cursor-pointer transition-colors ${
                     balanceMode === 'adjust_tx'
                       ? 'border-rose-500 bg-rose-50/50 dark:bg-rose-950/30'
-                      : 'border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50'
+                      : 'border-slate-200 dark:border-white/[0.08] hover:bg-slate-50 dark:hover:bg-slate-800/50'
                   }`}
                 >
                   <input
@@ -1514,7 +1514,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
                 </label>
               </div>
 
-              <div className="flex items-center justify-between gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+              <div className="flex items-center justify-between gap-2 pt-3 border-t border-slate-100 dark:border-white/[0.08]">
                 <button
                   type="button"
                   onClick={handleResetToZero}
@@ -1550,7 +1550,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
       {/* Confirm Clear Demo Data Modal */}
       {clearDemoConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
-          <div className="glass-panel w-full max-w-sm rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-5 animate-in zoom-in-95 duration-150">
+          <div className="glass-panel w-full max-w-sm rounded-2xl shadow-2xl border border-slate-200 dark:border-white/[0.08] p-5 animate-in zoom-in-95 duration-150">
             <div className="flex items-center gap-2 text-rose-600 dark:text-rose-400 mb-2">
               <AlertTriangle className="w-5 h-5" />
               <h3 className="text-sm font-bold">

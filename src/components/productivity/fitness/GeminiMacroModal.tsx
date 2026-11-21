@@ -141,9 +141,9 @@ export const GeminiMacroModal: React.FC<GeminiMacroModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
-      <div className="bg-white dark:bg-[#131b2e] w-full max-w-2xl max-h-[92vh] rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden flex flex-col">
+      <div className="bg-white dark:bg-white/[0.03] backdrop-blur-xl w-full max-w-2xl max-h-[92vh] rounded-2xl border border-slate-200 dark:border-white/[0.08] shadow-2xl overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between p-4.5 border-b border-gray-100 dark:border-slate-800 bg-gradient-to-r from-orange-500/10 via-amber-500/10 to-transparent">
+        <div className="flex items-center justify-between p-4.5 border-b border-gray-100 dark:border-white/[0.08] bg-gradient-to-r from-orange-500/10 via-amber-500/10 to-transparent">
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-orange-500 to-amber-600 text-white flex items-center justify-center font-bold text-lg shadow-sm">
               <Sparkles className="w-5 h-5 text-amber-200" />
@@ -167,14 +167,14 @@ export const GeminiMacroModal: React.FC<GeminiMacroModalProps> = ({
         </div>
 
         {/* Tab switch */}
-        <div className="p-3 border-b border-gray-100 dark:border-slate-800 bg-gray-50/50 dark:bg-gray-900/30 flex items-center gap-2">
+        <div className="p-3 border-b border-gray-100 dark:border-white/[0.08] bg-gray-50/50 dark:bg-gray-900/30 flex items-center gap-2">
           <button
             type="button"
             onClick={() => setActiveTab('ingest')}
             className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
               activeTab === 'ingest'
                 ? 'bg-orange-600 text-white shadow-xs'
-                : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 border border-slate-200 dark:border-gray-700'
+                : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 border border-slate-200 dark:border-white/[0.1]'
             }`}
           >
             <FileText className="w-4 h-4" />
@@ -187,7 +187,7 @@ export const GeminiMacroModal: React.FC<GeminiMacroModalProps> = ({
             className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
               activeTab === 'api'
                 ? 'bg-orange-600 text-white shadow-xs'
-                : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 border border-slate-200 dark:border-gray-700'
+                : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 border border-slate-200 dark:border-white/[0.1]'
             }`}
           >
             <Send className="w-4 h-4" />
@@ -198,7 +198,7 @@ export const GeminiMacroModal: React.FC<GeminiMacroModalProps> = ({
         {/* Body */}
         <div className="p-5 flex-1 overflow-y-auto space-y-4">
           {/* Target meal slot selector */}
-          <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-900/40 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800">
+          <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-900/40 p-2.5 rounded-xl border border-slate-200 dark:border-white/[0.08]">
             <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">
               Mặc định nạp vào bữa:
             </span>
@@ -255,14 +255,14 @@ export const GeminiMacroModal: React.FC<GeminiMacroModalProps> = ({
                 <button
                   type="button"
                   onClick={() => applyPreset('Trưa: Cơm tấm sườn bì chả 680 kcal (38P, 78C, 22F)')}
-                  className="px-2 py-1 rounded-md bg-gray-100 dark:bg-gray-800 hover:bg-orange-100 dark:hover:bg-orange-950/40 text-[11px] font-medium text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 cursor-pointer"
+                  className="px-2 py-1 rounded-md bg-gray-100 dark:bg-gray-800 hover:bg-orange-100 dark:hover:bg-orange-950/40 text-[11px] font-medium text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-white/[0.1] cursor-pointer"
                 >
                   🍚 Cơm tấm sườn
                 </button>
                 <button
                   type="button"
                   onClick={() => applyPreset('Sáng: Phở bò tái gầu 480 kcal (34P, 56C, 12F)')}
-                  className="px-2 py-1 rounded-md bg-gray-100 dark:bg-gray-800 hover:bg-orange-100 dark:hover:bg-orange-950/40 text-[11px] font-medium text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 cursor-pointer"
+                  className="px-2 py-1 rounded-md bg-gray-100 dark:bg-gray-800 hover:bg-orange-100 dark:hover:bg-orange-950/40 text-[11px] font-medium text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-white/[0.1] cursor-pointer"
                 >
                   🍜 Phở bò
                 </button>
@@ -273,7 +273,7 @@ export const GeminiMacroModal: React.FC<GeminiMacroModalProps> = ({
                       `Sáng: Phở bò 450 kcal, 32P, 55C, 10F\nTrưa: Cơm tấm sườn 650 kcal, 38P, 75C, 20F\nTối: 200g ức gà + 200g khoai lang 380 kcal, 46P, 42C, 4F\nPhụ: 1 muỗng Whey 120 kcal, 25P, 2C, 1.5F`
                     )
                   }
-                  className="px-2 py-1 rounded-md bg-gray-100 dark:bg-gray-800 hover:bg-orange-100 dark:hover:bg-orange-950/40 text-[11px] font-medium text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 cursor-pointer"
+                  className="px-2 py-1 rounded-md bg-gray-100 dark:bg-gray-800 hover:bg-orange-100 dark:hover:bg-orange-950/40 text-[11px] font-medium text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-white/[0.1] cursor-pointer"
                 >
                   🥗 Thực đơn 4 bữa
                 </button>
@@ -288,7 +288,7 @@ export const GeminiMacroModal: React.FC<GeminiMacroModalProps> = ({
                   value={promptInput}
                   onChange={(e) => handlePromptInputChange(e.target.value)}
                   placeholder={`Ví dụ gõ trực tiếp:\nSáng: Phở bò tái 450 kcal, 32P, 55C, 10F\nTrưa: Cơm tấm sườn 650 kcal, 38P, 75C, 20F\nTối: 200g ức gà, khoai lang 380 kcal (45P, 40C, 4F)`}
-                  className="mt-1 w-full text-xs font-mono p-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 shadow-2xs leading-relaxed focus:ring-2 focus:ring-orange-500 focus:outline-none"
+                  className="mt-1 w-full text-xs font-mono p-3 rounded-xl border border-gray-300 dark:border-white/[0.1] bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 shadow-2xs leading-relaxed focus:ring-2 focus:ring-orange-500 focus:outline-none"
                 />
               </div>
             </div>
@@ -307,7 +307,7 @@ export const GeminiMacroModal: React.FC<GeminiMacroModalProps> = ({
                   value={apiKey}
                   onChange={(e) => setApiKey(e.target.value)}
                   placeholder="AIzaSy..."
-                  className="mt-1 w-full text-xs font-mono px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 font-semibold"
+                  className="mt-1 w-full text-xs font-mono px-3 py-2 rounded-xl border border-gray-300 dark:border-white/[0.1] bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 font-semibold"
                 />
               </div>
 
@@ -320,7 +320,7 @@ export const GeminiMacroModal: React.FC<GeminiMacroModalProps> = ({
                   value={naturalPromptText}
                   onChange={(e) => setNaturalPromptText(e.target.value)}
                   placeholder="Ví dụ: Trưa nay ăn 1 đĩa cơm gà xối mỡ, 1 bát canh cải thịt băm, uống 1 ly nước mía ít ngọt..."
-                  className="mt-1 w-full text-xs px-3.5 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 shadow-2xs"
+                  className="mt-1 w-full text-xs px-3.5 py-2.5 rounded-xl border border-gray-300 dark:border-white/[0.1] bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 shadow-2xs"
                 />
               </div>
 
@@ -347,8 +347,8 @@ export const GeminiMacroModal: React.FC<GeminiMacroModalProps> = ({
 
           {/* Parsed Result Preview with CTG Macro Ring */}
           {parsedItems.length > 0 && (
-            <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800 space-y-4">
-              <div className="flex items-center justify-between text-xs font-bold text-slate-800 dark:text-slate-200 border-b border-slate-200 dark:border-slate-800 pb-2.5">
+            <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/70 border border-slate-200 dark:border-white/[0.08] space-y-4">
+              <div className="flex items-center justify-between text-xs font-bold text-slate-800 dark:text-slate-200 border-b border-slate-200 dark:border-white/[0.08] pb-2.5">
                 <span className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
                   <CheckCircle2 className="w-4 h-4" />
                   Bóc tách thành công {parsedItems.length} món ăn:
@@ -359,7 +359,7 @@ export const GeminiMacroModal: React.FC<GeminiMacroModalProps> = ({
               </div>
 
               {/* CTG Macro Ring Visualization */}
-              <div className="flex flex-col sm:flex-row items-center gap-4 bg-white dark:bg-gray-800/80 p-3.5 rounded-xl border border-slate-200 dark:border-gray-700">
+              <div className="flex flex-col sm:flex-row items-center gap-4 bg-white dark:bg-gray-800/80 p-3.5 rounded-xl border border-slate-200 dark:border-white/[0.1]">
                 {/* SVG Ring */}
                 <div className="relative w-24 h-24 shrink-0 flex items-center justify-center">
                   <svg className="w-24 h-24 transform -rotate-90" viewBox="0 0 100 100">
@@ -431,7 +431,7 @@ export const GeminiMacroModal: React.FC<GeminiMacroModalProps> = ({
                 {parsedItems.map((item, idx) => (
                   <div
                     key={idx}
-                    className="p-2.5 rounded-xl bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 flex items-center justify-between text-xs"
+                    className="p-2.5 rounded-xl bg-white dark:bg-gray-800 border border-slate-200 dark:border-white/[0.1] flex items-center justify-between text-xs"
                   >
                     <div className="flex items-center gap-2">
                       <span className="px-1.5 py-0.5 rounded-md bg-gray-100 dark:bg-gray-700 text-[9px] font-bold uppercase text-gray-600 dark:text-gray-300">
@@ -457,7 +457,7 @@ export const GeminiMacroModal: React.FC<GeminiMacroModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-gray-100 dark:border-slate-800 bg-gray-50 dark:bg-gray-900/50 flex items-center justify-between">
+        <div className="p-4 border-t border-gray-100 dark:border-white/[0.08] bg-gray-50 dark:bg-gray-900/50 flex items-center justify-between">
           <span className="text-xs text-gray-500">
             {parsedItems.length > 0 ? `Sẵn sàng nạp ${parsedItems.length} món vào nhật ký` : 'Chưa có món ăn nào'}
           </span>
@@ -466,7 +466,7 @@ export const GeminiMacroModal: React.FC<GeminiMacroModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-700 text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-100 cursor-pointer"
+              className="px-4 py-2 rounded-xl border border-gray-300 dark:border-white/[0.1] text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-100 cursor-pointer"
             >
               Hủy
             </button>

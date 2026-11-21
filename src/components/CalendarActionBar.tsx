@@ -94,24 +94,24 @@ export const CalendarActionBar: React.FC<CalendarActionBarProps> = ({
           <span>{currentMonthName} {currentYear}</span>
         </h2>
 
-        <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800/80 p-0.5 rounded-lg border border-slate-200 dark:border-slate-700/60">
+        <div className="flex items-center gap-1 bg-white/[0.04] dark:bg-white/[0.04] p-1 rounded-full border border-white/[0.12] shadow-[0_4px_20px_rgba(0,0,0,0.25)] backdrop-blur-2xl">
           <button
             onClick={onToday}
-            className="px-2.5 py-1 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-white dark:hover:bg-slate-700 rounded-md transition-colors cursor-pointer"
+            className="px-3 py-1 text-xs font-bold text-white hover:bg-white/[0.1] rounded-full transition-colors cursor-pointer"
           >
             {lang === 'vi' ? 'Hôm nay' : 'Today'}
           </button>
           <button
             onClick={onPrev}
             title={lang === 'vi' ? 'Thời gian trước' : 'Previous'}
-            className="p-1 text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 rounded-md transition-colors cursor-pointer"
+            className="p-1.5 text-slate-300 hover:text-white hover:bg-white/[0.1] rounded-full transition-colors cursor-pointer"
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
           <button
             onClick={onNext}
             title={lang === 'vi' ? 'Thời gian tới' : 'Next'}
-            className="p-1 text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 rounded-md transition-colors cursor-pointer"
+            className="p-1.5 text-slate-300 hover:text-white hover:bg-white/[0.1] rounded-full transition-colors cursor-pointer"
           >
             <ChevronRight className="w-4 h-4" />
           </button>
@@ -145,15 +145,15 @@ export const CalendarActionBar: React.FC<CalendarActionBarProps> = ({
       {/* Right: View Pills + Category Filter + Add Event */}
       <div className="flex items-center gap-2 flex-wrap justify-between sm:justify-end">
         {/* View Switcher segment */}
-        <div className="flex items-center bg-slate-100 dark:bg-white/[0.05] p-1 rounded-full border border-slate-200 dark:border-white/[0.12] backdrop-blur-md">
+        <div className="flex items-center bg-white/[0.04] dark:bg-white/[0.04] p-1.5 rounded-full border border-white/[0.12] shadow-[0_8px_24px_rgba(0,0,0,0.35)] backdrop-blur-2xl gap-1">
           {calViewOptions.map((opt) => (
             <button
               key={opt.id}
               onClick={() => onViewChange(opt.id)}
-              className={`px-3 py-1 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+              className={`px-3.5 py-1.5 text-xs font-bold rounded-full transition-all duration-200 cursor-pointer ${
                 view === opt.id
-                  ? 'glass-pill-primary text-slate-950 font-bold shadow-sm'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  ? 'bg-white text-slate-950 shadow-[0_2px_12px_rgba(255,255,255,0.4)] scale-102 font-extrabold'
+                  : 'text-slate-300 hover:text-white hover:bg-white/[0.08]'
               }`}
             >
               {lang === 'vi' ? opt.labelVi : opt.labelEn}

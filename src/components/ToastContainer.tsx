@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { CheckCircle2, Info, AlertTriangle, AlertCircle, X } from 'lucide-react';
+import { CheckCircle2, Info, AlertTriangle, AlertCircle, X, Volume2, Sparkles } from 'lucide-react';
 import { ToastItem } from '../utils/notify';
 
 export const ToastContainer: React.FC = () => {
@@ -32,7 +32,7 @@ export const ToastContainer: React.FC = () => {
   if (toasts.length === 0) return null;
 
   return (
-    <div className="fixed top-5 right-5 z-[99999] flex flex-col gap-2.5 max-w-sm sm:max-w-md w-full pointer-events-none px-4 sm:px-0">
+    <div className="fixed top-5 right-5 sm:right-6 z-[999999] flex flex-col gap-3 max-w-sm sm:max-w-md w-full pointer-events-none px-4 sm:px-0">
       {toasts.map((toast) => {
         const isSuccess = toast.type === 'success';
         const isWarning = toast.type === 'warning';
@@ -43,40 +43,66 @@ export const ToastContainer: React.FC = () => {
             key={toast.id}
             role="status"
             aria-live="polite"
-            className={`pointer-events-auto rounded-2xl border p-4 shadow-2xl backdrop-blur-xl transition-all duration-300 animate-in slide-in-from-top-4 fade-in ${
+            className={`pointer-events-auto rounded-2xl border p-4 shadow-2xl backdrop-blur-2xl transition-all duration-300 toast-card-enter ${
               isSuccess
-                ? 'bg-[#0c1524]/95 border-emerald-500/40 shadow-emerald-950/30'
+                ? 'bg-gradient-to-r from-[#06241a]/98 via-[#071914]/98 to-[#050f0c]/98 border-emerald-400/50 text-white toast-success-glow'
                 : isWarning
-                ? 'bg-[#1c1409]/95 border-amber-500/40 shadow-amber-950/30'
+                ? 'bg-gradient-to-r from-[#2a1b06]/98 via-[#1f1304]/98 to-[#150d03]/98 border-amber-400/50 text-white shadow-amber-950/40'
                 : isError
-                ? 'bg-[#1f0d11]/95 border-rose-500/40 shadow-rose-950/30'
-                : 'bg-[#0f172a]/95 border-blue-500/40 shadow-blue-950/30'
+                ? 'bg-gradient-to-r from-[#2c090e]/98 via-[#1f0509]/98 to-[#150306]/98 border-rose-400/50 text-white shadow-rose-950/40'
+                : 'bg-gradient-to-r from-[#0d182e]/98 via-[#091020]/98 to-[#050912]/98 border-blue-400/50 text-white shadow-blue-950/40'
             }`}
           >
-            <div className="flex items-start gap-3">
+            <div className="flex items-start gap-3.5">
               <div
-                className={`p-1.5 rounded-xl shrink-0 ${
+                className={`p-2 rounded-xl shrink-0 relative ${
                   isSuccess
-                    ? 'bg-emerald-500/20 text-emerald-400'
+                    ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-400/40'
                     : isWarning
-                    ? 'bg-amber-500/20 text-amber-400'
+                    ? 'bg-amber-500/20 text-amber-300 border border-amber-400/40'
                     : isError
-                    ? 'bg-rose-500/20 text-rose-400'
-                    : 'bg-blue-500/20 text-blue-400'
+                    ? 'bg-rose-500/20 text-rose-300 border border-rose-400/40'
+                    : 'bg-blue-500/20 text-blue-300 border border-blue-400/40'
                 }`}
               >
-                {isSuccess && <CheckCircle2 className="w-5 h-5" />}
-                {isWarning && <AlertTriangle className="w-5 h-5" />}
-                {isError && <AlertCircle className="w-5 h-5" />}
-                {!isSuccess && !isWarning && !isError && <Info className="w-5 h-5" />}
+                {isSuccess && (
+                  <>
+                    <CheckCircle2 className="w-5 h-5 text-emerald-300 icon-pop-enter" />
+                    <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping opacity-75" />
+                  </>
+                )}
+                {isWarning && <AlertTriangle className="w-5 h-5 text-amber-300" />}
+                {isError && <AlertCircle className="w-5 h-5 text-rose-300" />}
+                {!isSuccess && !isWarning && !isError && <Info className="w-5 h-5 text-blue-300" />}
               </div>
 
               <div className="flex-1 min-w-0 pr-1">
-                <h4 className="text-sm font-bold text-white tracking-tight leading-snug">
+                <div className="flex items-center gap-2 mb-0.5">
+                  <span
+                    className={`text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full border ${
+                      isSuccess
+                        ? 'bg-emerald-500/20 text-emerald-300 border-emerald-400/40'
+                        : isWarning
+                        ? 'bg-amber-500/20 text-amber-300 border-amber-400/40'
+                        : isError
+                        ? 'bg-rose-500/20 text-rose-300 border-rose-400/40'
+                        : 'bg-blue-500/20 text-blue-300 border-blue-400/40'
+                    }`}
+                  >
+                    {isSuccess ? 'Thành công' : isWarning ? 'Cảnh báo' : isError ? 'Lỗi' : 'Thông tin'}
+                  </span>
+                  {isSuccess && (
+                    <span className="text-[10px] text-emerald-400/80 font-mono flex items-center gap-1">
+                      <Volume2 className="w-3 h-3 text-emerald-400" />
+                      <span>Đã xác nhận</span>
+                    </span>
+                  )}
+                </div>
+                <h4 className="text-sm font-extrabold text-white tracking-tight leading-snug">
                   {toast.title}
                 </h4>
                 {toast.message && (
-                  <p className="text-xs text-white/75 mt-0.5 leading-relaxed break-words">
+                  <p className="text-xs text-white/80 mt-1 leading-relaxed break-words font-medium">
                     {toast.message}
                   </p>
                 )}
@@ -92,34 +118,26 @@ export const ToastContainer: React.FC = () => {
               </button>
             </div>
 
-            {/* Subtle animated timeout indicator bar */}
-            <div className="mt-3 w-full h-1 bg-white/10 rounded-full overflow-hidden">
+            {/* Glowing animated progress timeout bar */}
+            <div className="mt-3.5 w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
               <div
-                className={`h-full rounded-full transition-all ease-linear ${
+                className={`h-full rounded-full transition-all ease-linear shadow-xs ${
                   isSuccess
-                    ? 'bg-linear-to-r from-emerald-500 to-teal-400'
+                    ? 'bg-gradient-to-r from-emerald-400 via-teal-300 to-emerald-500'
                     : isWarning
-                    ? 'bg-linear-to-r from-amber-500 to-orange-400'
+                    ? 'bg-gradient-to-r from-amber-400 to-orange-500'
                     : isError
-                    ? 'bg-linear-to-r from-rose-500 to-red-400'
-                    : 'bg-linear-to-r from-blue-500 to-indigo-400'
+                    ? 'bg-gradient-to-r from-rose-400 to-red-500'
+                    : 'bg-gradient-to-r from-blue-400 to-indigo-500'
                 }`}
                 style={{
-                  animation: `shrinkWidth ${toast.durationMs}ms linear forwards`,
+                  animation: `toastProgressShrink ${toast.durationMs}ms linear forwards`,
                 }}
               />
             </div>
           </div>
         );
       })}
-
-      <style>{`
-        @keyframes shrinkWidth {
-          from { width: 100%; }
-          to { width: 0%; }
-        }
-      `}</style>
     </div>
   );
 };
-

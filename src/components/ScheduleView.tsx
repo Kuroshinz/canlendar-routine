@@ -123,7 +123,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
                     <div
                       key={ev.id}
                       onClick={(e) => onSelectEvent(ev, e.currentTarget)}
-                      className="bg-white dark:bg-gray-800 p-3.5 rounded-xl border border-gray-200 dark:border-gray-700 hover:shadow-md transition-all cursor-pointer relative overflow-hidden group"
+                      className="bg-white dark:bg-gray-800 p-3.5 rounded-xl border border-gray-200 dark:border-white/[0.1] hover:shadow-md transition-all cursor-pointer relative overflow-hidden group"
                     >
                       {/* Left accent color strip */}
                       <div

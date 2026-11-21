@@ -1,3 +1,4 @@
+import { accountStorage } from '../services/accountStorage';
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   CheckSquare,
@@ -58,7 +59,7 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
   // Keep Notes state (persisted to localStorage)
   const [notes, setNotes] = useState<NoteItem[]>(() => {
     try {
-      const saved = localStorage.getItem('gcal_keep_notes');
+      const saved = accountStorage.getItem('gcal_keep_notes');
       if (saved) return JSON.parse(saved);
     } catch {}
     return DEFAULT_NOTES;
@@ -66,7 +67,7 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
 
   useEffect(() => {
     try {
-      localStorage.setItem('gcal_keep_notes', JSON.stringify(notes));
+      accountStorage.setItem('gcal_keep_notes', JSON.stringify(notes));
     } catch {}
   }, [notes]);
 

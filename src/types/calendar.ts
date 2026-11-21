@@ -10,7 +10,9 @@ export type CalendarViewType =
   | 'tasks'
   | 'focus'
   | 'finance'
-  | 'health';
+  | 'health'
+  | 'landing'
+  | 'scene';
 
 export type EventType = 'event' | 'task' | 'reminder';
 
@@ -105,8 +107,8 @@ export const GOOGLE_COLORS: GoogleColor[] = [
 ];
 
 export const DEFAULT_CALENDARS: CalendarCategory[] = [
-  { id: 'personal', name: 'Personal', nameVi: 'Cá nhân', color: '#039BE5', visible: true },
-  { id: 'work', name: 'Work', nameVi: 'Công việc', color: '#7986CB', visible: true },
+  { id: 'personal', name: 'Personal', nameVi: 'Cá nhân', color: '#E11D48', visible: true },
+  { id: 'work', name: 'Work', nameVi: 'Công việc', color: '#8B5CF6', visible: true },
   { id: 'study', name: 'Study', nameVi: 'Học tập', color: '#8E24AA', visible: true },
   { id: 'health', name: 'Fitness & Health', nameVi: 'Tập luyện & Sức khỏe', color: '#33B679', visible: true },
   { id: 'reminders', name: 'Reminders', nameVi: 'Nhắc nhở', color: '#33B679', visible: true },

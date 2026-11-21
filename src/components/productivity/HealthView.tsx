@@ -193,7 +193,13 @@ export const HealthView: React.FC<HealthViewProps> = ({
   onUpdateNutritionSettings = () => {},
   onScheduleSessionToCalendar,
 }) => {
-  const [activeSubTab, setActiveSubTab] = useState<SubTab>('overview');
+  const [activeSubTab, setActiveSubTab] = useState<SubTab>(() => {
+    const saved = localStorage.getItem('vortex_health_subtab');
+    if (saved && ['overview', 'roadmap', 'inbody', 'training', 'nutrition', 'profile'].includes(saved)) {
+      return saved as SubTab;
+    }
+    return 'overview';
+  });
   const today = formatDateString(new Date());
   const todayLog = useMemo(
     () => healthLogs.find((l) => l.date === today) || emptyLog(today),
@@ -278,6 +284,18 @@ export const HealthView: React.FC<HealthViewProps> = ({
     return ctgPeriodizedRoadmap.phases.find((p) => p.isCurrent) || ctgPeriodizedRoadmap.phases[0] || null;
   }, [ctgPeriodizedRoadmap]);
 
+  const activePhaseDaysElapsed = useMemo(() => {
+    if (!ctgActivePhase?.startDate) return 0;
+    const start = parseVnDate(ctgActivePhase.startDate);
+    const startMs = start.getTime();
+    if (!Number.isFinite(startMs)) return 0;
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    start.setHours(0, 0, 0, 0);
+    const diffDays = Math.round((now.getTime() - start.getTime()) / 86_400_000);
+    return Math.max(0, Number.isFinite(diffDays) ? diffDays : 0);
+  }, [ctgActivePhase]);
+
   const activePhaseDaysRemaining = useMemo(() => {
     if (!ctgActivePhase?.endDate) return 0;
     const end = parseVnDate(ctgActivePhase.endDate);
@@ -356,7 +374,7 @@ export const HealthView: React.FC<HealthViewProps> = ({
     const raw = selectedLog[key] as number | undefined;
     return (
       <label className="block">
-        <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">{label}</span>
+        <span className="text-[10px] font-semibold  text-gray-400">{label}</span>
         <div className="mt-1 flex items-center gap-1.5">
           <input
             type="number"
@@ -368,7 +386,7 @@ export const HealthView: React.FC<HealthViewProps> = ({
               const v = e.target.value === '' ? undefined : Number(e.target.value);
               patchLog({ [key]: v } as Partial<HealthDayLog>);
             }}
-            className="w-full text-xs px-2.5 py-1.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 font-semibold"
+            className="w-full text-xs px-2.5 py-1.5 rounded-lg border border-gray-300 dark:border-white/[0.1] bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 font-semibold"
           />
           <span className="text-[10px] text-gray-400 shrink-0 w-8">{unit}</span>
         </div>
@@ -426,7 +444,7 @@ export const HealthView: React.FC<HealthViewProps> = ({
           : 0,
       icon: Moon,
       color: '#7986CB',
-      cls: 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/40',
+      cls: 'text-rose-500 dark:text-rose-400 bg-rose-950/30 dark:bg-rose-950/40',
     },
     {
       label: lang === 'vi' ? 'Calo tiêu thụ' : 'Calories burned',
@@ -445,8 +463,8 @@ export const HealthView: React.FC<HealthViewProps> = ({
   );
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-y-auto bg-slate-50 dark:bg-[#0b101b] p-4 md:p-6 lg:p-8 select-none">
-      {/* VortexCal Brand Header */}
+    <div className="flex-1 flex flex-col h-full overflow-y-auto bg-slate-50 dark:bg-transparent p-4 md:p-6 lg:p-8 select-none">
+      {/* ZENOX Brand Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
           <div className="flex items-center gap-2.5">
@@ -478,18 +496,18 @@ export const HealthView: React.FC<HealthViewProps> = ({
           >
             {lang === 'vi' ? 'Hôm nay' : 'Today'}
           </button>
-          <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
+          <span className="px-2.5 py-1 rounded-full text-[10px] font-bold  bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
             {lang === 'vi' ? 'Tự nhập liệu' : 'Manual Track'}
           </span>
         </div>
       </div>
 
       {/* Multitasking Sub-Tabs Sticky Bar */}
-      <div className="sticky top-0 z-20 bg-slate-50/95 dark:bg-[#0b101b]/95 backdrop-blur-md pt-2 pb-3 mb-6 border-b border-slate-200 dark:border-slate-800">
-        <div className="flex items-center gap-2 overflow-x-auto py-1 px-0.5">
+      <div className="sticky top-0 z-20 pt-2 pb-3 mb-6">
+        <div className="p-1.5 rounded-full bg-white/[0.04] dark:bg-white/[0.04] backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.36),0_0_20px_rgba(255,255,255,0.03)] inline-flex items-center gap-1.5 overflow-x-auto max-w-full scrollbar-none">
           {[
             { id: 'overview', label: lang === 'vi' ? 'Tổng quan & Chỉ số' : 'Overview & Logs', icon: HeartPulse },
-            { id: 'roadmap', label: lang === 'vi' ? 'Định hướng lộ trình' : 'Roadmap & AI', icon: Compass },
+            { id: 'roadmap', label: lang === 'vi' ? 'Lộ trình thể hình (NTN)' : 'NTN Roadmap', icon: Compass },
             { id: 'inbody', label: lang === 'vi' ? 'Tiến độ & Check Body' : 'Progress & Body Check', icon: Scale },
             { id: 'training', label: lang === 'vi' ? 'Giáo án & Buổi tập' : 'Workouts & Mesocycle', icon: Dumbbell },
             { id: 'nutrition', label: lang === 'vi' ? 'Dinh dưỡng & Món Việt' : 'Nutrition & Meals', icon: Utensils },
@@ -502,14 +520,14 @@ export const HealthView: React.FC<HealthViewProps> = ({
                 key={tab.id}
                 type="button"
                 onClick={() => setActiveSubTab(tab.id as SubTab)}
-                className={`inline-flex items-center gap-2 h-10 px-4 rounded-xl text-xs font-bold leading-none transition-all cursor-pointer shrink-0 shadow-2xs ${
+                className={`inline-flex items-center gap-2 h-9 px-4 rounded-full text-xs font-bold transition-all duration-300 cursor-pointer shrink-0 whitespace-nowrap ${
                   isActive
-                    ? 'bg-rose-600 text-white shadow-xs ring-1 ring-rose-600'
-                    : 'bg-white dark:bg-[#131b2e] text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/60 border border-slate-200 dark:border-slate-800'
+                    ? 'bg-white text-slate-950 shadow-[0_2px_14px_rgba(255,255,255,0.4)] scale-102 font-extrabold'
+                    : 'text-slate-300 hover:text-white hover:bg-white/[0.08] hover:scale-102 active:scale-98 font-semibold'
                 }`}
               >
                 <Icon className="w-4 h-4 shrink-0" />
-                <span className="whitespace-nowrap">{tab.label}</span>
+                <span>{tab.label}</span>
               </button>
             );
           })}
@@ -598,6 +616,8 @@ export const HealthView: React.FC<HealthViewProps> = ({
           healthLogs={healthLogs}
           onUpsertHealthLog={onUpsertHealthLog}
           ctgPeriodizedRoadmap={ctgPeriodizedRoadmap}
+          bodyPoints={bodyPoints}
+          onUpdateProfile={onUpdateCtgProfile}
         />
       )}
 
@@ -608,6 +628,12 @@ export const HealthView: React.FC<HealthViewProps> = ({
           onGoogleSignIn={onGoogleSignIn}
           lang={lang}
           onUpdateProfile={onUpdateCtgProfile}
+          bodyPoints={bodyPoints}
+          ctgPeriodizedRoadmap={ctgPeriodizedRoadmap}
+          savedCtgRoadmaps={savedCtgRoadmaps}
+          onNavigateTab={(tab) => setActiveSubTab(tab as SubTab)}
+          onSwitchCtgRoadmap={onSwitchCtgRoadmap}
+          onDeleteCtgRoadmap={onDeleteCtgRoadmap}
         />
       )}
 
@@ -623,11 +649,14 @@ export const HealthView: React.FC<HealthViewProps> = ({
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30">
+                      <span className="text-[10px] font-extrabold  px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30">
                         Lộ Trình CTG Đang Chạy
                       </span>
                       <span className="text-xs text-white/50 font-mono">
                         {ctgActivePhase.startDate} – {ctgActivePhase.endDate}
+                      </span>
+                      <span className="text-[11px] text-emerald-400 font-bold font-mono">
+                        (Đã đi: {activePhaseDaysElapsed} ngày)
                       </span>
                       <span className="text-[11px] text-amber-400 font-semibold font-mono">
                         (Còn ~{activePhaseDaysRemaining} ngày)
@@ -716,7 +745,7 @@ export const HealthView: React.FC<HealthViewProps> = ({
           )}
 
           {/* Daily Health Score Banner */}
-      <div className="bg-white dark:bg-[#131b2e] p-4 md:p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs mb-6 flex flex-col md:flex-row md:items-center justify-between gap-5">
+      <div className="bg-white dark:bg-white/[0.03] backdrop-blur-xl p-4 md:p-5 rounded-2xl border border-slate-200 dark:border-white/[0.08] shadow-xs mb-6 flex flex-col md:flex-row md:items-center justify-between gap-5">
         <div className="flex items-center gap-4">
           {/* Big Score Badge */}
           <div
@@ -730,7 +759,7 @@ export const HealthView: React.FC<HealthViewProps> = ({
           <div>
             <div className="flex items-center gap-2">
               <span
-                className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider text-white"
+                className="px-2.5 py-0.5 rounded-full text-[10px] font-bold  text-white"
                 style={{ backgroundColor: healthScore.badgeColor }}
               >
                 {healthScore.statusLabel}
@@ -780,14 +809,14 @@ export const HealthView: React.FC<HealthViewProps> = ({
           return (
             <div
               key={card.label}
-              className="bg-white dark:bg-[#131b2e] p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs"
+              className="bg-white dark:bg-white/[0.03] backdrop-blur-xl p-3.5 rounded-2xl border border-slate-200 dark:border-white/[0.08] shadow-xs"
             >
               <div className="flex items-center gap-3">
                 <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${card.cls}`}>
                   <Icon className="w-4.5 h-4.5" />
                 </div>
                 <div className="min-w-0">
-                  <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider truncate">
+                  <div className="text-[10px] font-semibold text-slate-400  truncate">
                     {card.label}
                   </div>
                   <div className="text-base font-bold text-slate-900 dark:text-slate-100">
@@ -809,13 +838,13 @@ export const HealthView: React.FC<HealthViewProps> = ({
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
         {/* Left: manual inputs */}
         <div className="xl:col-span-5 space-y-4">
-          <div className="bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs p-4">
+          <div className="bg-white dark:bg-white/[0.03] backdrop-blur-xl rounded-2xl border border-slate-200 dark:border-white/[0.08] shadow-xs p-4">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+              <h3 className="text-[10px] font-semibold  text-slate-400">
                 {lang === 'vi' ? `Chỉ số ngày ${selectedDate}` : `Metrics for ${selectedDate}`}
               </h3>
               <span
-                className={`text-[9px] px-1.5 py-0.5 rounded-full font-semibold uppercase tracking-wider ${
+                className={`text-[9px] px-1.5 py-0.5 rounded-full font-semibold  ${
                   selectedLog.source === 'google-fit'
                     ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-300'
                     : selectedLog.source === 'mock'
@@ -870,10 +899,10 @@ export const HealthView: React.FC<HealthViewProps> = ({
           </div>
 
           {/* Macros & CTG Macro Ring */}
-          <div className="bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs p-4">
+          <div className="bg-white dark:bg-white/[0.03] backdrop-blur-xl rounded-2xl border border-slate-200 dark:border-white/[0.08] shadow-xs p-4">
             <div className="flex items-center justify-between mb-3">
               <div>
-                <h3 className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                <h3 className="text-[10px] font-semibold  text-slate-400">
                   {lang === 'vi' ? 'Dinh dưỡng & Tỉ lệ Macros' : 'Nutrition & Macro Ratio'}
                 </h3>
                 <span className="text-xs font-bold text-slate-900 dark:text-slate-100">
@@ -891,7 +920,7 @@ export const HealthView: React.FC<HealthViewProps> = ({
             </div>
 
             {/* CTG Macro Ring Visualization */}
-            <div className="flex items-center gap-4 py-2 border-y border-slate-100 dark:border-slate-800/80 mb-3">
+            <div className="flex items-center gap-4 py-2 border-y border-slate-100 dark:border-white/[0.08]/80 mb-3">
               <div className="relative w-20 h-20 shrink-0">
                 <svg className="w-20 h-20 -rotate-90" viewBox="0 0 80 80">
                   <circle cx="40" cy="40" r="34" stroke="currentColor" strokeWidth="7" fill="none" className="text-slate-100 dark:text-slate-800" />
@@ -977,7 +1006,7 @@ export const HealthView: React.FC<HealthViewProps> = ({
                 { key: 'fat' as const, label: 'Fat', color: '#ff6025' },
               ].map((m) => (
                 <label key={m.key} className="block">
-                  <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: m.color }}>
+                  <span className="text-[10px] font-semibold " style={{ color: m.color }}>
                     {m.label}
                   </span>
                   <input
@@ -1015,14 +1044,14 @@ export const HealthView: React.FC<HealthViewProps> = ({
           </div>
 
           {/* CTG Energy Balance (Cân bằng năng lượng & Thâm hụt calo) */}
-          <div className="bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs p-4">
+          <div className="bg-white dark:bg-white/[0.03] backdrop-blur-xl rounded-2xl border border-slate-200 dark:border-white/[0.08] shadow-xs p-4">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <div className="w-7 h-7 rounded-lg bg-orange-500/10 text-orange-500 flex items-center justify-center">
                   <Flame className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="text-xs font-bold text-slate-900 dark:text-slate-100 uppercase tracking-wider">
+                  <h3 className="text-xs font-bold text-slate-900 dark:text-slate-100 ">
                     {lang === 'vi' ? 'Cân Bằng Năng Lượng' : 'Energy Balance'}
                   </h3>
                   <p className="text-[10px] text-slate-400">
@@ -1032,7 +1061,7 @@ export const HealthView: React.FC<HealthViewProps> = ({
               </div>
               {netEnergy !== null && (
                 <span
-                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${
+                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full  ${
                     netEnergy < -100
                       ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-300'
                       : netEnergy > 100
@@ -1055,7 +1084,7 @@ export const HealthView: React.FC<HealthViewProps> = ({
               )}
             </div>
 
-            <div className="grid grid-cols-3 gap-2 p-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-center mb-3">
+            <div className="grid grid-cols-3 gap-2 p-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-white/[0.08] text-center mb-3">
               <div>
                 <div className="text-[10px] font-semibold text-slate-400 uppercase">Nạp vào</div>
                 <div className="text-base font-extrabold text-slate-900 dark:text-slate-100 font-mono">
@@ -1087,7 +1116,7 @@ export const HealthView: React.FC<HealthViewProps> = ({
             </div>
 
             {netEnergy !== null && currentIn > 0 && (
-              <div className="p-2.5 rounded-xl border border-dashed border-slate-200 dark:border-slate-800 text-xs">
+              <div className="p-2.5 rounded-xl border border-dashed border-slate-200 dark:border-white/[0.08] text-xs">
                 <div className="flex items-center justify-between text-[11px] mb-1">
                   <span className="text-slate-500 dark:text-slate-400 font-medium">
                     {netEnergy < 0 ? '🔥 Tốc độ giảm mỡ ước tính:' : '⚡ Tốc độ tăng cân/cơ ước tính:'}
@@ -1108,8 +1137,8 @@ export const HealthView: React.FC<HealthViewProps> = ({
           </div>
 
           {/* BMI / profile */}
-          <div className="bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs p-4">
-            <h3 className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-3">
+          <div className="bg-white dark:bg-white/[0.03] backdrop-blur-xl rounded-2xl border border-slate-200 dark:border-white/[0.08] shadow-xs p-4">
+            <h3 className="text-[10px] font-semibold  text-slate-400 mb-3">
               {lang === 'vi' ? 'Chỉ số cơ thể' : 'Body metrics'}
             </h3>
             <div className="flex items-center gap-4">
@@ -1152,9 +1181,9 @@ export const HealthView: React.FC<HealthViewProps> = ({
 
         {/* Right: charts + workouts */}
         <div className="xl:col-span-7 space-y-4">
-          <div className="bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs p-4">
+          <div className="bg-white dark:bg-white/[0.03] backdrop-blur-xl rounded-2xl border border-slate-200 dark:border-white/[0.08] shadow-xs p-4">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+              <h3 className="text-[10px] font-semibold  text-slate-400">
                 {lang === 'vi' ? 'Xu hướng cân nặng (30 ngày)' : 'Weight trend (30 days)'}
               </h3>
               <span className="text-[10px] text-slate-400 font-mono">
@@ -1171,9 +1200,9 @@ export const HealthView: React.FC<HealthViewProps> = ({
             />
           </div>
 
-          <div className="bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs p-4">
+          <div className="bg-white dark:bg-white/[0.03] backdrop-blur-xl rounded-2xl border border-slate-200 dark:border-white/[0.08] shadow-xs p-4">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 flex items-center gap-1.5">
+              <h3 className="text-[10px] font-semibold  text-gray-400 flex items-center gap-1.5">
                 <Dumbbell className="w-3.5 h-3.5" />
                 {lang === 'vi' ? 'Lịch sử tập luyện' : 'Workout log'}
               </h3>
@@ -1192,16 +1221,16 @@ export const HealthView: React.FC<HealthViewProps> = ({
             </div>
 
             {showWorkoutForm && (
-              <form onSubmit={handleSubmitWorkout} className="mb-3 p-3 rounded-xl border border-slate-200 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-800/40">
+              <form onSubmit={handleSubmitWorkout} className="mb-3 p-3 rounded-xl border border-slate-200 dark:border-white/[0.1] bg-gray-50/60 dark:bg-gray-800/40">
                 <div className="grid grid-cols-2 md:grid-cols-6 gap-2">
                   <input
-                    className="col-span-2 text-xs px-2.5 py-1.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
+                    className="col-span-2 text-xs px-2.5 py-1.5 rounded-lg border border-gray-300 dark:border-white/[0.1] bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
                     placeholder={lang === 'vi' ? 'Tên bài tập' : 'Workout name'}
                     value={woName}
                     onChange={(e) => setWoName(e.target.value)}
                   />
                   <select
-                    className="text-xs px-2 py-1.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
+                    className="text-xs px-2 py-1.5 rounded-lg border border-gray-300 dark:border-white/[0.1] bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
                     value={woType}
                     onChange={(e) => setWoType(e.target.value as WorkoutType)}
                   >
@@ -1214,7 +1243,7 @@ export const HealthView: React.FC<HealthViewProps> = ({
                   <input
                     type="number"
                     min={0}
-                    className="text-xs px-2 py-1.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
+                    className="text-xs px-2 py-1.5 rounded-lg border border-gray-300 dark:border-white/[0.1] bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
                     placeholder="min"
                     value={woDuration}
                     onChange={(e) => setWoDuration(e.target.value)}
@@ -1222,7 +1251,7 @@ export const HealthView: React.FC<HealthViewProps> = ({
                   <input
                     type="number"
                     min={0}
-                    className="text-xs px-2 py-1.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
+                    className="text-xs px-2 py-1.5 rounded-lg border border-gray-300 dark:border-white/[0.1] bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
                     placeholder="sets"
                     value={woSets}
                     onChange={(e) => setWoSets(e.target.value)}
@@ -1230,7 +1259,7 @@ export const HealthView: React.FC<HealthViewProps> = ({
                   <input
                     type="number"
                     min={0}
-                    className="text-xs px-2 py-1.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
+                    className="text-xs px-2 py-1.5 rounded-lg border border-gray-300 dark:border-white/[0.1] bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
                     placeholder="reps"
                     value={woReps}
                     onChange={(e) => setWoReps(e.target.value)}
@@ -1238,7 +1267,7 @@ export const HealthView: React.FC<HealthViewProps> = ({
                   <input
                     type="number"
                     min={0}
-                    className="col-span-2 md:col-span-1 text-xs px-2 py-1.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
+                    className="col-span-2 md:col-span-1 text-xs px-2 py-1.5 rounded-lg border border-gray-300 dark:border-white/[0.1] bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
                     placeholder="kcal"
                     value={woCalories}
                     onChange={(e) => setWoCalories(e.target.value)}
@@ -1252,7 +1281,7 @@ export const HealthView: React.FC<HealthViewProps> = ({
                   <button
                     type="button"
                     onClick={() => setShowWorkoutForm(false)}
-                    className="px-2 py-1.5 rounded-lg border border-gray-300 dark:border-gray-700 text-[11px] font-semibold cursor-pointer"
+                    className="px-2 py-1.5 rounded-lg border border-gray-300 dark:border-white/[0.1] text-[11px] font-semibold cursor-pointer"
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>
@@ -1298,8 +1327,8 @@ export const HealthView: React.FC<HealthViewProps> = ({
             )}
           </div>
 
-          <div className="bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs p-4">
-            <h3 className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 mb-2">
+          <div className="bg-white dark:bg-white/[0.03] backdrop-blur-xl rounded-2xl border border-slate-200 dark:border-white/[0.08] shadow-xs p-4">
+            <h3 className="text-[10px] font-semibold  text-gray-400 mb-2">
               {lang === 'vi' ? 'Theo dõi thể hình & sức khỏe' : 'Personal Health & Fitness Tracking'}
             </h3>
             <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">
