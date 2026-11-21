@@ -254,12 +254,24 @@ export const Header: React.FC<HeaderProps> = ({
               )}
               <span
                 className={`relative inline-flex rounded-full h-2 w-2 ${
-                  isLiveSyncEnabled ? 'bg-rose-500' : 'bg-slate-400'
+                  isLiveSyncEnabled
+                    ? syncState === 'synced'
+                      ? 'bg-emerald-500'
+                      : syncState === 'syncing'
+                      ? 'bg-amber-500 animate-pulse'
+                      : 'bg-rose-500'
+                    : 'bg-slate-400'
                 }`}
               ></span>
             </span>
             <span className="font-mono text-[11px] font-bold">
-              {isLiveSyncEnabled ? 'LIVE SYNC' : 'SYNC OFF'}
+              {isLiveSyncEnabled
+                ? syncState === 'synced'
+                  ? (lang === 'vi' ? 'ĐÃ ĐỒNG BỘ' : 'SYNCED')
+                  : syncState === 'syncing'
+                  ? (lang === 'vi' ? 'ĐANG LƯU...' : 'SYNCING...')
+                  : (lang === 'vi' ? 'CHƯA ĐỒNG BỘ' : 'NOT SYNCED')
+                : (lang === 'vi' ? 'SYNC TẮT' : 'OFFLINE')}
             </span>
           </button>
         )}

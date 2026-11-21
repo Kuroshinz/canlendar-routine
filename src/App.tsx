@@ -1277,7 +1277,11 @@ export default function App() {
         </div>
 
         <div className="w-full max-w-[540px] h-[340px] sm:h-[380px] rounded-3xl overflow-hidden border border-white/15 shadow-[0_20px_80px_rgba(0,0,0,0.9),0_0_60px_rgba(225,29,72,0.25)] bg-[#0a0a0a]">
-          <Scene />
+          <Scene
+            syncState={syncState}
+            lastSyncedTime={lastSyncedTime}
+            onSync={() => runLiveSyncCheck(false)}
+          />
         </div>
       </div>
     );

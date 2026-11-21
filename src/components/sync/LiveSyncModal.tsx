@@ -150,12 +150,20 @@ export const LiveSyncModal: React.FC<LiveSyncModalProps> = ({
               speed={1.0}
               size={1.0}
               opacity={1.0}
-              hue={0}
-              saturation={1.0}
-              brightness={1.0}
+              hue={syncState === 'synced' && isEnabled ? -85 : syncState === 'syncing' ? 45 : 140}
+              saturation={isEnabled ? 1.25 : 0.4}
+              brightness={isEnabled ? 1.05 : 0.7}
               defaultOn={isEnabled}
               onChange={handleToggle}
-              label={lang === 'vi' ? 'Live Sync' : 'Live Sync'}
+              label={
+                !isEnabled
+                  ? (lang === 'vi' ? 'LIVE SYNC · CHƯA ĐỒNG BỘ' : 'LIVE SYNC · NOT SYNCED')
+                  : syncState === 'synced'
+                  ? (lang === 'vi' ? 'LIVE SYNC · ĐÃ ĐỒNG BỘ' : 'LIVE SYNC · SYNCED')
+                  : syncState === 'syncing'
+                  ? (lang === 'vi' ? 'LIVE SYNC · ĐANG ĐỒNG BỘ...' : 'LIVE SYNC · SYNCING...')
+                  : (lang === 'vi' ? 'LIVE SYNC · CHƯA ĐỒNG BỘ' : 'LIVE SYNC · NOT SYNCED')
+              }
             />
           </div>
         </div>
