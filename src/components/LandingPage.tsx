@@ -1,3 +1,6 @@
+import { SkeuomorphicToggleCollection } from '@designcodeio/threeui';
+import '@designcodeio/threeui/style.css';
+import { playToggleSound, playLiveSyncChime } from '../utils/sound';
 import React, { useState, useEffect } from 'react';
 import {
   Sun,
@@ -263,6 +266,31 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               <span>Khám Phá Tính Năng</span>
               <span className="text-xs text-zinc-400">↓</span>
             </button>
+          </div>
+
+          {/* ThreeUI Live Sync Shader Switch Showcase directly on Landing Hero */}
+          <div className="mt-8 mb-3 flex flex-col items-center">
+            <div className="w-[250px] sm:w-[260px] h-[142px] rounded-3xl overflow-hidden border border-white/15 shadow-[0_20px_50px_rgba(0,0,0,0.85),0_0_30px_rgba(225,29,72,0.22)] bg-[#06070b] relative live-sync-main-card">
+              <SkeuomorphicToggleCollection
+                variant="shader"
+                mode="auto"
+                speed={1.00}
+                size={0.88}
+                opacity={1.00}
+                hue={-85}
+                saturation={1.25}
+                brightness={1.05}
+                defaultOn={true}
+                label="LIVE SYNC · ĐÃ ĐỒNG BỘ"
+                onChange={(on) => {
+                  playToggleSound(on);
+                  if (on) playLiveSyncChime();
+                }}
+              />
+            </div>
+            <span className="text-[10px] text-zinc-400 font-mono tracking-widest mt-2 uppercase">
+              Google Calendar &amp; Local Vault Live Sync Engine
+            </span>
           </div>
 
           {/* ANCHORED 4-METRIC CRAFTED BAR (Replaces Chaotic Orbiting Sway Nodes) */}

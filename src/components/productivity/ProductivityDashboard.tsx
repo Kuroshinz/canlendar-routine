@@ -62,6 +62,9 @@ import {
 import { formatDateString, doesEventOccurOnDate } from '../../utils/calendarUtils';
 import { calculateDailyHealthScore } from '../../utils/fitnessMetrics';
 import { notifySuccess } from '../../utils/notify';
+import { SkeuomorphicToggleCollection } from '@designcodeio/threeui';
+import '@designcodeio/threeui/style.css';
+import { SyncState } from '../../types/calendar';
 
 export interface ProductivityDashboardProps {
   events: CalendarEvent[];
@@ -85,6 +88,9 @@ export interface ProductivityDashboardProps {
   onOpenLifeCopilot?: () => void;
   onQuickAddWater?: (ml: number) => void;
   onOpenMacroModal?: () => void;
+  syncState?: SyncState;
+  isLiveSyncEnabled?: boolean;
+  onToggleLiveSync?: (enabled: boolean) => void;
 }
 
 export const ProductivityDashboard: React.FC<ProductivityDashboardProps> = ({
@@ -109,6 +115,9 @@ export const ProductivityDashboard: React.FC<ProductivityDashboardProps> = ({
   onOpenLifeCopilot,
   onQuickAddWater,
   onOpenMacroModal,
+  syncState = "synced",
+  isLiveSyncEnabled = true,
+  onToggleLiveSync,
 }) => {
   const today = formatDateString(new Date());
 
@@ -204,7 +213,7 @@ export const ProductivityDashboard: React.FC<ProductivityDashboardProps> = ({
         <div className="absolute top-0 right-0 w-80 h-80 bg-rose-600/15 rounded-full blur-3xl pointer-events-none -mr-16 -mt-16" />
 
         <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-5">
-          <div className="space-y-2 max-w-xl">
+          <div className="space-y-3 max-w-xl">
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse" />
               <span className="text-[11px] font-extrabold tracking-wider uppercase text-rose-300">
@@ -221,47 +230,80 @@ export const ProductivityDashboard: React.FC<ProductivityDashboardProps> = ({
               đã hoàn thành <strong className="text-rose-400 font-mono">{completedHabitsCount}/{activeHabitsList.length} thói quen</strong>,{' '}
               và điểm sinh học đạt <strong className="text-emerald-400 font-mono">{todayHealthScore.score}/100</strong>.
             </p>
+
+            {/* Quick 1-Click Interactive Action Pills */}
+            <div className="flex items-center gap-2 flex-wrap pt-1">
+              <button
+                onClick={() => {
+                  onQuickAddWater?.(250);
+                  notifySuccess('Đã uống thêm nước!', '+250ml nước đã được cộng vào nhật ký.');
+                }}
+                className="glass-pill text-xs py-2 px-3 text-sky-300 hover:text-white border-sky-500/30 cursor-pointer transition-transform hover:bg-white/[0.06] active:scale-98"
+                title="Ghi nhận uống thêm 250ml nước"
+              >
+                <Droplets className="w-3.5 h-3.5 text-sky-400" />
+                <span>+250ml Nước</span>
+              </button>
+
+              <button
+                onClick={onOpenMacroModal}
+                className="glass-pill text-xs py-2 px-3 text-amber-300 hover:text-white border-amber-500/30 cursor-pointer transition-transform hover:bg-white/[0.06] active:scale-98"
+                title="Nhập Prompt Macro bữa ăn"
+              >
+                <Utensils className="w-3.5 h-3.5 text-amber-400" />
+                <span>Nhập Bữa Ăn</span>
+              </button>
+
+              <button
+                onClick={() => onNavigate('focus')}
+                className="glass-pill text-xs py-2 px-3 text-rose-300 hover:text-white border-rose-500/30 cursor-pointer transition-transform hover:bg-white/[0.06] active:scale-98"
+                title="Mở đồng hồ Pomodoro"
+              >
+                <Timer className="w-3.5 h-3.5 text-rose-400" />
+                <span>Pomodoro</span>
+              </button>
+
+              <button
+                onClick={onOpenLifeCopilot}
+                className="glass-pill-crimson text-xs py-2 px-3.5 cursor-pointer shadow-md transition-transform hover:bg-white/[0.06] active:scale-98"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-rose-300 animate-pulse" />
+                <span>Hỏi AI Copilot</span>
+              </button>
+            </div>
           </div>
 
-          {/* Quick 1-Click Interactive Action Pills */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <button
-              onClick={() => {
-                onQuickAddWater?.(250);
-                notifySuccess('Đã uống thêm nước!', '+250ml nước đã được cộng vào nhật ký.');
-              }}
-              className="glass-pill text-xs py-2 px-3 text-sky-300 hover:text-white border-sky-500/30 cursor-pointer transition-transform hover:bg-white/[0.06] active:scale-98"
-              title="Ghi nhận uống thêm 250ml nước"
-            >
-              <Droplets className="w-3.5 h-3.5 text-sky-400" />
-              <span>+250ml Nước</span>
-            </button>
-
-            <button
-              onClick={onOpenMacroModal}
-              className="glass-pill text-xs py-2 px-3 text-amber-300 hover:text-white border-amber-500/30 cursor-pointer transition-transform hover:bg-white/[0.06] active:scale-98"
-              title="Nhập Prompt Macro bữa ăn"
-            >
-              <Utensils className="w-3.5 h-3.5 text-amber-400" />
-              <span>Nhập Bữa Ăn</span>
-            </button>
-
-            <button
-              onClick={() => onNavigate('focus')}
-              className="glass-pill text-xs py-2 px-3 text-rose-300 hover:text-white border-rose-500/30 cursor-pointer transition-transform hover:bg-white/[0.06] active:scale-98"
-              title="Mở đồng hồ Pomodoro"
-            >
-              <Timer className="w-3.5 h-3.5 text-rose-400" />
-              <span>Pomodoro</span>
-            </button>
-
-            <button
-              onClick={onOpenLifeCopilot}
-              className="glass-pill-crimson text-xs py-2 px-3.5 cursor-pointer shadow-md transition-transform hover:bg-white/[0.06] active:scale-98"
-            >
-              <Sparkles className="w-3.5 h-3.5 text-rose-300 animate-pulse" />
-              <span>Hỏi AI Copilot</span>
-            </button>
+          {/* ThreeUI Skeuomorphic Raw-WebGL Live Sync Switch directly on main dashboard */}
+          <div className="shrink-0 flex flex-col items-center sm:items-end gap-2">
+            <div className="w-[230px] sm:w-[250px] h-[135px] rounded-3xl overflow-hidden border border-white/15 shadow-[0_12px_40px_rgba(0,0,0,0.8),0_0_30px_rgba(225,29,72,0.18)] bg-[#06070b] relative live-sync-main-card">
+              <SkeuomorphicToggleCollection
+                variant="shader"
+                mode="auto"
+                speed={1.00}
+                size={0.85}
+                opacity={1.00}
+                hue={syncState === 'synced' && isLiveSyncEnabled ? -85 : syncState === 'syncing' ? 45 : 140}
+                saturation={isLiveSyncEnabled ? 1.25 : 0.35}
+                brightness={isLiveSyncEnabled ? 1.05 : 0.7}
+                defaultOn={isLiveSyncEnabled}
+                label={
+                  !isLiveSyncEnabled
+                    ? 'LIVE SYNC · CHƯA ĐỒNG BỘ'
+                    : syncState === 'synced'
+                    ? 'LIVE SYNC · ĐÃ ĐỒNG BỘ'
+                    : syncState === 'syncing'
+                    ? 'LIVE SYNC · ĐANG ĐỒNG BỘ...'
+                    : 'LIVE SYNC · CHƯA ĐỒNG BỘ'
+                }
+                onChange={onToggleLiveSync}
+              />
+            </div>
+            <div className="flex items-center gap-2 pr-1">
+              <span className={`w-2 h-2 rounded-full ${syncState === 'synced' && isLiveSyncEnabled ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
+              <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-wider">
+                {isLiveSyncEnabled ? (syncState === 'synced' ? 'Google Calendar & Vault: 100%' : 'Đang xử lý...') : 'Chế độ ngoại tuyến'}
+              </span>
+            </div>
           </div>
         </div>
       </div>

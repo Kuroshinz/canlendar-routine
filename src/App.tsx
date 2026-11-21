@@ -1571,6 +1571,9 @@ export default function App() {
                     });
                   }}
                   onOpenMacroModal={() => setIsGeminiMacroOpen(true)}
+                  syncState={syncState}
+                  isLiveSyncEnabled={isLiveSyncEnabled}
+                  onToggleLiveSync={handleToggleLiveSync}
                 />
               )}
 

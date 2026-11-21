@@ -860,3 +860,18 @@
 .shader-frame .shader-toggle__caption b {
   display: none !important;
 }
+/* ThreeUI Shader Toggle on Main Screen & Cards */
+.live-sync-main-card .shader-toggle__caption,
+.shader-frame .shader-toggle__caption {
+  font-family: inherit !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.1em !important;
+  text-transform: uppercase !important;
+  text-shadow: 0 0 16px rgba(0, 0, 0, 0.95) !important;
+}
+
+.live-sync-main-card .shader-toggle__caption b,
+.shader-frame .shader-toggle__caption b {
+  display: none !important;
+}
