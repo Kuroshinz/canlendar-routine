@@ -275,9 +275,37 @@ export const LoginModal: React.FC<LoginModalProps> = ({
 
             {/* Error Message Box */}
             {errorMessage && (
-              <div className="w-full mb-4 p-3 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-start gap-2.5 animate-in fade-in duration-200">
-                <AlertCircle className="w-4 h-4 shrink-0 text-rose-400 mt-0.5" />
-                <span className="leading-relaxed flex-1">{errorMessage}</span>
+              <div className="w-full mb-4 p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex flex-col gap-2.5 animate-in fade-in duration-200">
+                <div className="flex items-start gap-2.5">
+                  <AlertCircle className="w-4 h-4 shrink-0 text-rose-400 mt-0.5" />
+                  <span className="leading-relaxed flex-1">{errorMessage}</span>
+                </div>
+                {errorMessage.includes('Authorized Domains') && (
+                  <div className="pt-1 flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (typeof navigator !== 'undefined' && navigator.clipboard) {
+                          navigator.clipboard.writeText(window.location.hostname);
+                          alert('Đã sao chép: ' + window.location.hostname);
+                        }
+                      }}
+                      className="px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-[11px] font-mono text-white transition-colors cursor-pointer border border-white/15"
+                    >
+                      Sao chép tên miền ({typeof window !== 'undefined' ? window.location.hostname : ''})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMode('register');
+                        setErrorMessage(null);
+                      }}
+                      className="px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-500 text-[11px] text-white font-medium transition-colors cursor-pointer"
+                    >
+                      Tạo tài khoản Web ngay
+                    </button>
+                  </div>
+                )}
               </div>
             )}
 

@@ -294,6 +294,14 @@ export async function loginWithGoogleAccount(): Promise<{
         };
       }
 
+      if (fbErr?.code === 'auth/unauthorized-domain' || fbErr?.message?.includes('unauthorized-domain')) {
+        const domain = typeof window !== 'undefined' ? window.location.hostname : 'domain';
+        return {
+          success: false,
+          error: `Domain web (${domain}) chưa được cấp phép trong Firebase Authentication. Bạn chỉ cần thêm "${domain}" vào Firebase Console > Authentication > Settings > Authorized Domains. Hoặc chuyển sang tab Đăng Ký bên dưới để tạo tài khoản cá nhân và vào Workspace ngay lập tức!`,
+        };
+      }
+
       // 2. Secondary fallback via Google Identity Services (GIS)
       try {
         const { executeRealGoogleSync } = await import('./realGoogleAuth');
