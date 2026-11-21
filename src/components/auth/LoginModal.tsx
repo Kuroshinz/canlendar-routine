@@ -11,18 +11,22 @@ import {
   AlertCircle,
   KeyRound,
   CheckCircle2,
+  Calendar,
+  XCircle,
+  Sparkles,
 } from 'lucide-react';
 import {
   loginZenoxAccount,
   registerZenoxAccount,
   loginWithGoogleAccount,
+  syncGoogleCalendarData,
   ZenoxUser,
 } from '../../services/zenoxAuth';
 
 interface LoginModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onLoginSuccess: (user: ZenoxUser) => void;
+  onLoginSuccess: (user: ZenoxUser, syncGoogleCalendar?: boolean) => void;
   lang?: 'vi' | 'en';
   initialMode?: 'login' | 'register';
 }
@@ -53,6 +57,10 @@ export const LoginModal: React.FC<LoginModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  // Consent Step: Ask user if they agree to sync Google Calendar data
+  const [pendingUser, setPendingUser] = useState<ZenoxUser | null>(null);
+  const [isAskingSyncConsent, setIsAskingSyncConsent] = useState(false);
+
   // Simulated High-Tech Processing Handshake (2.2 seconds cinematic transition)
   const [isProcessing, setIsProcessing] = useState(false);
   const [processStep, setProcessStep] = useState(1);
@@ -82,14 +90,15 @@ export const LoginModal: React.FC<LoginModalProps> = ({
    * Runs for ~2.2 seconds displaying cryptographic verification,
    * personal vault decryption, and then transitions into Workspace.
    */
-  const startCinematicAuthHandshake = (user: ZenoxUser) => {
+  const startCinematicAuthHandshake = (user: ZenoxUser, syncAgreed: boolean) => {
     setIsProcessing(true);
     setIsSubmitting(false);
+    setIsAskingSyncConsent(false);
     setProcessStep(1);
     setProcessPercent(28);
     setProcessStatus(
       lang === 'vi'
-        ? (user.authMethod === 'google' ? 'Xác thực Google OAuth 2.0 & quyền truy cập...' : 'Đang xác thực sinh trắc học & khóa SHA-256...')
+        ? 'Xác thực tài khoản & khóa bảo mật...'
         : 'Verifying credentials & security keys...'
     );
 
@@ -98,8 +107,12 @@ export const LoginModal: React.FC<LoginModalProps> = ({
       setProcessPercent(68);
       setProcessStatus(
         lang === 'vi'
-          ? (user.authMethod === 'google' ? 'Đang đồng bộ Google Calendar & dữ liệu cá nhân...' : 'Đang kết nối & giải mã khoang dữ liệu cá nhân...')
-          : 'Connecting & decrypting personal vault namespace...'
+          ? (syncAgreed
+              ? 'Đang đồng bộ dữ liệu Google Calendar chính xác...'
+              : 'Đang thiết lập tài khoản ở trạng thái mới hoàn toàn...')
+          : (syncAgreed
+              ? 'Synchronizing Google Calendar data accurately...'
+              : 'Initializing fresh blank workspace...')
       );
     }, 750);
 
@@ -115,11 +128,37 @@ export const LoginModal: React.FC<LoginModalProps> = ({
 
     setTimeout(() => {
       setIsProcessing(false);
-      onLoginSuccess(user);
+      onLoginSuccess(user, syncAgreed);
     }, 2200);
   };
 
-  /** Real Google OAuth Sign-In (Direct popup, no fake input forms) */
+  /**
+   * Handle user choice on Calendar Sync prompt
+   */
+  const handleConsentChoice = async (agree: boolean) => {
+    if (!pendingUser) return;
+
+    if (agree) {
+      // User agrees to sync: accurately sync Google Calendar data
+      const token = typeof window !== 'undefined' ? localStorage.getItem('gcal_real_access_token') : null;
+      if (token) {
+        await syncGoogleCalendarData(token, pendingUser.uid);
+      }
+      startCinematicAuthHandshake(pendingUser, true);
+    } else {
+      // User declines: start like an empty account with nothing
+      try {
+        const { accountStorage } = await import('../../services/accountStorage');
+        accountStorage.setItem('gcal_events', JSON.stringify([]), pendingUser.uid);
+        localStorage.setItem('gcal_events', JSON.stringify([]));
+      } catch (e) {
+        console.warn('Error resetting events to empty:', e);
+      }
+      startCinematicAuthHandshake(pendingUser, false);
+    }
+  };
+
+  /** Real Google OAuth Sign-In */
   const handleGoogleSignInClick = async () => {
     setErrorMessage(null);
     setIsSubmitting(true);
@@ -127,7 +166,9 @@ export const LoginModal: React.FC<LoginModalProps> = ({
     try {
       const res = await loginWithGoogleAccount();
       if (res.success && res.user) {
-        startCinematicAuthHandshake(res.user);
+        setIsSubmitting(false);
+        setPendingUser(res.user);
+        setIsAskingSyncConsent(true);
       } else {
         setIsSubmitting(false);
         setErrorMessage(res.error || (lang === 'vi' ? 'Đăng nhập Google thất bại.' : 'Google login failed.'));
@@ -147,7 +188,9 @@ export const LoginModal: React.FC<LoginModalProps> = ({
     try {
       const res = await loginZenoxAccount(loginEmail, loginPassword, rememberMe);
       if (res.success && res.user) {
-        startCinematicAuthHandshake(res.user);
+        setIsSubmitting(false);
+        setPendingUser(res.user);
+        setIsAskingSyncConsent(true);
       } else {
         setIsSubmitting(false);
         setErrorMessage(res.error || (lang === 'vi' ? 'Đăng nhập thất bại.' : 'Login failed.'));
@@ -173,7 +216,9 @@ export const LoginModal: React.FC<LoginModalProps> = ({
     try {
       const res = await registerZenoxAccount(regName, regEmail, regPassword);
       if (res.success && res.user) {
-        startCinematicAuthHandshake(res.user);
+        setIsSubmitting(false);
+        setPendingUser(res.user);
+        setIsAskingSyncConsent(true);
       } else {
         setIsSubmitting(false);
         setErrorMessage(res.error || (lang === 'vi' ? 'Đăng ký thất bại.' : 'Registration failed.'));
@@ -191,7 +236,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
 
       <div className="relative w-full max-w-md rounded-3xl bg-[#090306] border border-white/15 p-6 sm:p-8 shadow-[0_25px_90px_rgba(0,0,0,0.98),0_0_80px_rgba(225,29,72,0.22)] flex flex-col items-center select-none text-zinc-100 max-h-[92vh] overflow-y-auto">
         {/* Close Button (Hidden during processing) */}
-        {!isProcessing && (
+        {!isProcessing && !isAskingSyncConsent && (
           <button
             onClick={onClose}
             className="absolute top-5 right-5 p-2 rounded-full bg-white/[0.05] hover:bg-white/[0.12] text-zinc-400 hover:text-white transition-all cursor-pointer border border-white/10"
@@ -248,7 +293,64 @@ export const LoginModal: React.FC<LoginModalProps> = ({
               <span>Xác thực bảo mật SHA-256 · Thiết lập Workspace riêng</span>
             </div>
           </div>
+        ) : isAskingSyncConsent && pendingUser ? (
+          /* ========================================================= */
+          /* VIEW 1: STEP 2 - CALENDAR SYNC CONFIRMATION PROMPT        */
+          /* ========================================================= */
+          <div className="w-full py-4 flex flex-col items-center text-center animate-in fade-in zoom-in-95 duration-200">
+            {/* Calendar Icon Glowing Orb */}
+            <div className="relative w-20 h-20 mb-4 flex items-center justify-center">
+              <div className="absolute inset-0 rounded-full border-2 border-sky-500/30 border-t-sky-400 animate-spin [animation-duration:3.5s]" />
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-sky-500/20 via-blue-600/20 to-rose-500/20 border border-sky-500/40 flex items-center justify-center shadow-[0_0_30px_rgba(2,132,199,0.35)] backdrop-blur-md">
+                <Calendar className="w-7 h-7 text-sky-400" />
+              </div>
+            </div>
+
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-sky-500/10 border border-sky-500/25 text-sky-300 text-[10px] font-mono tracking-widest uppercase mb-2.5 shadow-sm">
+              <Sparkles className="w-3 h-3 text-sky-400" />
+              <span>BƯỚC XÁC NHẬN ĐỒNG BỘ DỮ LIỆU</span>
+            </div>
+
+            <h3 className="text-base sm:text-lg font-bold text-white mb-2">
+              Đồng bộ dữ liệu từ Google Calendar?
+            </h3>
+
+            <p className="text-xs text-zinc-300 leading-relaxed max-w-sm mb-6 px-1">
+              Chào mừng <strong className="text-white font-semibold">{pendingUser.displayName}</strong>! Bạn có đồng ý đồng bộ các lịch hẹn và sự kiện từ Google Calendar vào Workspace không?
+            </p>
+
+            {/* Action Buttons */}
+            <div className="w-full space-y-3">
+              {/* Option 1: Có, Đồng ý đồng bộ */}
+              <button
+                type="button"
+                onClick={() => handleConsentChoice(true)}
+                className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-sky-600 via-blue-600 to-indigo-600 hover:from-sky-500 hover:to-blue-500 text-white font-semibold text-xs flex items-center justify-center gap-2.5 shadow-[0_4px_25px_rgba(2,132,199,0.45)] transition-all cursor-pointer group active:scale-[0.99]"
+              >
+                <CheckCircle2 className="w-4 h-4 text-emerald-300 transition-transform group-hover:scale-110" />
+                <span className="text-sm">Đồng ý đồng bộ dữ liệu lịch</span>
+              </button>
+
+              {/* Option 2: Không, Bắt đầu với tài khoản trống */}
+              <button
+                type="button"
+                onClick={() => handleConsentChoice(false)}
+                className="w-full py-3 px-4 rounded-2xl bg-white/[0.05] hover:bg-white/[0.1] border border-white/10 text-zinc-400 hover:text-white font-medium text-xs flex items-center justify-center gap-2 transition-all cursor-pointer group"
+              >
+                <XCircle className="w-4 h-4 text-zinc-500 group-hover:text-rose-400 transition-colors" />
+                <span>Không đồng ý (Bắt đầu với tài khoản trống)</span>
+              </button>
+            </div>
+
+            <div className="mt-5 text-[10px] text-zinc-400 font-mono flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-sky-400" />
+              <span>Dữ liệu có thể tùy chỉnh hoặc đồng bộ lại bất kỳ lúc nào</span>
+            </div>
+          </div>
         ) : (
+          /* ========================================================= */
+          /* VIEW 2: STANDARD LOGIN & REGISTER FORMS                   */
+          /* ========================================================= */
           <>
             {/* Brand & Security Header */}
             <div className="flex flex-col items-center text-center mb-4 w-full">
@@ -310,7 +412,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
             )}
 
             <div className="w-full space-y-4">
-              {/* DIRECT GOOGLE SIGN-IN BUTTON (REAL GOOGLE OAUTH POPUP) */}
+              {/* DIRECT GOOGLE SIGN-IN BUTTON */}
               <div>
                 <button
                   type="button"

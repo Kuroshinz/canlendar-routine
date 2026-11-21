@@ -372,30 +372,43 @@ export async function loginWithGoogleAccount(): Promise<{
     }
     sessionStorage.setItem(WORKSPACE_ENTERED_KEY, 'true');
 
-    // 4. Fetch and synchronize real Google Calendar events with web workspace
-    if (accessToken) {
-      try {
-        const { fetchGoogleCalendarEvents } = await import('./googleCalendarSync');
-        const googleEvents = await fetchGoogleCalendarEvents(accessToken);
-        if (googleEvents && googleEvents.length > 0) {
-          const { accountStorage } = await import('./accountStorage');
-          const rawExisting = accountStorage.getItem('gcal_events', user.uid) || localStorage.getItem('gcal_events');
-          const existingEvents: any[] = rawExisting ? JSON.parse(rawExisting) : [];
-          const incomingIds = new Set(googleEvents.map((e) => e.id));
-          const merged = [...googleEvents, ...existingEvents.filter((e) => !incomingIds.has(e.id))];
-          accountStorage.setItem('gcal_events', JSON.stringify(merged), user.uid);
-          localStorage.setItem('gcal_events', JSON.stringify(merged));
-        }
-      } catch (syncErr) {
-        console.warn('Google Calendar auto-fetch note:', syncErr);
-      }
-    }
-
+    // Return authenticated user immediately so consent step can ask user whether to sync
     return { success: true, user };
   } catch (err: any) {
     return {
       success: false,
       error: err?.message || 'Lỗi xác thực máy chủ Google.',
     };
+  }
+}
+
+/**
+ * Accurately fetch and synchronize Google Calendar events into user workspace
+ */
+export async function syncGoogleCalendarData(
+  accessToken: string,
+  uid: string
+): Promise<{ success: boolean; count: number; error?: string }> {
+  try {
+    const { fetchGoogleCalendarEvents } = await import('./googleCalendarSync');
+    const googleEvents = await fetchGoogleCalendarEvents(accessToken);
+    if (googleEvents && googleEvents.length > 0) {
+      const { accountStorage } = await import('./accountStorage');
+      const rawExisting =
+        accountStorage.getItem('gcal_events', uid) || localStorage.getItem('gcal_events');
+      const existingEvents: any[] = rawExisting ? JSON.parse(rawExisting) : [];
+      const incomingIds = new Set(googleEvents.map((e) => e.id));
+      const merged = [
+        ...googleEvents,
+        ...existingEvents.filter((e) => !incomingIds.has(e.id)),
+      ];
+      accountStorage.setItem('gcal_events', JSON.stringify(merged), uid);
+      localStorage.setItem('gcal_events', JSON.stringify(merged));
+      return { success: true, count: googleEvents.length };
+    }
+    return { success: true, count: 0 };
+  } catch (err: any) {
+    console.warn('syncGoogleCalendarData error:', err);
+    return { success: false, count: 0, error: err?.message || 'Lỗi đồng bộ Google Calendar' };
   }
 }

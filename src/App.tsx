@@ -895,24 +895,43 @@ export default function App() {
     window.location.hash = '#landing';
   };
 
-  const handleAuthUserSuccess = (authedUser: ZenoxUser) => {
+  const handleAuthUserSuccess = (authedUser: ZenoxUser, syncGoogleCalendar: boolean = true) => {
     setUser(authedUser);
     setIsLoginModalOpen(false);
     sessionStorage.setItem('zenox_workspace_entered', 'true');
     setView('dashboard');
     window.location.hash = '#workspace';
 
-    // Immediately re-hydrate events so synced Google Calendar & preserved data are instantly visible
-    try {
-      const stored = accountStorage.getItem('gcal_events');
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setEvents(parsed);
+    if (syncGoogleCalendar) {
+      // Re-hydrate accurate synced Google Calendar events
+      try {
+        const stored = accountStorage.getItem('gcal_events');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed)) {
+            setEvents(parsed);
+          }
         }
+      } catch (e) {
+        console.warn('Could not re-hydrate events on auth success:', e);
       }
-    } catch (e) {
-      console.warn('Could not re-hydrate events on auth success:', e);
+      notifySuccess(
+        lang === 'vi' ? 'Đã kết nối & đồng bộ dữ liệu!' : 'Connected & Synced!',
+        lang === 'vi'
+          ? 'Dữ liệu từ Google Calendar đã được đồng bộ chính xác.'
+          : 'Google Calendar data accurately synchronized.'
+      );
+      playSuccessSound();
+    } else {
+      // User declined sync: start fresh with a clean, blank account ("như một tài khoản chưa có gì")
+      setEvents([]);
+      accountStorage.setItem('gcal_events', JSON.stringify([]));
+      notifySuccess(
+        lang === 'vi' ? 'Khởi tạo Workspace mới' : 'Fresh Workspace Initialized',
+        lang === 'vi'
+          ? 'Tài khoản của bạn đã được khởi tạo ở trạng thái hoàn toàn mới.'
+          : 'Your account is ready with a fresh blank canvas.'
+      );
     }
   };
 
@@ -1166,9 +1185,7 @@ export default function App() {
           isOpen={isLoginModalOpen}
           onClose={() => setIsLoginModalOpen(false)}
           initialMode={loginModalMode}
-          onLoginSuccess={(authedUser) => {
-            handleAuthUserSuccess(authedUser);
-          }}
+          onLoginSuccess={(authedUser, syncAgreed) => { handleAuthUserSuccess(authedUser, syncAgreed); }}
           lang={lang}
         />
       </>
@@ -1183,9 +1200,7 @@ export default function App() {
         isOpen={isLoginModalOpen}
         onClose={() => setIsLoginModalOpen(false)}
         initialMode={loginModalMode}
-        onLoginSuccess={(authedUser) => {
-          handleAuthUserSuccess(authedUser);
-        }}
+        onLoginSuccess={(authedUser, syncAgreed) => { handleAuthUserSuccess(authedUser, syncAgreed); }}
         lang={lang}
       />
       <ToastContainer />
