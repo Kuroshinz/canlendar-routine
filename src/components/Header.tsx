@@ -1,3 +1,5 @@
+import { SkeuomorphicToggleCollection } from '@designcodeio/threeui';
+import '@designcodeio/threeui/style.css';
 import React, { useState, useEffect, useMemo } from 'react';
 import { CalendarViewType, SyncState } from '../types/calendar';
 import {
@@ -107,6 +109,7 @@ interface HeaderProps {
   weightTrendAlert?: HeaderWeightTrendAlert | null;
   isLiveSyncEnabled?: boolean;
   onOpenLiveSync?: () => void;
+  onToggleLiveSync?: (enabled: boolean) => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -140,6 +143,7 @@ export const Header: React.FC<HeaderProps> = ({
   weightTrendAlert,
   isLiveSyncEnabled = true,
   onOpenLiveSync,
+  onToggleLiveSync,
 }) => {
   const [showNotificationPopup, setShowNotificationPopup] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
@@ -233,48 +237,54 @@ export const Header: React.FC<HeaderProps> = ({
 
         
 
-        {/* Live Sync ThreeUI Control Button */}
-        {onOpenLiveSync && (
-          <button
-            onClick={onOpenLiveSync}
-            title={
-              isLiveSyncEnabled
-                ? (lang === 'vi' ? 'Live Sync: Đang bật (Đồng bộ tức thì)' : 'Live Sync: Active')
-                : (lang === 'vi' ? 'Live Sync: Đã tắt (Chế độ thủ công)' : 'Live Sync: Off')
-            }
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border backdrop-blur-md transition-all cursor-pointer hover:scale-[1.02] active:scale-[0.98] ${
-              isLiveSyncEnabled
-                ? 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border-rose-500/25 shadow-xs'
-                : 'bg-slate-100 dark:bg-white/[0.08] hover:bg-slate-200 dark:hover:bg-white/[0.14] text-slate-500 dark:text-slate-400 border-slate-200 dark:border-white/10'
-            }`}
-          >
-            <span className="relative flex h-2 w-2">
-              {isLiveSyncEnabled && (
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
-              )}
-              <span
-                className={`relative inline-flex rounded-full h-2 w-2 ${
-                  isLiveSyncEnabled
-                    ? syncState === 'synced'
-                      ? 'bg-emerald-500'
-                      : syncState === 'syncing'
-                      ? 'bg-amber-500 animate-pulse'
-                      : 'bg-rose-500'
-                    : 'bg-slate-400'
-                }`}
-              ></span>
-            </span>
-            <span className="font-mono text-[11px] font-bold">
-              {isLiveSyncEnabled
-                ? syncState === 'synced'
+        {/* ThreeUI Live Sync Switch in Header - Chỉ là nút và trạng thái, không nền xám */}
+        <div className="flex items-center gap-2 select-none header-threeui-sync-control">
+          <div className="w-[74px] sm:w-[82px] h-[36px] sm:h-[40px] rounded-full overflow-hidden bg-transparent relative">
+            <SkeuomorphicToggleCollection
+              variant="shader"
+              mode="auto"
+              speed={1.00}
+              size={2.5}
+              opacity={1.00}
+              hue={syncState === 'synced' && isLiveSyncEnabled ? -85 : syncState === 'syncing' ? 45 : 140}
+              saturation={isLiveSyncEnabled ? 1.3 : 0.35}
+              brightness={isLiveSyncEnabled ? 1.1 : 0.7}
+              defaultOn={isLiveSyncEnabled}
+              label={
+                !isLiveSyncEnabled
+                  ? (lang === 'vi' ? 'CHƯA ĐỒNG BỘ' : 'NOT SYNCED')
+                  : syncState === 'synced'
                   ? (lang === 'vi' ? 'ĐÃ ĐỒNG BỘ' : 'SYNCED')
                   : syncState === 'syncing'
                   ? (lang === 'vi' ? 'ĐANG LƯU...' : 'SYNCING...')
                   : (lang === 'vi' ? 'CHƯA ĐỒNG BỘ' : 'NOT SYNCED')
-                : (lang === 'vi' ? 'SYNC TẮT' : 'OFFLINE')}
-            </span>
-          </button>
-        )}
+              }
+              onChange={onToggleLiveSync}
+            />
+          </div>
+
+          <span
+            onClick={() => onToggleLiveSync?.(!isLiveSyncEnabled)}
+            title={lang === 'vi' ? 'Bấm để bật/tắt Live Sync' : 'Click to toggle Live Sync'}
+            className={`text-[11px] font-mono font-bold tracking-tight cursor-pointer transition-colors whitespace-nowrap select-none ${
+              !isLiveSyncEnabled
+                ? 'text-slate-400 dark:text-zinc-500'
+                : syncState === 'synced'
+                ? 'text-emerald-500 dark:text-emerald-400'
+                : syncState === 'syncing'
+                ? 'text-amber-500 dark:text-amber-400 animate-pulse'
+                : 'text-rose-500 dark:text-rose-400'
+            }`}
+          >
+            {!isLiveSyncEnabled
+              ? (lang === 'vi' ? 'CHƯA ĐỒNG BỘ' : 'NOT SYNCED')
+              : syncState === 'synced'
+              ? (lang === 'vi' ? 'ĐÃ ĐỒNG BỘ' : 'SYNCED')
+              : syncState === 'syncing'
+              ? (lang === 'vi' ? 'ĐANG LƯU...' : 'SYNCING...')
+              : (lang === 'vi' ? 'CHƯA ĐỒNG BỘ' : 'NOT SYNCED')}
+          </span>
+        </div>
 
         {/* Notification Bell with Badge */}
         <div className="relative">

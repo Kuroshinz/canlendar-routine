@@ -268,29 +268,26 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </button>
           </div>
 
-          {/* ThreeUI Live Sync Shader Switch Showcase directly on Landing Hero */}
-          <div className="mt-8 mb-3 flex flex-col items-center">
-            <div className="w-[250px] sm:w-[260px] h-[142px] rounded-3xl overflow-hidden border border-white/15 shadow-[0_20px_50px_rgba(0,0,0,0.85),0_0_30px_rgba(225,29,72,0.22)] bg-[#06070b] relative live-sync-main-card">
+          {/* ThreeUI Live Sync Switch (Chỉ là nút và trạng thái, không nền xám) */}
+          <div className="mt-6 mb-2 flex items-center justify-center">
+            <div className="w-[190px] h-[115px] bg-transparent relative live-sync-pure-button">
               <SkeuomorphicToggleCollection
                 variant="shader"
                 mode="auto"
                 speed={1.00}
-                size={0.88}
+                size={0.95}
                 opacity={1.00}
                 hue={-85}
                 saturation={1.25}
                 brightness={1.05}
                 defaultOn={true}
-                label="LIVE SYNC · ĐÃ ĐỒNG BỘ"
+                label="ĐÃ ĐỒNG BỘ"
                 onChange={(on) => {
                   playToggleSound(on);
                   if (on) playLiveSyncChime();
                 }}
               />
             </div>
-            <span className="text-[10px] text-zinc-400 font-mono tracking-widest mt-2 uppercase">
-              Google Calendar &amp; Local Vault Live Sync Engine
-            </span>
           </div>
 
           {/* ANCHORED 4-METRIC CRAFTED BAR (Replaces Chaotic Orbiting Sway Nodes) */}

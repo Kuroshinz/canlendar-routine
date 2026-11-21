@@ -1409,6 +1409,7 @@ export default function App() {
           isSyncing={isSyncing}
           syncState={syncState}
           isLiveSyncEnabled={isLiveSyncEnabled}
+          onToggleLiveSync={handleToggleLiveSync}
           onOpenLiveSync={() => setIsLiveSyncOpen(true)}
           pendingTasksCount={productivity.tasks.filter((t) => t.status !== 'completed').length}
           nutritionSummary={nutritionSummary}

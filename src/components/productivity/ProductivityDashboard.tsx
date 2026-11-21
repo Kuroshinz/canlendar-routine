@@ -273,39 +273,32 @@ export const ProductivityDashboard: React.FC<ProductivityDashboardProps> = ({
             </div>
           </div>
 
-          {/* ThreeUI Skeuomorphic Raw-WebGL Live Sync Switch directly on main dashboard */}
-          <div className="shrink-0 flex flex-col items-center sm:items-end gap-2">
-            <div className="w-[230px] sm:w-[250px] h-[135px] rounded-3xl overflow-hidden border border-white/15 shadow-[0_12px_40px_rgba(0,0,0,0.8),0_0_30px_rgba(225,29,72,0.18)] bg-[#06070b] relative live-sync-main-card">
+          {/* ThreeUI Live Sync Switch (Chỉ là nút và trạng thái, không nền xám) */}
+          <div className="shrink-0 flex items-center justify-center">
+            <div className="w-[180px] sm:w-[190px] h-[115px] bg-transparent relative live-sync-pure-button">
               <SkeuomorphicToggleCollection
                 variant="shader"
                 mode="auto"
                 speed={1.00}
-                size={0.85}
+                size={0.95}
                 opacity={1.00}
                 hue={syncState === 'synced' && isLiveSyncEnabled ? -85 : syncState === 'syncing' ? 45 : 140}
-                saturation={isLiveSyncEnabled ? 1.25 : 0.35}
+                saturation={isLiveSyncEnabled ? 1.3 : 0.35}
                 brightness={isLiveSyncEnabled ? 1.05 : 0.7}
                 defaultOn={isLiveSyncEnabled}
                 label={
                   !isLiveSyncEnabled
-                    ? 'LIVE SYNC · CHƯA ĐỒNG BỘ'
+                    ? 'CHƯA ĐỒNG BỘ'
                     : syncState === 'synced'
-                    ? 'LIVE SYNC · ĐÃ ĐỒNG BỘ'
+                    ? 'ĐÃ ĐỒNG BỘ'
                     : syncState === 'syncing'
-                    ? 'LIVE SYNC · ĐANG ĐỒNG BỘ...'
-                    : 'LIVE SYNC · CHƯA ĐỒNG BỘ'
+                    ? 'ĐANG LƯU...'
+                    : 'CHƯA ĐỒNG BỘ'
                 }
                 onChange={onToggleLiveSync}
               />
             </div>
-            <div className="flex items-center gap-2 pr-1">
-              <span className={`w-2 h-2 rounded-full ${syncState === 'synced' && isLiveSyncEnabled ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
-              <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-wider">
-                {isLiveSyncEnabled ? (syncState === 'synced' ? 'Google Calendar & Vault: 100%' : 'Đang xử lý...') : 'Chế độ ngoại tuyến'}
-              </span>
-            </div>
-          </div>
-        </div>
+          </div></div>
       </div>
 
       {/* =========================================================================
