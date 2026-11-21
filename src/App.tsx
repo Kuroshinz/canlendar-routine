@@ -147,15 +147,15 @@ export default function App() {
       return 'landing';
     }
 
-    // 3. User authenticated and entered workspace in current session
-    const enteredWorkspace = typeof window !== 'undefined' ? sessionStorage.getItem('zenox_workspace_entered') : null;
-    if (enteredWorkspace === 'true') {
-      const saved = localStorage.getItem('gcal_view') as CalendarViewType | null;
-      return saved && saved !== 'landing' ? saved : 'dashboard';
+    // If verified user specifically asks for landing page via hash
+    if (typeof window !== 'undefined' && window.location.hash === '#landing') {
+      return 'landing';
     }
 
-    // 4. Default to landing space so user always passes through landing space first
-    return 'landing';
+    // 3. User authenticated: seamlessly restore into workspace directly when returning to the web
+    sessionStorage.setItem('zenox_workspace_entered', 'true');
+    const saved = localStorage.getItem('gcal_view') as CalendarViewType | null;
+    return saved && saved !== 'landing' ? saved : 'dashboard';
   });
 
   const handleViewChange = (newView: CalendarViewType) => {
@@ -905,10 +905,10 @@ export default function App() {
     if (syncGoogleCalendar) {
       // Re-hydrate accurate synced Google Calendar events
       try {
-        const stored = accountStorage.getItem('gcal_events');
+        const stored = accountStorage.getItem('gcal_events', authedUser.uid) || accountStorage.getItem('gcal_events');
         if (stored) {
           const parsed = JSON.parse(stored);
-          if (Array.isArray(parsed)) {
+          if (Array.isArray(parsed) && parsed.length > 0) {
             setEvents(parsed);
           }
         }
@@ -923,9 +923,19 @@ export default function App() {
       );
       playSuccessSound();
     } else {
-      // User declined sync: start fresh with a clean, blank account ("như một tài khoản chưa có gì")
+      // User declined sync: keep their existing workspace events if any, or initialize clean
+      try {
+        const stored = accountStorage.getItem('gcal_events', authedUser.uid);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setEvents(parsed);
+            return;
+          }
+        }
+      } catch (e) {}
       setEvents([]);
-      accountStorage.setItem('gcal_events', JSON.stringify([]));
+      accountStorage.setItem('gcal_events', JSON.stringify([]), authedUser.uid);
       notifySuccess(
         lang === 'vi' ? 'Khởi tạo Workspace mới' : 'Fresh Workspace Initialized',
         lang === 'vi'

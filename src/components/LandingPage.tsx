@@ -191,21 +191,18 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             {isLoggedIn ? (
               <>
                 <button
-                  onClick={() => {
-                    window.open('/#workspace', 'zenox_workspace');
-                    onEnterApp();
-                  }}
+                  onClick={onEnterApp}
                   className="inline-flex items-center gap-1.5 text-xs font-semibold text-rose-300 hover:text-white transition-all cursor-pointer px-3.5 py-1.5 rounded-full bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 shadow-[0_0_15px_rgba(225,29,72,0.25)] hover:scale-[1.02] whitespace-nowrap"
-                  title="Mở Workspace riêng trong Tab mới"
+                  title="Vào Workspace ZENOX"
                 >
                   <span>Vào Workspace</span>
                   <ArrowRight className="w-3.5 h-3.5 text-rose-300" />
                 </button>
 
                 <button
-                  onClick={onOpenLogin}
+                  onClick={onEnterApp}
                   className="nav-glass-btn shrink-0"
-                  title="Tài khoản ZENOX đã đăng nhập"
+                  title="Tài khoản ZENOX đã đăng nhập - Bấm để vào Workspace"
                 >
                   <span className="nav-glass-btn__title">
                     {userName ? (userName.length > 12 ? userName.slice(0, 10) + '...' : userName) : 'Tài Khoản'}

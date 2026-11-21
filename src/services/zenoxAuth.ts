@@ -12,6 +12,7 @@ export interface ZenoxAccount {
   salt: string;
   createdAt: string;
   lastLoginAt: string;
+  syncConsent?: 'agreed' | 'declined';
 }
 
 export interface ZenoxUser {
@@ -410,5 +411,77 @@ export async function syncGoogleCalendarData(
   } catch (err: any) {
     console.warn('syncGoogleCalendarData error:', err);
     return { success: false, count: 0, error: err?.message || 'Lỗi đồng bộ Google Calendar' };
+  }
+}
+
+export type SyncConsentStatus = 'agreed' | 'declined';
+
+/**
+ * Checks if the account has already made a decision regarding calendar synchronization.
+ * Includes intelligent detection for accounts that already have synced calendar events.
+ */
+export function getAccountSyncConsent(uid: string, email?: string | null): SyncConsentStatus | null {
+  if (typeof window === 'undefined') return null;
+
+  // 1. Direct explicit consent key by uid
+  const uidConsent = localStorage.getItem(`zenox_sync_consent_${uid}`);
+  if (uidConsent === 'agreed' || uidConsent === 'declined' || uidConsent === 'synced') {
+    return uidConsent === 'declined' ? 'declined' : 'agreed';
+  }
+
+  // 2. Direct explicit consent key by email
+  if (email) {
+    const cleanEmail = email.trim().toLowerCase();
+    const emailConsent = localStorage.getItem(`zenox_sync_consent_${cleanEmail}`);
+    if (emailConsent === 'agreed' || emailConsent === 'declined' || emailConsent === 'synced') {
+      return emailConsent === 'declined' ? 'declined' : 'agreed';
+    }
+  }
+
+  // 3. Check account record in local vault
+  const accounts = getVaultAccounts();
+  const acc = accounts.find((a) => a.id === uid || (email && a.email.toLowerCase() === email.trim().toLowerCase()));
+  if (acc && acc.syncConsent) {
+    return acc.syncConsent === 'declined' ? 'declined' : 'agreed';
+  }
+
+  // 4. Intelligent detection for existing returning users who already have synced events:
+  try {
+    const safeUid = String(uid).replace(/[^a-zA-Z0-9_-]/g, '_');
+    const rawEvents = localStorage.getItem(`zenox_acc_${safeUid}__gcal_events`) || localStorage.getItem('gcal_events');
+    if (rawEvents) {
+      const parsed = JSON.parse(rawEvents);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        setAccountSyncConsent(uid, email, 'agreed');
+        return 'agreed';
+      }
+    }
+  } catch {}
+
+  return null;
+}
+
+/**
+ * Persists the user's synchronization consent choice so they are NEVER prompted again upon returning to the web.
+ */
+export function setAccountSyncConsent(
+  uid: string,
+  email: string | null | undefined,
+  consent: SyncConsentStatus
+): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(`zenox_sync_consent_${uid}`, consent);
+    if (email) {
+      localStorage.setItem(`zenox_sync_consent_${email.trim().toLowerCase()}`, consent);
+    }
+    const accounts = getVaultAccounts();
+    const acc = accounts.find((a) => a.id === uid || (email && a.email.toLowerCase() === email.trim().toLowerCase()));
+    if (acc) {
+      acc.syncConsent = consent;
+      saveVaultAccounts(accounts);
+    }
+  } catch (e) {
+    console.warn('Could not persist sync consent:', e);
   }
 }

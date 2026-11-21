@@ -20,6 +20,8 @@ import {
   registerZenoxAccount,
   loginWithGoogleAccount,
   syncGoogleCalendarData,
+  getAccountSyncConsent,
+  setAccountSyncConsent,
   ZenoxUser,
 } from '../../services/zenoxAuth';
 
@@ -133,10 +135,41 @@ export const LoginModal: React.FC<LoginModalProps> = ({
   };
 
   /**
+   * Evaluates if the authenticated user has already decided on calendar sync.
+   * If already decided, smoothly bypasses the prompt and proceeds into workspace.
+   * If first-time user, displays the consent choice prompt.
+   */
+  const proceedWithAuthenticatedUser = async (user: ZenoxUser) => {
+    setIsSubmitting(false);
+
+    // Check if user has already made a synchronization consent decision previously
+    const existingConsent = getAccountSyncConsent(user.uid, user.email);
+    if (existingConsent) {
+      // User has already made their decision previously: NEVER ask again!
+      const isAgreed = existingConsent === 'agreed';
+      if (isAgreed) {
+        const token = typeof window !== 'undefined' ? localStorage.getItem('gcal_real_access_token') : null;
+        if (token) {
+          await syncGoogleCalendarData(token, user.uid);
+        }
+      }
+      startCinematicAuthHandshake(user, isAgreed);
+      return;
+    }
+
+    // Only ask first-time accounts that have never made a choice
+    setPendingUser(user);
+    setIsAskingSyncConsent(true);
+  };
+
+  /**
    * Handle user choice on Calendar Sync prompt
    */
   const handleConsentChoice = async (agree: boolean) => {
     if (!pendingUser) return;
+
+    // Persist choice so returning to the web never prompts again
+    setAccountSyncConsent(pendingUser.uid, pendingUser.email, agree ? 'agreed' : 'declined');
 
     if (agree) {
       // User agrees to sync: accurately sync Google Calendar data
@@ -166,9 +199,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
     try {
       const res = await loginWithGoogleAccount();
       if (res.success && res.user) {
-        setIsSubmitting(false);
-        setPendingUser(res.user);
-        setIsAskingSyncConsent(true);
+        await proceedWithAuthenticatedUser(res.user);
       } else {
         setIsSubmitting(false);
         setErrorMessage(res.error || (lang === 'vi' ? 'Đăng nhập Google thất bại.' : 'Google login failed.'));
@@ -188,9 +219,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
     try {
       const res = await loginZenoxAccount(loginEmail, loginPassword, rememberMe);
       if (res.success && res.user) {
-        setIsSubmitting(false);
-        setPendingUser(res.user);
-        setIsAskingSyncConsent(true);
+        await proceedWithAuthenticatedUser(res.user);
       } else {
         setIsSubmitting(false);
         setErrorMessage(res.error || (lang === 'vi' ? 'Đăng nhập thất bại.' : 'Login failed.'));
@@ -216,9 +245,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
     try {
       const res = await registerZenoxAccount(regName, regEmail, regPassword);
       if (res.success && res.user) {
-        setIsSubmitting(false);
-        setPendingUser(res.user);
-        setIsAskingSyncConsent(true);
+        await proceedWithAuthenticatedUser(res.user);
       } else {
         setIsSubmitting(false);
         setErrorMessage(res.error || (lang === 'vi' ? 'Đăng ký thất bại.' : 'Registration failed.'));
