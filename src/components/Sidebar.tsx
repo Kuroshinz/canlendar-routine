@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import {
   ExternalLink,
   LayoutDashboard,
@@ -91,44 +91,44 @@ export const Sidebar: React.FC<SidebarProps> = ({
     {
       id: 'dashboard',
       icon: LayoutDashboard,
-      labelVi: 'Tổng quan',
+      labelVi: 'Tá»•ng quan',
       labelEn: 'Dashboard',
     },
     {
       id: 'month',
       icon: CalendarIcon,
-      labelVi: 'Lịch trình',
+      labelVi: 'Lá»‹ch trÃ¬nh',
       labelEn: 'Calendar',
     },
     {
       id: 'tasks',
       icon: CheckSquare,
-      labelVi: 'Công việc & Mục tiêu',
+      labelVi: 'CÃ´ng viá»‡c & Má»¥c tiÃªu',
       labelEn: 'Tasks & Goals',
     },
     {
       id: 'focus',
       icon: Timer,
-      labelVi: 'Đồng hồ tập trung',
+      labelVi: 'Äá»“ng há»“ táº­p trung',
       labelEn: 'Focus & Timer',
     },
     {
       id: 'health',
       icon: HeartPulse,
-      labelVi: 'Sức khỏe & Macro',
+      labelVi: 'Sá»©c khá»e & Macro',
       labelEn: 'Health & Macro',
       badge: 'Fitness AI',
     },
     {
       id: 'finance',
       icon: Wallet,
-      labelVi: 'Quản lý Tài chính',
+      labelVi: 'Quáº£n lÃ½ TÃ i chÃ­nh',
       labelEn: 'Finance',
     },
     {
       id: 'analytics',
       icon: BarChart3,
-      labelVi: 'Báo cáo & Phân tích',
+      labelVi: 'BÃ¡o cÃ¡o & PhÃ¢n tÃ­ch',
       labelEn: 'Analytics',
     },
   ];
@@ -155,8 +155,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const selectedDateStr = formatDateString(currentDate);
 
   const monthNamesVi = [
-    'Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6',
-    'Tháng 7', 'Tháng 8', 'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12'
+    'ThÃ¡ng 1', 'ThÃ¡ng 2', 'ThÃ¡ng 3', 'ThÃ¡ng 4', 'ThÃ¡ng 5', 'ThÃ¡ng 6',
+    'ThÃ¡ng 7', 'ThÃ¡ng 8', 'ThÃ¡ng 9', 'ThÃ¡ng 10', 'ThÃ¡ng 11', 'ThÃ¡ng 12'
   ];
   const monthNamesEn = [
     'January', 'February', 'March', 'April', 'May', 'June',
@@ -181,9 +181,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <div className="space-y-2.5 px-1">
             <div className="flex items-center justify-between">
               <div
-                onClick={() => onViewChange && onViewChange('dashboard')}
+                onClick={() => onViewChange && onViewChange('landing')}
+                title={lang === 'vi' ? 'Quay vá» Trang chá»§ (Landing Page)' : 'Return to Landing Page'}
                 className="flex items-center cursor-pointer group py-1 transition-transform duration-200 hover:scale-[1.02]"
-                title="ZENOX Workspace"
+                
               >
                 <img
                   src="/zenox-logo.png"
@@ -255,7 +256,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 onClick={() => setShowCalendarCategories(!showCalendarCategories)}
                 className="flex items-center justify-between px-2 text-xs font-bold uppercase tracking-wider text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-pointer"
               >
-                <span>{lang === 'vi' ? 'Lịch của tôi' : 'My Calendars'}</span>
+                <span>{lang === 'vi' ? 'Lá»‹ch cá»§a tÃ´i' : 'My Calendars'}</span>
                 {showCalendarCategories ? (
                   <ChevronDown className="w-3.5 h-3.5" />
                 ) : (
@@ -311,7 +312,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-400 hover:text-white hover:bg-white/[0.04] transition-colors cursor-pointer"
           >
             <Settings className="w-4 h-4 text-slate-400" />
-            <span>{lang === 'vi' ? 'Cài đặt' : 'Settings'}</span>
+            <span>{lang === 'vi' ? 'CÃ i Ä‘áº·t' : 'Settings'}</span>
           </button>
 
           <button
@@ -322,11 +323,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 onOpenCloudSync();
               }
             }}
-            title={lang === 'vi' ? 'Đăng xuất khỏi hệ thống' : 'Logout from workspace'}
+            title={lang === 'vi' ? 'ÄÄƒng xuáº¥t khá»i há»‡ thá»‘ng' : 'Logout from workspace'}
             className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer group"
           >
             <LogOut className="w-4 h-4 text-slate-400 group-hover:text-rose-400 transition-colors" />
-            <span>{lang === 'vi' ? 'Đăng xuất' : 'Logout'}</span>
+            <span>{lang === 'vi' ? 'ÄÄƒng xuáº¥t' : 'Logout'}</span>
           </button>
 
           {/* Dev Attribution */}
@@ -335,7 +336,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               Dev By Zenox Development
             </div>
             <div className="text-[9px] font-mono text-zinc-500 mt-0.5">
-              ZENOX OS Core · Vault Encrypted
+              ZENOX OS Core Â· Vault Encrypted
             </div>
           </div>
         </div>

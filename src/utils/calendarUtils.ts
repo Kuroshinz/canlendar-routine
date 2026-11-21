@@ -190,7 +190,12 @@ export function timeToMinutes(timeStr: string): number {
  * Normalizes event title for comparisons
  */
 export function normalizeEventTitle(title: string): string {
-  return (title || '').trim().toLowerCase().replace(/\s+/g, ' ');
+  let norm = (title || '').trim().toLowerCase().replace(/\s+/g, ' ');
+  // Typo normalization for fitness/gym entries
+  if (norm === 'gyn' || norm.startsWith('gyn ')) {
+    norm = norm.replace(/^gyn/, 'gym');
+  }
+  return norm;
 }
 
 /**
@@ -209,20 +214,24 @@ function normalizeTimeStr(t?: string): string {
 export function deduplicateEvents(events: CalendarEvent[]): CalendarEvent[] {
   if (!events || events.length === 0) return [];
 
+  // If real Google or user events exist, discard fake mock demo events (ev-*)
+  const hasRealEvents = events.some((e) => e.id.startsWith('gcal-') || e.id.startsWith('usr-') || e.id.startsWith('evt-'));
+  const candidates = hasRealEvents ? events.filter((e) => !e.id.startsWith('ev-')) : events;
+
   const timedByDateAndTitle = new Set<string>();
 
   // Pass 1: detect timed events to eliminate duplicate all-day course placeholders
-  for (const ev of events) {
+  for (const ev of candidates) {
     if (!ev.allDay && ev.startTime && ev.endTime) {
       const normTitle = normalizeEventTitle(ev.title);
       timedByDateAndTitle.add(`${ev.startDate}_${normTitle}`);
     }
   }
 
-  const result: CalendarEvent[] = [];
+  const exactDeduped: CalendarEvent[] = [];
   const seenExact = new Set<string>();
 
-  for (const ev of events) {
+  for (const ev of candidates) {
     const normTitle = normalizeEventTitle(ev.title);
 
     // If an all-day event duplicates a timed event on the same day, drop the all-day placeholder
@@ -230,7 +239,6 @@ export function deduplicateEvents(events: CalendarEvent[]): CalendarEvent[] {
       continue;
     }
 
-    // Exact key: date + normalized start/end time + normalized title + allDay
     const startT = normalizeTimeStr(ev.startTime);
     const endT = normalizeTimeStr(ev.endTime);
     const key = `${ev.startDate}_${startT}_${endT}_${normTitle}_${Boolean(ev.allDay)}`;
@@ -239,10 +247,92 @@ export function deduplicateEvents(events: CalendarEvent[]): CalendarEvent[] {
       continue;
     }
     seenExact.add(key);
-    result.push(ev);
+    exactDeduped.push(ev);
   }
 
-  return result;
+  // Pass 3: Overlapping same-title deduplication on the same date
+  // e.g. "Gym 16:00 - 18:00" and "Gym 16:00 - 17:00" on the same day -> keep the Google Calendar or longer one
+  const byDateAndTitle = new Map<string, CalendarEvent[]>();
+  for (const ev of exactDeduped) {
+    if (ev.allDay) continue;
+    const normTitle = normalizeEventTitle(ev.title);
+    const groupKey = `${ev.startDate}_${normTitle}`;
+    const list = byDateAndTitle.get(groupKey) || [];
+    list.push(ev);
+    byDateAndTitle.set(groupKey, list);
+  }
+
+  const toDropIds = new Set<string>();
+  for (const [_, group] of byDateAndTitle.entries()) {
+    if (group.length <= 1) continue;
+    for (let i = 0; i < group.length; i++) {
+      for (let j = i + 1; j < group.length; j++) {
+        const a = group[i];
+        const b = group[j];
+        if (toDropIds.has(a.id) || toDropIds.has(b.id)) continue;
+
+        const aStart = timeToMinutes(a.startTime);
+        const aEnd = timeToMinutes(a.endTime);
+        const bStart = timeToMinutes(b.startTime);
+        const bEnd = timeToMinutes(b.endTime);
+
+        const isOverlapping = Math.max(aStart, bStart) < Math.min(aEnd, bEnd);
+        const isNearStart = Math.abs(aStart - bStart) <= 35;
+
+        if (isOverlapping || isNearStart) {
+          const aIsGcal = a.id.startsWith('gcal-');
+          const bIsGcal = b.id.startsWith('gcal-');
+          if (aIsGcal && !bIsGcal) {
+            toDropIds.add(b.id);
+          } else if (!aIsGcal && bIsGcal) {
+            toDropIds.add(a.id);
+          } else {
+            const aDur = aEnd - aStart;
+            const bDur = bEnd - bStart;
+            if (aDur >= bDur) {
+              toDropIds.add(b.id);
+            } else {
+              toDropIds.add(a.id);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  return exactDeduped.filter((e) => !toDropIds.has(e.id));
+}
+
+/**
+ * Merges freshly fetched Google Calendar events authoritatively:
+ * 1. Replaces all previous gcal-* events with current Google Calendar state.
+ * 2. Purges stale mock/demo events.
+ * 3. Removes local copies that duplicate incoming Google events.
+ * 4. Deduplicates overlapping same-title events.
+ */
+export function mergeSyncedGoogleEvents(
+  googleEvents: CalendarEvent[],
+  existingEvents: CalendarEvent[]
+): CalendarEvent[] {
+  const nonMock = (existingEvents || []).filter(
+    (e) => !e.id.startsWith('ev-') && !e.id.startsWith('demo-')
+  );
+
+  // Authoritative Google Calendar sync: all events previously originating from Google Calendar
+  // are replaced by the freshly fetched Google Calendar events.
+  const localNonGoogle = nonMock.filter((e) => !e.id.startsWith('gcal-'));
+
+  const gcalKeys = new Set(
+    (googleEvents || []).map((g) => `${g.startDate}_${normalizeEventTitle(g.title)}`)
+  );
+
+  const filteredLocal = localNonGoogle.filter((loc) => {
+    const key = `${loc.startDate}_${normalizeEventTitle(loc.title)}`;
+    return !gcalKeys.has(key);
+  });
+
+  const combined = [...(googleEvents || []), ...filteredLocal];
+  return deduplicateEvents(combined);
 }
 
 export function computeEventLayout(

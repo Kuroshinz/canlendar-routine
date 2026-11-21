@@ -75,7 +75,12 @@ export async function fetchGoogleCalendarEvents(accessToken: string): Promise<Ca
     const data = await res.json();
     const items: GoogleCalendarApiItem[] = data.items || [];
 
-    return items.map((item) => {
+    // Filter out cancelled / deleted instances and malformed items
+    const activeItems = items.filter(
+      (item) => item && (item as any).status !== 'cancelled' && (item.start?.dateTime || item.start?.date)
+    );
+
+    return activeItems.map((item) => {
       const isAllDay = Boolean(item.start?.date && !item.start?.dateTime);
       let startDate = item.start?.date || '';
       let startTime = '09:00';

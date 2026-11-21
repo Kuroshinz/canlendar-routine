@@ -72,6 +72,8 @@ import { FinanceView } from './components/productivity/FinanceView';
 import { HealthView } from './components/productivity/HealthView';
 import { LandingPage } from './components/LandingPage';
 import { verifyZenoxSession, logoutZenoxSession, ZenoxUser } from './services/zenoxAuth';
+import { getCurrentRoute, navigateToRoute } from './services/router';
+import { mergeSyncedGoogleEvents } from './utils/calendarUtils';
 import { useProductivityStore, todayString } from './hooks/useProductivityStore';
 import { buildTaskEvents } from './utils/productivityUtils';
 import { buildWorkoutEvents, startOfWeek, tdee, calorieTarget, macroTargets } from './utils/fitnessMetrics';
@@ -132,7 +134,7 @@ export default function App() {
   });
 
   // 3. Current active date & view (Default to Landing Page)
-  const [currentDate, setCurrentDate] = useState<Date>(() => new Date(2026, 9, 29)); // Oct 29, 2026
+  const [currentDate, setCurrentDate] = useState<Date>(() => new Date());
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [loginModalMode, setLoginModalMode] = useState<'login' | 'register'>('login');
   const [view, setView] = useState<CalendarViewType>(() => {
@@ -141,21 +143,25 @@ export default function App() {
       return 'scene';
     }
 
-    // 2. ANTI-BYPASS: Verify cryptographic session token
-    const verified = verifyZenoxSession();
-    if (!verified) {
+    const route = getCurrentRoute();
+
+    // 2. If entering /workspace explicitly:
+    if (route === 'workspace') {
+      const verified = verifyZenoxSession();
+      if (verified) {
+        sessionStorage.setItem('zenox_workspace_entered', 'true');
+        const saved = localStorage.getItem('gcal_view') as CalendarViewType | null;
+        return saved && saved !== 'landing' ? saved : 'dashboard';
+      }
+      // Anti-Bypass: guest cannot access /workspace directly -> redirect to landing
+      if (typeof window !== 'undefined') {
+        navigateToRoute('landing', { replace: true });
+      }
       return 'landing';
     }
 
-    // If verified user specifically asks for landing page via hash
-    if (typeof window !== 'undefined' && window.location.hash === '#landing') {
-      return 'landing';
-    }
-
-    // 3. User authenticated: seamlessly restore into workspace directly when returning to the web
-    sessionStorage.setItem('zenox_workspace_entered', 'true');
-    const saved = localStorage.getItem('gcal_view') as CalendarViewType | null;
-    return saved && saved !== 'landing' ? saved : 'dashboard';
+    // 3. Default to Landing Page when entering web at root domain (zenox.vercel.app)
+    return 'landing';
   });
 
   const handleViewChange = (newView: CalendarViewType) => {
@@ -163,21 +169,18 @@ export default function App() {
     if (newView !== 'landing' && !user) {
       setLoginModalMode('login');
       setIsLoginModalOpen(true);
+      navigateToRoute('landing', { replace: true });
       return;
     }
 
     setView(newView);
     if (newView === 'landing') {
       sessionStorage.removeItem('zenox_workspace_entered');
-      if (typeof window !== 'undefined') {
-        window.location.hash = '#landing';
-      }
+      navigateToRoute('landing');
     } else {
       sessionStorage.setItem('zenox_workspace_entered', 'true');
       localStorage.setItem('gcal_view', newView);
-      if (typeof window !== 'undefined' && window.location.hash === '#landing') {
-        window.location.hash = '#workspace';
-      }
+      navigateToRoute('workspace');
     }
   };
 
@@ -191,25 +194,37 @@ export default function App() {
   }, [user, view]);
 
   useEffect(() => {
-    const onHashChange = () => {
+    const handleRouteSync = () => {
+      const route = getCurrentRoute();
       const verified = verifyZenoxSession();
-      if (window.location.hash === '#landing') {
-        setView('landing');
-        sessionStorage.removeItem('zenox_workspace_entered');
-      } else if (window.location.hash === '#workspace' || window.location.hash === '#app' || window.location.hash === '#dashboard') {
+
+      if (route === 'workspace') {
         if (!verified) {
-          // STRICT ANTI-BYPASS: Block unauthenticated access immediately
+          // STRICT ANTI-BYPASS: Block unauthenticated access to /workspace
           setView('landing');
+          navigateToRoute('landing', { replace: true });
           setLoginModalMode('login');
           setIsLoginModalOpen(true);
         } else {
           sessionStorage.setItem('zenox_workspace_entered', 'true');
-          setView((prev) => (prev === 'landing' ? 'dashboard' : prev));
+          const saved = localStorage.getItem('gcal_view') as CalendarViewType | null;
+          setView(saved && saved !== 'landing' ? saved : 'dashboard');
         }
+      } else {
+        setView('landing');
+        sessionStorage.removeItem('zenox_workspace_entered');
       }
     };
-    window.addEventListener('hashchange', onHashChange);
-    return () => window.removeEventListener('hashchange', onHashChange);
+
+    window.addEventListener('popstate', handleRouteSync);
+    window.addEventListener('hashchange', handleRouteSync);
+    window.addEventListener('zenox-route-change', handleRouteSync as EventListener);
+
+    return () => {
+      window.removeEventListener('popstate', handleRouteSync);
+      window.removeEventListener('hashchange', handleRouteSync);
+      window.removeEventListener('zenox-route-change', handleRouteSync as EventListener);
+    };
   }, [user]);
 
   // 4. Events & Categories persistence (Offline-First, Scoped per User Account)
@@ -659,7 +674,7 @@ export default function App() {
 
   // Navigation handlers
   const handleNavigateToday = useCallback(() => {
-    setCurrentDate(new Date(2026, 9, 29));
+    setCurrentDate(new Date());
   }, []);
 
   const handleNavigatePrev = useCallback(() => {
@@ -892,7 +907,7 @@ export default function App() {
     localStorage.removeItem('gcal_active_user');
     sessionStorage.removeItem('zenox_workspace_entered');
     setView('landing');
-    window.location.hash = '#landing';
+    navigateToRoute('landing');
   };
 
   const handleAuthUserSuccess = (authedUser: ZenoxUser, syncGoogleCalendar: boolean = true) => {
@@ -900,7 +915,7 @@ export default function App() {
     setIsLoginModalOpen(false);
     sessionStorage.setItem('zenox_workspace_entered', 'true');
     setView('dashboard');
-    window.location.hash = '#workspace';
+    navigateToRoute('workspace');
 
     if (syncGoogleCalendar) {
       // Re-hydrate accurate synced Google Calendar events
@@ -991,12 +1006,9 @@ export default function App() {
       const gEvents = await fetchGoogleCalendarEvents(token);
       if (gEvents && gEvents.length > 0) {
         setEvents((prev) => {
-          const cleaned = prev.filter((e) => !e.id.startsWith('ev-'));
-          const incomingIds = new Set(gEvents.map((e) => e.id));
-          const filtered = cleaned.filter((e) => !incomingIds.has(e.id));
-          const merged = deduplicateEvents([...gEvents, ...filtered]);
+          const merged = mergeSyncedGoogleEvents(gEvents, prev);
           try {
-            accountStorage.setItem('gcal_events', JSON.stringify(merged));
+            accountStorage.setItem('gcal_events', JSON.stringify(merged), user?.uid);
           } catch {}
           return merged;
         });

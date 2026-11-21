@@ -395,14 +395,11 @@ export async function syncGoogleCalendarData(
     const googleEvents = await fetchGoogleCalendarEvents(accessToken);
     if (googleEvents && googleEvents.length > 0) {
       const { accountStorage } = await import('./accountStorage');
+      const { mergeSyncedGoogleEvents } = await import('../utils/calendarUtils');
       const rawExisting =
         accountStorage.getItem('gcal_events', uid) || localStorage.getItem('gcal_events');
       const existingEvents: any[] = rawExisting ? JSON.parse(rawExisting) : [];
-      const incomingIds = new Set(googleEvents.map((e) => e.id));
-      const merged = [
-        ...googleEvents,
-        ...existingEvents.filter((e) => !incomingIds.has(e.id)),
-      ];
+      const merged = mergeSyncedGoogleEvents(googleEvents, existingEvents);
       accountStorage.setItem('gcal_events', JSON.stringify(merged), uid);
       localStorage.setItem('gcal_events', JSON.stringify(merged));
       return { success: true, count: googleEvents.length };
